@@ -1,0 +1,15 @@
+[2026-04-12 21:21:10,528][hydra.utils][WARNING] - OPENAI_API_KEY not set; skipping OpenAI setup for eval
+[2026-04-12 21:21:10,528][hydra.utils][INFO] - Starting AutoMISC evals with configuration:
+method: IRR
+input_dataset:
+  name: MIV6.3A
+  subset: lowconf
+n_conversations: 10
+annotated:
+  model: google/gemma-4-e4b
+  context_mode: interval
+  num_context_turns: 10
+  class_structure: tiered
+  temperature: 0.0
+
+[2026-04-12 21:21:10,529][hydra.utils][INFO] - AutoMISC annotations path: data/annotated/MIV6.3A_lowconf_tiered_gemma-4-e4b_interval_10_annotated.csv

@@ -1,0 +1,106 @@
+[2026-04-15 15:28:32,980][hydra.utils][WARNING] - OPENAI_API_KEY not set; skipping OpenAI setup for eval
+[2026-04-15 15:28:32,981][hydra.utils][INFO] - Starting AutoMISC evals with configuration:
+method: IRR
+input_dataset:
+  name: MIV6.3A
+  subset: lowconf
+n_conversations: 10
+annotated:
+  model: google/gemma-4-e4b
+  context_mode: interval
+  num_context_turns: 5
+  class_structure: tiered
+  temperature: 0.0
+
+[2026-04-15 15:28:32,981][hydra.utils][INFO] - AutoMISC annotations path: data/annotated/MIV6.3A_lowconf_tiered_gemma-4-e4b_interval_5_annotated.csv
+[2026-04-15 15:28:33,000][hydra.utils][INFO] - Z-score: 23.28565092187411
+[2026-04-15 15:28:33,000][hydra.utils][INFO] - Cohen's Kappa (T1 Counsellor Codes): 0.57
+[2026-04-15 15:28:33,000][hydra.utils][INFO] - Manual Cohen's Kappa (T1 Counsellor): 0.57
+[2026-04-15 15:28:33,000][hydra.utils][INFO] - Asymptotic Variance (T1 Counsellor): 0.0005986607515533297
+[2026-04-15 15:28:33,000][hydra.utils][INFO] - P-value (T1 Counsellor): 0.000000000000000e+00
+[2026-04-15 15:28:33,002][hydra.utils][INFO] - Total Correct Predictions (Counsellor): 384 / 580 = 66.21%
+[2026-04-15 15:28:33,296][hydra.utils][INFO] - 
+              precision    recall  f1-score     support
+CRL            0.512712  0.801325  0.625323  151.000000
+SRL            0.883721  0.283582  0.429379  134.000000
+IMC            0.822222  0.560606  0.666667   66.000000
+IMI            0.045455  0.500000  0.083333    2.000000
+Q              0.977273  0.837662  0.902098  154.000000
+O              0.568627  0.794521  0.662857   73.000000
+accuracy       0.662069  0.662069  0.662069    0.662069
+macro avg      0.635002  0.629616  0.561609  580.000000
+weighted avg   0.762423  0.662069  0.661101  580.000000
+[2026-04-15 15:28:33,297][hydra.utils][INFO] - Z-score: 16.087422698607924
+[2026-04-15 15:28:33,297][hydra.utils][INFO] - Cohen's Kappa (T1 Client Codes): 0.67
+[2026-04-15 15:28:33,297][hydra.utils][INFO] - Manual Cohen's Kappa (T1 Client): 0.67
+[2026-04-15 15:28:33,297][hydra.utils][INFO] - Asymptotic Variance (T1 Client): 0.0017436830716317728
+[2026-04-15 15:28:33,297][hydra.utils][INFO] - P-value (T1 Client): 0.000000000000000e+00
+[2026-04-15 15:28:33,298][hydra.utils][INFO] - Total Correct Predictions (Client): 191
+[2026-04-15 15:28:33,298][hydra.utils][INFO] - Total Correct Predictions (Client): 191 / 241 = 79.25%
+[2026-04-15 15:28:33,352][hydra.utils][INFO] - 
+              precision    recall  f1-score     support
+C              0.676768  0.917808  0.779070   73.000000
+S              0.818182  0.837209  0.827586   43.000000
+N              0.897959  0.704000  0.789238  125.000000
+accuracy       0.792531  0.792531  0.792531    0.792531
+macro avg      0.797636  0.819673  0.798631  241.000000
+weighted avg   0.816725  0.792531  0.793000  241.000000
+[2026-04-15 15:28:33,367][hydra.utils][INFO] - Z-score: 20.87941950788458
+[2026-04-15 15:28:33,368][hydra.utils][INFO] - Cohen's Kappa (T2 Counsellor Codes): 0.46
+[2026-04-15 15:28:33,368][hydra.utils][INFO] - Manual Cohen's Kappa (T2 Counsellor): 0.46
+[2026-04-15 15:28:33,368][hydra.utils][INFO] - Asymptotic Variance (T2 Counsellor): 0.00047616655819572026
+[2026-04-15 15:28:33,368][hydra.utils][INFO] - P-value (T2 Counsellor): 0.000000000000000e+00
+[2026-04-15 15:28:33,369][hydra.utils][INFO] - Total Correct Predictions (Counsellor): 291 / 580 = 50.17%
+[2026-04-15 15:28:33,555][hydra.utils][INFO] - 
+              precision    recall  f1-score     support
+CR             0.223684  0.404762  0.288136   42.000000
+AF             0.368421  0.466667  0.411765   30.000000
+SU             0.385542  0.820513  0.524590   39.000000
+RF             0.000000  0.000000  0.000000    1.000000
+EC             0.355556  0.410256  0.380952   39.000000
+SR             0.904762  0.283582  0.431818  134.000000
+ADP            0.000000  0.000000  0.000000   42.000000
+RCP            0.000000  0.000000  0.000000    0.000000
+GI             0.200000  0.125000  0.153846   24.000000
+ADW            0.000000  0.000000  0.000000    0.000000
+CO             0.000000  0.000000  0.000000    0.000000
+DI             0.000000  0.000000  0.000000    2.000000
+RCW            0.000000  0.000000  0.000000    0.000000
+WA             0.000000  0.000000  0.000000    0.000000
+OQ             0.865854  0.898734  0.881988   79.000000
+CQ             0.942308  0.653333  0.771654   75.000000
+FA             0.137931  1.000000  0.242424    4.000000
+FI             0.875000  0.625000  0.729167   56.000000
+ST             0.363636  0.923077  0.521739   13.000000
+accuracy       0.501724  0.501724  0.501724    0.501724
+macro avg      0.295931  0.347943  0.280951  580.000000
+weighted avg   0.635763  0.501724  0.512868  580.000000
+[2026-04-15 15:28:33,557][hydra.utils][INFO] - Z-score: 12.023112027589063
+[2026-04-15 15:28:33,557][hydra.utils][INFO] - Cohen's Kappa (T2 Client Codes): 0.46
+[2026-04-15 15:28:33,557][hydra.utils][INFO] - Manual Cohen's Kappa (T2 Client): 0.46
+[2026-04-15 15:28:33,557][hydra.utils][INFO] - Asymptotic Variance (T2 Client): 0.0014493823140103504
+[2026-04-15 15:28:33,557][hydra.utils][INFO] - P-value (T2 Client): 0.000000000000000e+00
+[2026-04-15 15:28:33,558][hydra.utils][INFO] - Total Correct Predictions (Client): 138
+[2026-04-15 15:28:33,558][hydra.utils][INFO] - Total Correct Predictions (Client): 138 / 241 = 57.26%
+[2026-04-15 15:28:33,762][hydra.utils][INFO] - 
+              precision    recall  f1-score     support
+TS-            0.000000  0.000000  0.000000    0.000000
+AC-            0.000000  0.000000  0.000000    1.000000
+C-             0.000000  0.000000  0.000000    0.000000
+N-             0.500000  1.000000  0.666667    2.000000
+R-             0.857143  0.480000  0.615385   25.000000
+AB-            0.714286  0.500000  0.588235   10.000000
+D-             0.166667  0.200000  0.181818    5.000000
+O-             0.000000  0.000000  0.000000    0.000000
+N              0.903614  0.600000  0.721154  125.000000
+O+             0.193548  0.600000  0.292683   10.000000
+D+             0.800000  0.888889  0.842105    9.000000
+AB+            1.000000  0.333333  0.500000    3.000000
+R+             0.760000  0.593750  0.666667   32.000000
+N+             0.000000  0.000000  0.000000    0.000000
+C+             0.285714  0.333333  0.307692    6.000000
+AC+            0.263158  0.454545  0.333333   11.000000
+TS+            0.285714  1.000000  0.444444    2.000000
+accuracy       0.572614  0.572614  0.572614    0.572614
+macro avg      0.395873  0.410815  0.362364  241.000000
+weighted avg   0.767604  0.572614  0.636491  241.000000

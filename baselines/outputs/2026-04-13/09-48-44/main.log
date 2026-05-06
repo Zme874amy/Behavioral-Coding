@@ -1,0 +1,83 @@
+[2026-04-13 09:48:44,529][AsyncWebsocketThread][INFO] - {"client": "<lmstudio.sync_api.Client object at 0x11e6506e0>", "event": "Websocket handling thread started", "thread_id": "Thread-1"}
+[2026-04-13 09:48:44,561][httpx][INFO] - HTTP Request: GET http://127.0.0.1:41343/lmstudio-greeting "HTTP/1.1 200 OK"
+[2026-04-13 09:48:44,569][httpx][INFO] - HTTP Request: GET ws://127.0.0.1:41343/system "HTTP/1.1 101 Switching Protocols"
+[2026-04-13 09:48:44,573][AsyncWebsocketHandler][INFO] - {"event": "Websocket session established", "ws_url": "ws://127.0.0.1:41343/system"}
+[2026-04-13 09:48:44,576][hydra.utils][WARNING] - OPENAI_API_KEY not set; skipping OpenAI model validation
+[2026-04-13 09:48:44,577][hydra.utils][WARNING] - OPENAI_API_KEY not set; skipping OpenAI model validation
+[2026-04-13 09:48:44,577][hydra.utils][INFO] - Configuration successfully validated.
+[2026-04-13 09:48:44,577][hydra.utils][INFO] - Starting AutoMISC run with configuration:
+input_dataset:
+  name: MIV6.3A
+  subset: lowconf
+n_conversations: 10
+parser:
+  provider: lmstudio
+  model: google/gemma-4-e4b
+  temperature: 0.0
+annotator:
+  provider: lmstudio
+  model: qwen/qwen3.5-9b
+  context_mode: interval
+  num_context_turns: 5
+  class_structure: tiered
+  temperature: 0.0
+
+[2026-04-13 09:48:44,593][hydra.utils][INFO] - Filtering IDs based on dataset specifications
+[2026-04-13 09:48:44,594][hydra.utils][INFO] - Dataset total unique IDs: 173
+[2026-04-13 09:48:44,600][hydra.utils][INFO] - Valid IDs for lowconf subset: 115
+[2026-04-13 09:48:44,601][hydra.utils][INFO] - Adding conversation 663fd7ca84b7978432d6070b with 16 volleys
+[2026-04-13 09:48:44,602][hydra.utils][INFO] - Adding conversation 671fff4fced93c3e5a17f230 with 38 volleys
+[2026-04-13 09:48:44,603][hydra.utils][INFO] - Adding conversation 6735337bd46a0b33a2bcf429 with 23 volleys
+[2026-04-13 09:48:44,604][hydra.utils][INFO] - Adding conversation 6481e7756969fcd48ea9c634 with 24 volleys
+[2026-04-13 09:48:44,605][hydra.utils][INFO] - Adding conversation 6127b32b912465823dca1e4b with 42 volleys
+[2026-04-13 09:48:44,606][hydra.utils][INFO] - Adding conversation 60dde1621f6e206dea63a7dd with 36 volleys
+[2026-04-13 09:48:44,607][hydra.utils][INFO] - Adding conversation 663b79f76293a4480abba57d with 23 volleys
+[2026-04-13 09:48:44,608][hydra.utils][INFO] - Adding conversation 67336dc4beb89674ca687d87 with 35 volleys
+[2026-04-13 09:48:44,608][hydra.utils][INFO] - Adding conversation 67203fd3fe9e55e9ec82fc1f with 36 volleys
+[2026-04-13 09:48:44,609][hydra.utils][INFO] - Adding conversation 59cb95053306be000195be2e with 30 volleys
+[2026-04-13 09:48:44,609][hydra.utils][INFO] - Loaded 10 conversations from dataset MIV6.3A
+[2026-04-13 09:48:44,609][hydra.utils][INFO] - Corpus info:
+Dataset: MIV6.3A.csv
+Conversations: 10
+Average conversation length: 30.30 volleys
+[2026-04-13 09:48:44,609][hydra.utils][INFO] - Dataset loaded. Now moving onto parsing
+[2026-04-13 09:48:44,611][hydra.utils][INFO] - OPENAI_API_KEY not set or empty; skipping OpenAI model validation
+[2026-04-13 09:48:44,639][hydra.utils][INFO] - Parser: Loaded existing output file data/parsed/MIV6.3A_parsed.csv with 13692 rows.
+[2026-04-13 09:48:44,649][hydra.utils][INFO] - Conversation 663fd7ca84b7978432d6070b already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,652][hydra.utils][INFO] - Conversation 663fd7ca84b7978432d6070b already fully parsed. Skipping.
+[2026-04-13 09:48:44,653][hydra.utils][INFO] - Conversation 671fff4fced93c3e5a17f230 already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,656][hydra.utils][INFO] - Conversation 671fff4fced93c3e5a17f230 already fully parsed. Skipping.
+[2026-04-13 09:48:44,657][hydra.utils][INFO] - Conversation 6735337bd46a0b33a2bcf429 already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,659][hydra.utils][INFO] - Conversation 6735337bd46a0b33a2bcf429 already fully parsed. Skipping.
+[2026-04-13 09:48:44,660][hydra.utils][INFO] - Conversation 6481e7756969fcd48ea9c634 already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,663][hydra.utils][INFO] - Conversation 6481e7756969fcd48ea9c634 already fully parsed. Skipping.
+[2026-04-13 09:48:44,664][hydra.utils][INFO] - Conversation 6127b32b912465823dca1e4b already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,668][hydra.utils][INFO] - Conversation 6127b32b912465823dca1e4b already fully parsed. Skipping.
+[2026-04-13 09:48:44,669][hydra.utils][INFO] - Conversation 60dde1621f6e206dea63a7dd already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,674][hydra.utils][INFO] - Conversation 60dde1621f6e206dea63a7dd already fully parsed. Skipping.
+[2026-04-13 09:48:44,674][hydra.utils][INFO] - Conversation 663b79f76293a4480abba57d already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,677][hydra.utils][INFO] - Conversation 663b79f76293a4480abba57d already fully parsed. Skipping.
+[2026-04-13 09:48:44,678][hydra.utils][INFO] - Conversation 67336dc4beb89674ca687d87 already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,682][hydra.utils][INFO] - Conversation 67336dc4beb89674ca687d87 already fully parsed. Skipping.
+[2026-04-13 09:48:44,682][hydra.utils][INFO] - Conversation 67203fd3fe9e55e9ec82fc1f already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,686][hydra.utils][INFO] - Conversation 67203fd3fe9e55e9ec82fc1f already fully parsed. Skipping.
+[2026-04-13 09:48:44,687][hydra.utils][INFO] - Conversation 59cb95053306be000195be2e already exists in the existing DataFrame. Checking for volleys.
+[2026-04-13 09:48:44,690][hydra.utils][INFO] - Conversation 59cb95053306be000195be2e already fully parsed. Skipping.
+[2026-04-13 09:48:44,691][hydra.utils][INFO] - Parsing complete. Now moving onto annotation
+[2026-04-13 09:48:44,698][hydra.utils][INFO] - Saved MIV6.3A-parsed dataframe to /Users/liujiawen/Desktop/research/AutoMISC/AutoMISC/outputs/2026-04-13/09-48-44/MIV6.3A_lowconf_tiered_qwen3.5-9b_interval_5_parsed.csv
+[2026-04-13 09:48:44,700][hydra.utils][INFO] - OPENAI_API_KEY not set or empty; skipping OpenAI model validation
+[2026-04-13 09:48:44,701][hydra.utils][INFO] - No existing annotations found. Starting from beginning.
+[2026-04-13 09:48:44,714][AsyncWebsocketHandler][INFO] - {"event": "Websocket session established", "ws_url": "ws://127.0.0.1:41343/llm"}
+[2026-04-13 13:49:36,867][hydra.utils][WARNING] - Error annotating corpus: string indices must be integers, not 'str'
+Traceback (most recent call last):
+  File "/Users/liujiawen/Desktop/research/AutoMISC/AutoMISC/src/components/annotator.py", line 154, in annotate_corpus
+    t2_system_prompt = render_prompt(speaker=speaker,structure="t2",label=t1['label'])
+                                                                          ~~^^^^^^^^^
+TypeError: string indices must be integers, not 'str'
+[2026-04-13 13:49:36,954][hydra.utils][INFO] - Annotated utterances saved to data/annotated/MIV6.3A_lowconf_tiered_qwen3.5-9b_interval_5_annotated.csv
+[2026-04-13 13:49:36,961][hydra.utils][INFO] - Annotating done. Returning from main
+[2026-04-13 13:49:36,983][SyncLMStudioWebsocket][INFO] - {"event": "Websocket session disconnected (ws://127.0.0.1:41343/system)", "ws_url": "ws://127.0.0.1:41343/system"}
+[2026-04-13 13:49:36,983][AsyncWebsocketHandler][INFO] - {"event": "Websocket closed.", "ws_url": "ws://127.0.0.1:41343/system"}
+[2026-04-13 13:49:36,995][SyncLMStudioWebsocket][INFO] - {"event": "Websocket session disconnected (ws://127.0.0.1:41343/llm)", "ws_url": "ws://127.0.0.1:41343/llm"}
+[2026-04-13 13:49:36,995][AsyncWebsocketHandler][INFO] - {"event": "Websocket closed.", "ws_url": "ws://127.0.0.1:41343/llm"}
+[2026-04-13 13:49:36,997][AsyncWebsocketThread][INFO] - {"client": "<lmstudio.sync_api.Client object at 0x11e6506e0>", "event": "Websocket thread terminated", "thread_id": "Thread-1"}

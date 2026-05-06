@@ -1,0 +1,15 @@
+input_dataset:
+  name: MIV6.3A
+  subset: lowconf
+n_conversations: 10
+parser:
+  provider: lmstudio
+  model: google/gemma-4-e4b
+  temperature: 0.0
+annotator:
+  provider: lmstudio
+  model: google/gemma-4-e4b
+  context_mode: interval
+  num_context_turns: 5
+  class_structure: tiered
+  temperature: 0.0

@@ -1,0 +1,11 @@
+method: 1
+input_dataset:
+  name: MIV6.3A
+  subset: lowconf
+n_conversations: 10
+annotated:
+  model: openai/gpt-4o
+  context_mode: interval
+  num_context_turns: 10
+  class_structure: tiered
+  temperature: 0.0

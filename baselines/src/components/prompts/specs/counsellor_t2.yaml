@@ -1,0 +1,44 @@
+CRL: |
+   - **Complex Reflection (CR)**: A reflective listening statement that adds significant meaning or emphasis to what the client said, conveying a deeper or richer picture of the client's statement.
+   - **Affirm (AF)**: Communicates something positive or complimentary about the client's strengths or efforts.
+   - **Support (SU)**: Sympathetic, compassionate, or understanding comments, which agree or side with the client.
+   - **Reframe (RF)**: Suggests a different meaning for an experience expressed by the client, usually changing the emotional valence of meaning but not the depth.
+   - **Emphasize Control (EC)**: Acknowledges, honours, or emphasizes the client's autonomy and freedom of choice.
+SRL: |
+   - **Simple Reflection (SR)**: A reflective listening statement which simply repeats or paraphrases the client's words or meaning, often with a slight change in wording or emphasis.
+IMC": |
+   - **Advise With Permission (ADP)**: After receiving permission, gives advice, makes a suggestion, or offers a solution or possible action.
+   - **Raise Concern With Permission (RCP)**: After getting permission, points out a possible problem with a client's goal, plan, or intention. Always phrased as the counsellor's concern.
+   - **Giving Information (GI)**: Provides information to the client, explains something, educates or provides feedback, or discloses personal information.
+IMI: |
+   - **Advise Without Permission (ADWP)**: Offers suggestions or guidance WITHOUT asking or receiving permission.
+   - **Confront (CON)**: Directly disagrees, argues, corrects, shames, blames, seeks to persuade, criticizes, judges, labels, moralizes, ridicules, or questions the client's honesty.
+   - **Direct (DIR)**: Gives an order, command, or direction. The language is imperative.
+   - **Raise Concern Without Permission (RCWP)**: Without getting permission, points out a possible problem with a client's goal, plan, or intention.
+   - **Warn (WA)**: Provides a warning or threat, implying negative consequences unless the client takes a certain action
+Q: |
+   - **Closed Question (CQ)**: A question is closed if it can be answered with “yes” or “no” under any grammatically valid interpretation, even if that answer is awkward, contextually unhelpful, or unlikely.
+         To determine is a question is CQ, always check for its grammatical structure first. If the utterance can be interpreted in a way that permits a yes/no response, you must classify it as CQ.
+         This includes any form of:
+            - any utterance containing or beginning with grammatical constructions that use auxiliary or modal verbs, existence/presence checks, or binary/framed prompts must be labeled as CQ. These include, but are not limited to, questions that:
+               - Begin with or contain modal/auxiliary verbs such as:  
+                  Can, Could, Do, Does, Did, Are, Is, Was, Were, Will, Would, Have, Has, Had, Might, May, Should, Shall, Must followed by a subject and verb/complement.
+               - Ask about existence, availability, or presence using forms like:  
+                  Is there, Are there, Do you have, Have you got, Would it be, Could it be, Might it be, Is it possible that…
+               - Implicitly or explicitly present binary choices or confirmatory framing, including structures like:  
+                  Do you ever, Would you say, Are you thinking about, Would you like, Is this something you, Have you thought about, Do you feel like, Do you think, Does it feel like, Do you notice…
+               If the utterance contains any clause that permits a grammatically valid yes/no or short factual response, even if additional elaboration is possible, it must be labeled CQ.
+            - even if it appears to invite elaboration.
+            - confirmation or factual information-seeking
+            - curiosity about presence/absence of something
+            - request for specific information or choices
+         If there is any ambiguity between CQ and OQ, always label it as CQ.
+   - **Open Question (OQ)**: 
+         A question is open only if it cannot be answered with “yes” or “no” in any grammatically valid or logically plausible way.
+         The question must structurally require an elaboration, explanation, or descriptive narrative that goes beyond a binary or fixed-option response.
+         Questions that seem to encourage elaboration but could be reduced to a yes/no response are still CQ, not OQ.
+         Use this label only when there is no grammatical path to yes/no answers — no exceptions.
+O: |
+   - **Facilitate (FA)**: Simple utterance that functions as a "keep-going" acknowledgement e.g. "Mm-hmm", "I see", "Go on"
+   - **Filler (FI)**: Pleasantries such as "good morning", "nice weather we're having", etc.
+   - **Structure (ST)**: Gives information about will happen directly to the client throughout the course of treatment or within a study format, in this or subsequent sessions.
