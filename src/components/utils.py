@@ -57,7 +57,17 @@ def call_chat_model(
              config={"temperature": temperature}, 
              response_format=response_format
             )
-                                       
+        if response_format is None:
+            parsed = getattr(completion, "parsed", None)
+            if isinstance(parsed, str) and parsed.strip():
+                return parsed.strip()
+            content = getattr(completion, "content", None)
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+            text = getattr(completion, "text", None)
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+            return str(completion).strip()
         return completion.parsed
     else:
         raise ValueError(f"Provider '{provider}' not recognized. Use 'openai' or 'lmstudio'.")

@@ -4,6 +4,7 @@ import pandas as pd
 from hydra.utils import log
 import hydra
 
+
 DEMO_DICT = {
     "MIV6.3A": "2024-11-14-MIV6.3A-2024-11-22-MIV6.3A_all_data_delta_with_post_keep_high_conf_True_merged.csv",
     "MIV6.3B": "2024-11-19-MIV6.1B_all_data_delta_with_post_keep_high_conf_True_merged.csv"
@@ -141,15 +142,9 @@ class Corpus:
         output_dir = Path('data/test')
         output_dir.mkdir(parents=True, exist_ok=True)
         exp_output_dir = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
-        fn = (
-            f"{self.cfg.input_dataset.name}_"
-            f"{self.cfg.input_dataset.subset}_"
-            f"{self.cfg.annotator.class_structure}_"
-            f"{self.cfg.annotator.model.rsplit('/', 1)[-1]}_"
-            f"{self.cfg.annotator.context_mode}_"
-            f"{self.cfg.annotator.num_context_turns if self.cfg.annotator.context_mode == 'interval' else ''}" 
-            f"_{self.state}.csv"
-        )
+        from components.artifact_paths import corpus_hydra_export_name
+
+        fn = corpus_hydra_export_name(self.cfg, self.state)
         exp_save_path = exp_output_dir / fn
         df = self.to_df()
         df.to_csv(exp_save_path, index=False)

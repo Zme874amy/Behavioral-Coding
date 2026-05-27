@@ -4,6 +4,7 @@ from datatypes.corpus import Conversation, Corpus
 from datatypes.corpus import Utterance
 from datatypes.corpus import Volley
 from .utils import call_chat_model, get_provider
+from components.artifact_paths import get_parsed_csv_path
 from hydra.utils import log
 import hydra
 import pandas as pd
@@ -109,7 +110,8 @@ class Parser:
 
     def parse_corpus(self, corp: Corpus) -> Corpus:
         output_dir = Path('data/parsed')
-        save_path = output_dir / f"{self.cfg.input_dataset.name}_parsed.csv"
+        save_path = get_parsed_csv_path(self.cfg)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         existing_df = pd.DataFrame()
         if save_path.exists():
             try: 

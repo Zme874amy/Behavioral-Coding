@@ -1,0 +1,15 @@
+[2026-05-14 01:02:00,497][hydra.utils][INFO] - STEP 1/2: LoRA fine-tuning on HUMAN-labeled MI utterances
+[2026-05-14 01:02:00,575][hydra.utils][INFO] - LODO summary: {'train_examples': 821, 'test_examples': 1925, 'train_rows[miv63a]': 821, 'test_rows[hlqc]': 1925}
+[2026-05-14 01:02:00,576][hydra.utils][INFO] - Capped training set to 300 examples (seed=42)
+[2026-05-14 01:02:00,590][hydra.utils][INFO] - Starting SFT: base=Qwen/Qwen2.5-0.5B-Instruct peft=True train=300 valid=0
+[2026-05-14 01:02:04,416][hydra.utils][INFO] - Using LoRA (parameter-efficient fine-tuning)
+[2026-05-14 01:02:05,171][hydra.utils][INFO] - Loading model: Qwen/Qwen2.5-0.5B-Instruct (dtype=torch.float32, device_map=None)
+[2026-05-14 01:02:06,750][hydra.utils][INFO] - Training device: mps
+[2026-05-14 01:02:07,137][hydra.utils][INFO] - Starting local fine-tuning...
+[2026-05-14 01:20:24,562][hydra.utils][INFO] - Saved fine-tuned model to /Users/liujiawen/Desktop/research/localproject/outputs/sft_runs/qwen05b/lora_model/local_finetuned_model
+[2026-05-14 01:20:24,585][hydra.utils][INFO] - Saved SFT metadata to /Users/liujiawen/Desktop/research/localproject/outputs/sft_runs/qwen05b/sft_artifacts/sft_metadata.json
+[2026-05-14 01:20:24,586][hydra.utils][INFO] - LoRA adapter saved at: /Users/liujiawen/Desktop/research/localproject/outputs/sft_runs/qwen05b/lora_model/local_finetuned_model
+[2026-05-14 01:20:24,586][hydra.utils][INFO] - STEP 2/2: Zero-shot baseline vs Fine-tuned evaluation
+[2026-05-14 01:20:24,666][hydra.utils][INFO] - Test split: 1925 examples ({'train_examples': 821, 'test_examples': 1925, 'train_rows[miv63a]': 821, 'test_rows[hlqc]': 1925})
+[2026-05-14 01:20:24,667][hydra.utils][INFO] - Sampled 200 examples for evaluation
+[2026-05-14 01:20:24,668][hydra.utils][INFO] - Loading base model for ZERO-SHOT baseline: Qwen/Qwen2.5-0.5B-Instruct

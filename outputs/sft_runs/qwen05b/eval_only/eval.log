@@ -1,0 +1,7 @@
+[2026-05-14 01:21:41,819][hydra.utils][INFO] - Test split: 1925 examples ({'train_examples': 821, 'test_examples': 1925, 'train_rows[miv63a]': 821, 'test_rows[hlqc]': 1925})
+[2026-05-14 01:21:41,819][hydra.utils][INFO] - Sampled 200 examples for evaluation
+[2026-05-14 01:21:41,820][hydra.utils][INFO] - Loading base model for ZERO-SHOT baseline: Qwen/Qwen2.5-0.5B-Instruct
+[2026-05-14 01:21:46,173][hydra.utils][INFO] - Zero-shot generation device: cpu
+[2026-05-14 01:38:48,974][hydra.utils][INFO] - Loading fine-tuned LoRA adapter from outputs/sft_runs/qwen05b/lora_model/local_finetuned_model
+[2026-05-14 01:38:50,772][hydra.utils][INFO] - Fine-tuned generation device: cpu
+[2026-05-14 01:49:54,679][hydra.utils][INFO] - Saved evaluation artifacts to /Users/liujiawen/Desktop/research/localproject/outputs/sft_runs/qwen05b/eval_only/sft_evaluation

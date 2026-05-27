@@ -12,7 +12,6 @@ from datatypes.corpus import Corpus
 from components.parser import Parser
 from components.annotator import Annotator
 from components.fine_tuning import run_fine_tuning
-from unified_eval import unified_eval
 import os
 import openai
 import logging
@@ -108,8 +107,11 @@ def generate_model_combinations(cfg: DictConfig) -> List[Dict[str, Any]]:
 def generate_experiment_id(parser: DictConfig, annotator: DictConfig, ft: DictConfig) -> str:
     """Generate a unique ID for this model combination."""
     combo_str = f"{parser.model}_{annotator.model}"
-    if ft:
-        combo_str += f"_{ft.provider}_{ft.base_model}"
+    if ft is not None:
+        if getattr(ft, "enabled", False):
+            combo_str += f"_{getattr(ft, 'provider', '')}_{getattr(ft, 'base_model', '')}"
+        else:
+            combo_str += "_no_ft"
     return hashlib.md5(combo_str.encode()).hexdigest()[:8]
 
 
@@ -190,8 +192,8 @@ def run_single_experiment(cfg: DictConfig, experiment_config: Dict[str, Any]) ->
     log.info(f"Starting experiment {exp_id}")
     log.info(f"Parser: {parser_cfg.model} ({parser_cfg.provider})")
     log.info(f"Annotator: {annotator_cfg.model} ({annotator_cfg.provider})")
-    if ft_cfg:
-        log.info(f"Fine-tuning: {ft_cfg.provider} on {ft_cfg.base_model}")
+    if ft_cfg and getattr(ft_cfg, "enabled", False):
+        log.info(f"Fine-tuning: {getattr(ft_cfg, 'provider', '')} on {getattr(ft_cfg, 'base_model', '')}")
     
     try:
         # Create experiment-specific config
@@ -218,11 +220,11 @@ def run_single_experiment(cfg: DictConfig, experiment_config: Dict[str, Any]) ->
             'annotator_context_mode': getattr(annotator_cfg, 'context_mode', 'interval'),
             'annotator_num_context_turns': getattr(annotator_cfg, 'num_context_turns', 5),
             'annotator_class_structure': getattr(annotator_cfg, 'class_structure', 'tiered'),
-            'fine_tuning_enabled': ft_cfg is not None,
+            'fine_tuning_enabled': bool(ft_cfg and getattr(ft_cfg, 'enabled', False)),
             'timestamp': str(Path.cwd().stat().st_mtime)
         }
         
-        if ft_cfg:
+        if ft_cfg and getattr(ft_cfg, 'enabled', False):
             metadata.update({
                 'fine_tuning_provider': ft_cfg.provider,
                 'fine_tuning_base_model': ft_cfg.base_model,
@@ -248,10 +250,20 @@ def run_single_experiment(cfg: DictConfig, experiment_config: Dict[str, Any]) ->
         annotator.annotate_corpus(parsed)
         log.info(f"Annotation complete for experiment {exp_id}")
         
-        # 4) Optional fine-tuning
-        if ft_cfg and ft_cfg.enabled:
-            log.info(f"Fine-tuning enabled for experiment {exp_id}")
-            run_fine_tuning(exp_cfg)
+        # 4) Fine-tuning from auto-annotations is DISABLED on purpose.
+        #
+        # Training on the model's own machine-generated annotations is a
+        # self-distillation loop, not Supervised Fine-Tuning. For the SFT
+        # thesis pipeline (train on HUMAN labels + Leave-One-Dataset-Out
+        # evaluation) use:  python src/sft/main.py
+        #
+        # We still log the request so config-level errors stay visible.
+        if ft_cfg and getattr(ft_cfg, 'enabled', False):
+            log.warning(
+                "Fine-tuning is disabled in the auto-annotation pipeline. "
+                "Use `python src/sft/main.py` (config: conf/sft_config.yaml) "
+                "to fine-tune on human-labeled data with LODO evaluation."
+            )
         
         log.info(f"Experiment {exp_id} completed successfully")
         return True
@@ -337,7 +349,11 @@ def main(cfg) -> None:
     if cfg.experiment.run_evaluation:
         log.info("Running unified evaluation across all experiments...")
         try:
+            from unified_eval import unified_eval
             unified_eval(cfg)
+        except ImportError as e:
+            log.warning(f"Unified evaluation dependencies not available: {e}")
+            log.info("Skipping unified evaluation. Install with: pip install scikit-learn statsmodels")
         except Exception as e:
             log.error(f"Unified evaluation failed: {e}")
     

@@ -8,25 +8,18 @@ import pandas as pd
 from hydra.utils import log
 
 
-def get_annotated_csv_path(cfg) -> Path:
-    """Construct path to annotated CSV file based on config."""
-    return Path('data/annotated') / (
-        f"{cfg.input_dataset.name}_"
-        f"{cfg.input_dataset.subset}_"
-        f"{cfg.annotator.class_structure}_"
-        f"{cfg.annotator.model.rsplit('/', 1)[-1]}_"
-        f"{cfg.annotator.context_mode}_"
-        f"{cfg.annotator.num_context_turns if cfg.annotator.context_mode == 'interval' else ''}"
-        f"_annotated.csv"
-    )
+from components.artifact_paths import get_annotated_csv_path  # noqa: F401 — re-export
 
 
 def resolve_label_field(cfg) -> str:
     """Determine which label field to use for fine-tuning."""
     if cfg.fine_tuning.label_field != 'auto':
         return cfg.fine_tuning.label_field
-    
-    return 't2_label_auto' if cfg.annotator.class_structure == 'tiered' else 'label_auto'
+
+    ann = cfg.annotator
+    if hasattr(ann, "models") and not hasattr(ann, "class_structure"):
+        ann = ann.models[0]
+    return 't2_label_auto' if ann.class_structure == 'tiered' else 'label_auto'
 
 
 def build_examples(cfg, df: pd.DataFrame) -> List[Dict[str, str]]:

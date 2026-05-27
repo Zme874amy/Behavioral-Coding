@@ -12,8 +12,9 @@ seaborn
 matplotlib
 numpy
 scipy
-transformers
+transformers>=4.51
 datasets
 accelerate
 peft
+huggingface_hub
 torch

@@ -1,0 +1,10 @@
+{
+  "evaluation_methods": [
+    "experiment_results",
+    "evaluation_config",
+    "fine_tuning_comparison"
+  ],
+  "total_experiments_evaluated": 1,
+  "timestamp": "1778626026.7331653",
+  "fine_tuning_comparisons": 0
+}

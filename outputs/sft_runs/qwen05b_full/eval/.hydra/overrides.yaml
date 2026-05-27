@@ -1,0 +1,3 @@
+- model.base_model=Qwen/Qwen2.5-0.5B-Instruct
+- evaluation.adapter_dir=outputs/sft_runs/qwen05b_full/lora_model/local_finetuned_model
+- evaluation.sample_size=300

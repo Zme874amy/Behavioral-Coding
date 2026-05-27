@@ -2,13 +2,21 @@ import os
 from pathlib import Path
 from omegaconf import DictConfig
 import pandas as pd
-from sklearn.metrics import confusion_matrix, cohen_kappa_score, classification_report
 import numpy as np
 from scipy.stats import norm
 import seaborn as sns
 import matplotlib.pyplot as plt
 import hydra
 from hydra.utils import log
+
+from components.artifact_paths import model_slug
+
+try:
+    from sklearn.metrics import confusion_matrix, cohen_kappa_score, classification_report
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    log.warning("sklearn not available. Install with: pip install scikit-learn")
 
 manual_fn = 'MIV6.3A_manual.csv' 
 
@@ -46,6 +54,10 @@ def compute_p_value(kappa, var_kappa):
     return p_value
 
 def cohens_kappa(cfg, auto_anno_path, manual_path, tier, rater):
+    if not SKLEARN_AVAILABLE:
+        log.error(f"Cannot compute Cohen's Kappa for {tier}: sklearn not available")
+        return
+    
     exp_output_dir = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
     os.makedirs(exp_output_dir / "results", exist_ok=True)
 
@@ -166,21 +178,45 @@ def cohens_kappa(cfg, auto_anno_path, manual_path, tier, rater):
     return
 
 def IRR(cfg: DictConfig) -> None:
+    if not SKLEARN_AVAILABLE:
+        log.error("IRR evaluation requires sklearn. Install with: pip install scikit-learn")
+        return
+        
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 20
-    auto_anno_path = Path('data/annotated') / (
+    ap = cfg.annotated
+    turns = ap.num_context_turns if ap.context_mode == "interval" else ""
+    legacy = Path("data/annotated") / (
         f"{cfg.input_dataset.name}_"
         f"{cfg.input_dataset.subset}_"
-        f"{cfg.annotated.class_structure}_"
-        f"{cfg.annotated.model.rsplit('/', 1)[-1]}_"
-        f"{cfg.annotated.context_mode}_"
-        f"{cfg.annotated.num_context_turns if cfg.annotated.context_mode == 'interval' else ''}" 
+        f"{ap.class_structure}_"
+        f"{ap.model.rsplit('/', 1)[-1]}_"
+        f"{ap.context_mode}_"
+        f"{turns}"
         f"_annotated.csv"
-        # f"_annotated_OLD.csv"
     )
+    parser_m = getattr(ap, "parser_model", None)
+    if parser_m:
+        new_path = Path("data/annotated") / (
+            f"{cfg.input_dataset.name}_"
+            f"{cfg.input_dataset.subset}_"
+            f"{ap.class_structure}_"
+            f"{model_slug(parser_m)}_"
+            f"{model_slug(ap.model)}_"
+            f"{ap.context_mode}_"
+            f"{turns}"
+            f"_annotated.csv"
+        )
+        auto_anno_path = new_path if new_path.exists() else legacy
+    else:
+        auto_anno_path = legacy
 
     manual_path = Path('data/manual') / manual_fn
     log.info(f"AutoMISC annotations path: {auto_anno_path}")
+
+    if not auto_anno_path.exists():
+        log.error(f"Annotated CSV not found: {auto_anno_path}")
+        return
 
     if cfg.annotated.class_structure == 'tiered':
         # rater_name = 'auto'

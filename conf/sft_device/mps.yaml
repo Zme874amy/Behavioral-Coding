@@ -1,0 +1,13 @@
+# @package _global_
+# Apple Silicon smoke-test profile (not for 7B+ models).
+model:
+  fp16: false
+  bf16: false
+
+training:
+  max_grad_norm: 0.0
+  train_subset_size: 50
+
+evaluation:
+  force_cpu: true
+  sample_size: 20

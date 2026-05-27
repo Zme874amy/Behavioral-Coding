@@ -7,13 +7,34 @@ import matplotlib as mpl
 import numpy as np
 import os
 from pathlib import Path
-from statsmodels.api import OLS, add_constant
 import seaborn as sns
 from hydra.utils import log
 import hydra
-from sklearn.model_selection import LeaveOneOut
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_squared_error
+
+from components.artifact_paths import model_slug
+
+try:
+    from sklearn.model_selection import LeaveOneOut
+    from sklearn.linear_model import LinearRegression
+    from sklearn.metrics import r2_score, mean_squared_error
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    log.warning("sklearn not available. Install with: pip install scikit-learn")
+
+try:
+    from statsmodels.api import OLS, add_constant
+    STATSMODELS_AVAILABLE = True
+except ImportError:
+    STATSMODELS_AVAILABLE = False
+    log.warning("statsmodels not available. Install with: pip install statsmodels")
+    from sklearn.model_selection import LeaveOneOut
+    from sklearn.linear_model import LinearRegression
+    from sklearn.metrics import r2_score, mean_squared_error
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    log.warning("sklearn not available. Install with: pip install scikit-learn")
 
 
 def get_slope(session: pd.DataFrame, normalize: bool=True):
@@ -104,14 +125,20 @@ def linear_regression(df, delta_with="week_later"):
     r, p = spearmanr(results['slope'], results['delta_confidence'])
     # print(f"Pearson correlation between slope and delta: r = {r:.2f}, p = {p:.4f}")
 
-    X = add_constant(results['slope'])
-    y = results['delta_confidence']
-    model = OLS(y, X).fit()
-    print(model.summary())
-    plt.figure(figsize=(6, 4))
-    plt.scatter(results['slope'], results['delta_confidence'], alpha=0.8)
-    pred_line = model.predict(X)
-    plt.plot(results['slope'], pred_line, 'r--', label=f'Regression Line\nr={r:.2f}, p={p:.4f}')
+    if STATSMODELS_AVAILABLE:
+        X = add_constant(results['slope'])
+        y = results['delta_confidence']
+        model = OLS(y, X).fit()
+        print(model.summary())
+        plt.figure(figsize=(6, 4))
+        plt.scatter(results['slope'], results['delta_confidence'], alpha=0.8)
+        pred_line = model.predict(X)
+        plt.plot(results['slope'], pred_line, 'r--', label=f'Regression Line\nr={r:.2f}, p={p:.4f}')
+    else:
+        log.warning("Statsmodels not available. Skipping OLS regression plot.")
+        plt.figure(figsize=(6, 4))
+        plt.scatter(results['slope'], results['delta_confidence'], alpha=0.8)
+        plt.plot(results['slope'], results['slope'] * 0, 'r--', label=f'Spearman r={r:.2f}, p={p:.4f}')  # Simple horizontal line
     plt.xlabel('Motivation Slope')
     plt.ylabel(f'Change in Confidence ({delta_with})')
     # plt.title(f'Motivation Trend vs. Change in  Gain (n={len(results)}, delta with {delta_with})')
@@ -119,12 +146,16 @@ def linear_regression(df, delta_with="week_later"):
     plt.legend()
     plt.tight_layout()
     plt.savefig(exp_output_dir / 'results/motivation_vs_confidence.pdf', format="pdf", bbox_inches='tight')
-    plt.show()
+    plt.close()
     log.info(f"Saved motivation vs confidence plot to {exp_output_dir / 'results/motivation_vs_confidence.pdf'}")
 
     return results, corr_df
 
 def loocv(df, delta_with="week_later"):
+    if not SKLEARN_AVAILABLE:
+        log.error("LOOCV evaluation requires sklearn. Skipping...")
+        return None
+        
     results = (
         df.groupby("conv_id", sort=False, group_keys=False)
         .apply(lambda group: compute_row(group, delta_with=delta_with))
@@ -167,9 +198,10 @@ def loocv(df, delta_with="week_later"):
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    plt.show()
-
-    err = np.array(y_pred) - np.array(y_true)
+    exp_output_dir = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
+    os.makedirs(exp_output_dir / "results", exist_ok=True)
+    plt.savefig(exp_output_dir / "results/loocv_pred_vs_true.pdf", format="pdf", bbox_inches="tight")
+    plt.close()
     with np.errstate(divide='ignore', invalid='ignore'):
         percent_err = np.where(np.abs(y_true) > 1e-5, (err / np.array(y_true)) * 100, np.nan)
 
@@ -219,23 +251,48 @@ def plot_trajectory(df: pd.DataFrame, results: pd.DataFrame, pids: str, normaliz
     plt.tight_layout()
     exp_output_dir = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
     plt.savefig(exp_output_dir / 'results/sample_traj.pdf', format="pdf", bbox_inches='tight')
-    plt.show()
+    plt.close()
     log.info(f"Saved sample trajectories plot to {exp_output_dir / 'results/sample_traj.pdf'}")
 
 def relate_outcomes(cfg: DictConfig) -> None:
+    if not SKLEARN_AVAILABLE:
+        log.error("Relate outcomes evaluation requires sklearn. Install with: pip install scikit-learn")
+        return
+
+    mpl.use("Agg")
+
     mpl.rcParams['font.family'] = 'Times New Roman'
 
-    auto_anno_path = Path('data/annotated') / (
+    ap = cfg.annotated
+    turns = ap.num_context_turns if ap.context_mode == "interval" else ""
+    legacy = Path("data/annotated") / (
         f"{cfg.input_dataset.name}_"
         f"{cfg.input_dataset.subset}_"
-        f"{cfg.annotated.class_structure}_"
-        f"{cfg.annotated.model.rsplit('/', 1)[-1]}_"
-        f"{cfg.annotated.context_mode}_"
-        f"{cfg.annotated.num_context_turns if cfg.annotated.context_mode == 'interval' else ''}" 
+        f"{ap.class_structure}_"
+        f"{ap.model.rsplit('/', 1)[-1]}_"
+        f"{ap.context_mode}_"
+        f"{turns}"
         f"_annotated.csv"
-        # f"_annotated_old.csv"
     )
+    parser_m = getattr(ap, "parser_model", None)
+    if parser_m:
+        new_path = Path("data/annotated") / (
+            f"{cfg.input_dataset.name}_"
+            f"{cfg.input_dataset.subset}_"
+            f"{ap.class_structure}_"
+            f"{model_slug(parser_m)}_"
+            f"{model_slug(ap.model)}_"
+            f"{ap.context_mode}_"
+            f"{turns}"
+            f"_annotated.csv"
+        )
+        auto_anno_path = new_path if new_path.exists() else legacy
+    else:
+        auto_anno_path = legacy
     log.info(f"AutoMISC annotations path: {auto_anno_path}")
+    if not auto_anno_path.exists():
+        log.error(f"Annotated CSV not found: {auto_anno_path}")
+        return
     df = pd.read_csv(auto_anno_path)
     label_to_score = {
         "TS-": -2, "AC-": -2, "C-": -2, 

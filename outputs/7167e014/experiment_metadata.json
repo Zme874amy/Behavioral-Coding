@@ -1,0 +1,12 @@
+{
+  "experiment_id": "7167e014",
+  "parser_model": "google/gemma-4-e4b",
+  "parser_provider": "lmstudio",
+  "annotator_model": "qwen/qwen3.5-9b",
+  "annotator_provider": "lmstudio",
+  "annotator_context_mode": "interval",
+  "annotator_num_context_turns": 5,
+  "annotator_class_structure": "tiered",
+  "fine_tuning_enabled": false,
+  "timestamp": "1778626026.7331653"
+}

@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 from lmstudio import BaseModel
 import yaml
 from components.utils import call_chat_model, get_provider
+from components.artifact_paths import get_annotated_csv_path
 from tqdm import tqdm
 from components.prompts.loader import render_prompt, render_user_prompt
 
@@ -89,16 +90,9 @@ class Annotator:
         output_rows = []
         exp_output_dir = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
         output_dir = Path('data/annotated')
-        fn = (
-            f"{self.cfg.input_dataset.name}_"
-            f"{self.cfg.input_dataset.subset}_"
-            f"{self.cfg.annotator.class_structure}_"
-            f"{self.cfg.annotator.model.rsplit('/', 1)[-1]}_"
-            f"{self.cfg.annotator.context_mode}_"
-            f"{self.cfg.annotator.num_context_turns if self.cfg.annotator.context_mode == 'interval' else ''}" 
-            f"_annotated.csv"
-        )
-        save_path = output_dir / fn
+        save_path = get_annotated_csv_path(self.cfg)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fn = save_path.name
         exp_save_path = exp_output_dir / fn
         
         utt_checkpoint = 0
@@ -141,7 +135,6 @@ class Annotator:
                                 {'role': 'system', 'content': t1_system_prompt},
                                 {'role': 'user', 'content': user_prompt}
                             ]
-                            print(f"t1_messages: {t1_messages}")
                             t1 = call_chat_model(
                                 messages=t1_messages,
                                 model=self.cfg.annotator.model, 
@@ -149,7 +142,6 @@ class Annotator:
                                 response_format=CounsellorUtterance_t1 if speaker=="counsellor" else ClientUtterance_t1,
                                 temperature=self.cfg.annotator.temperature
                             )
-                            print(f"t1: {t1}")
                             # Tier 2 prompt using render_prompt and render_user_prompt, and passing t1.label
                             t2_system_prompt = render_prompt(speaker=speaker,structure="t2",label=t1['label'])
                             t2_messages = [

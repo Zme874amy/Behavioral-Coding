@@ -14,25 +14,61 @@ from tqdm import tqdm
 try:
     from sklearn.metrics import classification_report, accuracy_score, f1_score
     SKLEARN_AVAILABLE = True
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     SKLEARN_AVAILABLE = False
-    log.warning("sklearn not available. Install with: pip install scikit-learn")
 
-from validation.IRR import IRR
-from validation.relate_outcomes import relate_outcomes
 from components.utils import call_chat_model, get_provider
+
+
+def _eval_cfg_with_annotated(cfg: DictConfig) -> DictConfig:
+    """Build a config slice with `annotated` fields expected by validation.IRR / relate_outcomes."""
+    if hasattr(cfg, "annotated") and cfg.annotated is not None:
+        return cfg
+    if hasattr(cfg.parser, "models") and cfg.parser.models:
+        m0p = cfg.parser.models[0]
+        parser_model = m0p.model
+    else:
+        parser_model = cfg.parser.model
+
+    if hasattr(cfg.annotator, "models") and cfg.annotator.models:
+        m0 = cfg.annotator.models[0]
+        annotated = OmegaConf.create(
+            {
+                "model": m0.model,
+                "context_mode": m0.context_mode,
+                "num_context_turns": m0.num_context_turns,
+                "class_structure": m0.class_structure,
+                "temperature": getattr(m0, "temperature", 0.0),
+                "parser_model": parser_model,
+            }
+        )
+    else:
+        annotated = OmegaConf.create(
+            {
+                "model": cfg.annotator.model,
+                "context_mode": cfg.annotator.context_mode,
+                "num_context_turns": cfg.annotator.num_context_turns,
+                "class_structure": cfg.annotator.class_structure,
+                "temperature": getattr(cfg.annotator, "temperature", 0.0),
+                "parser_model": parser_model,
+            }
+        )
+    return OmegaConf.create(
+        {
+            "input_dataset": cfg.input_dataset,
+            "annotated": annotated,
+            "experiment": cfg.experiment,
+        }
+    )
 
 
 def run_irr_evaluation(cfg: DictConfig, experiment_results: Dict[str, Any]) -> Dict[str, Any]:
     """Run Inter-Rater Reliability evaluation."""
     log.info("Running IRR evaluation...")
     try:
+        from validation.IRR import IRR
         # IRR expects specific config structure, create a temporary config
-        irr_cfg = OmegaConf.create({
-            'input_dataset': cfg.input_dataset,
-            'annotator': cfg.annotator,
-            'experiment': cfg.experiment
-        })
+        irr_cfg = _eval_cfg_with_annotated(cfg)
         irr_results = IRR(irr_cfg)
         return {'success': True, 'results': irr_results}
     except Exception as e:
@@ -44,12 +80,9 @@ def run_relate_outcomes_evaluation(cfg: DictConfig, experiment_results: Dict[str
     """Run relate outcomes evaluation."""
     log.info("Running relate outcomes evaluation...")
     try:
+        from validation.relate_outcomes import relate_outcomes
         # relate_outcomes expects specific config structure
-        ro_cfg = OmegaConf.create({
-            'input_dataset': cfg.input_dataset,
-            'annotator': cfg.annotator,
-            'experiment': cfg.experiment
-        })
+        ro_cfg = _eval_cfg_with_annotated(cfg)
         ro_results = relate_outcomes(ro_cfg)
         return {'success': True, 'results': ro_results}
     except Exception as e:
@@ -57,49 +90,141 @@ def run_relate_outcomes_evaluation(cfg: DictConfig, experiment_results: Dict[str
         return {'success': False, 'error': str(e)}
 
 
+def _primary_fine_tuning_block(cfg: DictConfig) -> DictConfig:
+    """Resolve a single fine_tuning config for paths (first enabled entry, else first list item)."""
+    ft = cfg.fine_tuning
+    if hasattr(ft, "configs") and ft.configs:
+        for c in ft.configs:
+            if c is None:
+                continue
+            if getattr(c, "enabled", False):
+                return c
+        c0 = ft.configs[0]
+        if c0 is not None:
+            return c0
+    return ft
+
+
 def load_fine_tuned_model(cfg, experiment_id: str) -> Optional[Dict]:
     """Load fine-tuned model metadata for a specific experiment."""
-    if cfg.fine_tuning.provider == 'local':
-        metadata_path = Path(cfg.fine_tuning.output_dir) / f"{experiment_id}_fine_tuning_local_metadata.json"
-        if metadata_path.exists():
-            with metadata_path.open('r') as f:
-                return json.load(f)
-    elif cfg.fine_tuning.provider == 'openai':
-        # Look for the most recent fine-tune job metadata for this experiment
-        output_dir = Path(cfg.fine_tuning.output_dir)
+    block = _primary_fine_tuning_block(cfg)
+    provider = getattr(block, "provider", None)
+    output_dir = Path(getattr(block, "output_dir", "data/fine_tuning"))
+
+    if provider == "local":
+        for metadata_path in (
+            output_dir / experiment_id / "fine_tuning_local_metadata.json",
+            output_dir / f"{experiment_id}_fine_tuning_local_metadata.json",
+            output_dir / "fine_tuning_local_metadata.json",
+        ):
+            if metadata_path.exists():
+                with metadata_path.open("r", encoding="utf-8") as f:
+                    return json.load(f)
+    elif provider == "openai":
         if output_dir.exists():
-            job_files = list(output_dir.glob(f'{experiment_id}_fine_tune_job_*.json'))
+            job_files = list(output_dir.glob(f"{experiment_id}_fine_tune_job_*.json"))
             if job_files:
                 latest_job = max(job_files, key=lambda x: x.stat().st_mtime)
-                with latest_job.open('r') as f:
+                with latest_job.open("r", encoding="utf-8") as f:
                     return json.load(f)
     return None
 
 
 def get_model_for_inference(cfg, experiment_id: str, fine_tuned_metadata: Optional[Dict] = None) -> str:
     """Get the model identifier to use for inference."""
-    if fine_tuned_metadata and cfg.fine_tuning.provider == 'local':
-        # For local models, we need to load from disk
-        return fine_tuned_metadata.get('model_dir', cfg.fine_tuning.base_model)
-    elif fine_tuned_metadata and cfg.fine_tuning.provider == 'openai':
-        # Use the fine-tuned OpenAI model ID
-        return fine_tuned_metadata.get('fine_tuned_model', cfg.fine_tuning.base_model)
+    block = _primary_fine_tuning_block(cfg)
+    provider = getattr(block, "provider", "local")
+    base_model = getattr(block, "base_model", "gpt2")
+    if fine_tuned_metadata and provider == "local":
+        return fine_tuned_metadata.get("model_dir", base_model)
+    if fine_tuned_metadata and provider == "openai":
+        return fine_tuned_metadata.get("fine_tuned_model", base_model)
+    return base_model
+
+
+def _local_hf_generate_label(
+    model, tokenizer, device: str, speaker: str, utterance: str, max_new_tokens: int = 48
+) -> str:
+    """Greedy generation for prompt-completion style MI labels (local HF / PEFT)."""
+    import torch
+
+    prompt = f"Speaker: {speaker}\n\nUtterance: {utterance}\n\nLabel:"
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+    with torch.no_grad():
+        out = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
+        )
+    gen_ids = out[0, inputs["input_ids"].shape[1] :]
+    text = tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+    return text.split()[0] if text else "UNKNOWN"
+
+
+def _run_local_hf_predictions(
+    utterances: List[str], speakers: List[str], ft_meta: Dict[str, Any]
+) -> List[str]:
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    model_dir = Path(ft_meta["model_dir"])
+    base_model = ft_meta["base_model"]
+    use_peft = bool(ft_meta.get("use_peft", False))
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    if use_peft:
+        from peft import PeftModel
+
+        base = AutoModelForCausalLM.from_pretrained(
+            base_model, torch_dtype=torch.float32, low_cpu_mem_usage=True
+        )
+        model = PeftModel.from_pretrained(base, str(model_dir))
     else:
-        # Use the base model (baseline)
-        return cfg.fine_tuning.base_model
+        model = AutoModelForCausalLM.from_pretrained(
+            str(model_dir), torch_dtype=torch.float32, low_cpu_mem_usage=True
+        )
+    model = model.to(device)
+    model.eval()
+
+    predictions: List[str] = []
+    for utterance, speaker in tqdm(
+        zip(utterances, speakers), desc="Local HF inference", total=len(utterances)
+    ):
+        try:
+            predictions.append(
+                _local_hf_generate_label(model, tokenizer, device, speaker, utterance)
+            )
+        except Exception as e:
+            log.warning(f"Local HF inference failed: {e}")
+            predictions.append("UNKNOWN")
+    return predictions
 
 
 def run_inference_on_utterances(
-    utterances: List[str], speakers: List[str], model: str, provider: str, cfg
+    utterances: List[str],
+    speakers: List[str],
+    model: str,
+    provider: str,
+    cfg,
+    local_hf_meta: Optional[Dict[str, Any]] = None,
 ) -> List[str]:
     """Run inference on a list of utterances."""
+    if provider == "local" and local_hf_meta:
+        return _run_local_hf_predictions(utterances, speakers, local_hf_meta)
+
     predictions = []
 
     for utterance, speaker in tqdm(zip(utterances, speakers), desc="Running inference"):
         prompt_parts = [f"Speaker: {speaker}", f"Utterance: {utterance}"]
         prompt = "\n\n".join(prompt_parts) + "\n\nLabel:"
 
-        messages = [{'role': 'user', 'content': prompt}]
+        messages = [{"role": "user", "content": prompt}]
 
         try:
             result = call_chat_model(
@@ -121,18 +246,39 @@ def run_inference_on_utterances(
     return predictions
 
 
-def load_test_data_for_experiment(cfg, experiment_id: str) -> Tuple[List[str], List[str], List[str]]:
+def load_test_data_for_experiment(
+    cfg, experiment_id: str, exp_metadata: Optional[Dict[str, Any]] = None
+) -> Tuple[List[str], List[str], List[str]]:
     """Load test utterances, speakers, and ground truth labels for a specific experiment."""
-    # Look for annotated data from this experiment
     annotated_path = None
-    
-    # Try different possible paths for annotated data
-    possible_paths = [
+    possible_paths: List[Path] = [
         Path('data/annotated') / f"{experiment_id}_annotated.csv",
         Path('outputs') / experiment_id / "annotated.csv",
-        # Fallback to any annotated file (for backward compatibility)
-        Path('data/annotated') / f"{cfg.input_dataset.name}_{cfg.input_dataset.subset}_{cfg.annotator.class_structure}_{cfg.annotator.model.rsplit('/', 1)[-1]}_{cfg.annotator.context_mode}_{cfg.annotator.num_context_turns if cfg.annotator.context_mode == 'interval' else ''}_annotated.csv"
     ]
+    if exp_metadata:
+        parser_tail = exp_metadata["parser_model"].rsplit("/", 1)[-1]
+        model_tail = exp_metadata["annotator_model"].rsplit("/", 1)[-1]
+        ctx = exp_metadata.get("annotator_context_mode", "interval")
+        nturns = exp_metadata.get("annotator_num_context_turns", 5) if ctx == "interval" else ""
+        cls = exp_metadata.get("annotator_class_structure", "tiered")
+        possible_paths.append(
+            Path("data/annotated")
+            / (
+                f"{cfg.input_dataset.name}_{cfg.input_dataset.subset}_{cls}_"
+                f"{parser_tail}_{model_tail}_{ctx}_{nturns}_annotated.csv"
+            )
+        )
+    # Fallback using top-level cfg (single-model runs)
+    if hasattr(cfg.annotator, 'model'):
+        possible_paths.append(
+            Path('data/annotated')
+            / (
+                f"{cfg.input_dataset.name}_{cfg.input_dataset.subset}_{cfg.annotator.class_structure}_"
+                f"{cfg.annotator.model.rsplit('/', 1)[-1]}_{cfg.annotator.context_mode}_"
+                f"{cfg.annotator.num_context_turns if cfg.annotator.context_mode == 'interval' else ''}"
+                f"_annotated.csv"
+            )
+        )
     
     for path in possible_paths:
         if path.exists():
@@ -152,7 +298,12 @@ def load_test_data_for_experiment(cfg, experiment_id: str) -> Tuple[List[str], L
 
     # Use the auto-annotated labels as "ground truth" for evaluation
     # In practice, you'd want human-annotated ground truth
-    label_field = 't2_label_auto' if cfg.annotator.class_structure == 'tiered' else 'label_auto'
+    class_structure = (
+        exp_metadata.get('annotator_class_structure', 'tiered')
+        if exp_metadata
+        else getattr(cfg.annotator, 'class_structure', 'tiered')
+    )
+    label_field = 't2_label_auto' if class_structure == 'tiered' else 'label_auto'
     if label_field not in df.columns:
         label_field = 'label_auto'  # fallback
     
@@ -204,14 +355,13 @@ def run_fine_tuning_comparison(cfg: DictConfig, experiment_results: Dict[str, An
     
     comparison_results = {}
     
-    # Group experiments by model combination (excluding fine-tuning)
+    # Group experiments by parser+annotator (baseline and fine-tuned share the same key)
     model_groups = {}
     for exp_id, exp_data in experiment_results.items():
-        if exp_data.get('fine_tuning_enabled', False):
-            base_key = f"{exp_data['parser_model']}_{exp_data['annotator_model']}"
-            if base_key not in model_groups:
-                model_groups[base_key] = {}
-            model_groups[base_key][exp_id] = exp_data
+        base_key = f"{exp_data['parser_model']}_{exp_data['annotator_model']}"
+        if base_key not in model_groups:
+            model_groups[base_key] = {}
+        model_groups[base_key][exp_id] = exp_data
     
     # For each model combination, compare baseline vs fine-tuned
     for base_key, experiments in model_groups.items():
@@ -238,7 +388,9 @@ def run_fine_tuning_comparison(cfg: DictConfig, experiment_results: Dict[str, An
         for ft_id, ft_data in ft_experiments:
             try:
                 # Load test data for this experiment combination
-                utterances, speakers, ground_truth = load_test_data_for_experiment(cfg, ft_id)
+                utterances, speakers, ground_truth = load_test_data_for_experiment(
+                    cfg, ft_id, exp_metadata=ft_data
+                )
                 
                 # Evaluate baseline
                 baseline_model = baseline_data['parser_model']  # Use parser model as baseline
@@ -252,9 +404,15 @@ def run_fine_tuning_comparison(cfg: DictConfig, experiment_results: Dict[str, An
                 ft_metadata = load_fine_tuned_model(cfg, ft_id)
                 if ft_metadata:
                     ft_model = get_model_for_inference(cfg, ft_id, ft_metadata)
-                    if cfg.fine_tuning.provider == 'local':
+                    ft_block = _primary_fine_tuning_block(cfg)
+                    if getattr(ft_block, "provider", "local") == "local":
                         ft_predictions = run_inference_on_utterances(
-                            utterances, speakers, ft_model, 'local', cfg
+                            utterances,
+                            speakers,
+                            ft_model,
+                            "local",
+                            cfg,
+                            local_hf_meta=ft_metadata,
                         )
                     else:
                         ft_provider = get_provider(ft_model)
@@ -293,16 +451,11 @@ def collect_experiment_results(cfg: DictConfig) -> Dict[str, Any]:
     # Look for experiment results in outputs directory
     outputs_dir = Path('outputs')
     if outputs_dir.exists():
-        for exp_dir in outputs_dir.iterdir():
-            if exp_dir.is_dir() and exp_dir.name.startswith(('202', 'exp_')):  # Date or exp_ prefix
-                exp_id = exp_dir.name.split('_')[0] if '_' in exp_dir.name else exp_dir.name
-                
-                # Try to load experiment metadata
-                metadata_file = exp_dir / "experiment_metadata.json"
-                if metadata_file.exists():
-                    with open(metadata_file, 'r') as f:
-                        exp_data = json.load(f)
-                        experiment_results[exp_id] = exp_data
+        for metadata_file in outputs_dir.rglob("experiment_metadata.json"):
+            with metadata_file.open("r") as f:
+                exp_data = json.load(f)
+            exp_id = exp_data.get("experiment_id", metadata_file.parent.name)
+            experiment_results[exp_id] = exp_data
     
     log.info(f"Collected results from {len(experiment_results)} experiments")
     return experiment_results
@@ -353,6 +506,9 @@ def save_unified_evaluation_results(results: Dict[str, Any], cfg):
 @hydra.main(config_path="../conf", config_name="config", version_base=None)
 def unified_eval(cfg: DictConfig) -> None:
     """Main unified evaluation function."""
+    from main import normalize_config
+
+    cfg = normalize_config(cfg)
     log.info("Starting unified AutoMISC evaluation with configuration:\n%s", OmegaConf.to_yaml(cfg))
     
     # Collect results from all experiments
@@ -402,7 +558,7 @@ def unified_eval(cfg: DictConfig) -> None:
         if ft_results:
             improvements = [comp['improvement']['accuracy_delta'] for comp in ft_results.values()]
             avg_improvement = sum(improvements) / len(improvements)
-            print(".3f")
+            print(f"Average accuracy improvement (fine-tuned vs baseline): {avg_improvement:.4f}")
     
     print(f"\nDetailed results saved to: {results_dir}")
     

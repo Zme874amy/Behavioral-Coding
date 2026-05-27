@@ -1,0 +1,11 @@
+# @package _global_
+# Control cell — matches prior Mac experiments.
+model:
+  base_model: Qwen/Qwen2.5-0.5B-Instruct
+  peft_r: 8
+  peft_alpha: 16
+  target_modules: [q_proj, v_proj]
+
+training:
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 1
