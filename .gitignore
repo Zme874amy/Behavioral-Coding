@@ -3,3 +3,13 @@
 *.jsonl
 *.csv
 .env
+
+# Experiment outputs (large; regenerable)
+outputs/
+!outputs/sft_runs/RESULTS.md
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+.venv/
+.mlerp_extras_installed
