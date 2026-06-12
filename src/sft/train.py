@@ -103,6 +103,7 @@ def train_lora(cfg: DictConfig) -> Path:
         warmup_ratio=float(cfg.training.get("warmup_ratio", 0.1)),
         weight_decay=float(cfg.training.get("weight_decay", 0.0)),
         lr_scheduler_type=str(cfg.training.get("lr_scheduler_type", "cosine")),
+        gradient_checkpointing=bool(cfg.training.get("gradient_checkpointing", False)),
     )
 
     log.info(

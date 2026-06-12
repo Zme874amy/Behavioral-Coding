@@ -36,6 +36,7 @@ class LocalTrainerConfig:
     warmup_ratio: float = 0.1
     weight_decay: float = 0.0
     lr_scheduler_type: str = "cosine"
+    gradient_checkpointing: bool = False
 
 
 def tokenize_prompt_completion(
@@ -138,6 +139,12 @@ def run_local_fine_tuning(
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
 
+    if getattr(cfg_ft, "gradient_checkpointing", False):
+        model.gradient_checkpointing_enable()
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        log.info("Gradient checkpointing enabled")
+
     # Tokenize examples (and attach attention_mask for the padding collator).
     def _tok(ex):
         rec = tokenize_prompt_completion(ex, tokenizer, cfg_ft)
@@ -205,6 +212,7 @@ def run_local_fine_tuning(
         weight_decay=getattr(cfg_ft, "weight_decay", 0.0),
         lr_scheduler_type=getattr(cfg_ft, "lr_scheduler_type", "cosine"),
         dataloader_pin_memory=False,
+        gradient_checkpointing=getattr(cfg_ft, "gradient_checkpointing", False),
     )
     ta_params = inspect.signature(TrainingArguments.__init__).parameters
     eval_strategy = "steps" if eval_dataset is not None else "no"

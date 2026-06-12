@@ -88,3 +88,7 @@ experiment:
   run_evaluation: true
   evaluation_methods: [IRR, relate_outcomes, fine_tuning_comparison]
   max_parallel_jobs: 1
+
+hydra:
+  run:
+    dir: outputs/annotation_runs/${now:%Y-%m-%d_%H-%M-%S}

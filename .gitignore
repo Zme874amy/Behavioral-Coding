@@ -12,4 +12,3 @@ outputs/
 __pycache__/
 *.py[cod]
 .venv/
-.mlerp_extras_installed

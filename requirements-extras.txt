@@ -1,0 +1,9 @@
+# Packages missing from MLeRP DSKS; installed via `pip --user`.
+# (DSKS already has torch, transformers, datasets, huggingface_hub, pandas, sklearn.)
+hydra-core
+omegaconf
+peft
+accelerate
+openai
+lmstudio
+tf-keras

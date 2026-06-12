@@ -1,5 +1,0 @@
-- n_conversations=1
-- fine_tuning.enabled=false
-- 'parser.models=[{provider: lmstudio, model: google/gemma-4-e4b, temperature: 0.0}]'
-- 'annotator.models=[{provider: lmstudio, model: google/gemma-4-e4b, context_mode:
-  interval, num_context_turns: 5, class_structure: tiered, temperature: 0.0}]'

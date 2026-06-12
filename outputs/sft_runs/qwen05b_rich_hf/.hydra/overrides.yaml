@@ -1,4 +1,0 @@
-- +sft_models=qwen05b
-- sft_device=mps
-- training.train_subset_size=80
-- evaluation.sample_size=40

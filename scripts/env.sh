@@ -1,61 +1,47 @@
 #!/usr/bin/env bash
-# MLeRP: dsks_2025.08 + pip --user for hydra/peft.  Mac: .venv from requirements.txt
+# Project environment.
+#   bash scripts/env.sh setup   # once: install extras
+#   source scripts/env.sh       # every session
 #
-#   bash scripts/env.sh setup    # once
-#   source scripts/env.sh        # every session
+# MLeRP: reuses the read-only DSKS conda env + `pip --user` for extras.
+# Local: uses a repo .venv built from requirements.txt.
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 
-# MLeRP DSKS — change version here if needed (dsks_2024.06 also works)
-DSKS="/apps/mambaforge/envs/dsks_2025.08"
-
-_is_mlerp() { [[ -x "${DSKS}/bin/python3" ]]; }
-
-_mlerp_on() {
-  export PATH="${DSKS}/bin:${PATH}"
-  export CONDA_PREFIX="${DSKS}"
-  export PYTHONPATH="${REPO_ROOT}/src"
-}
-
-_setup_mlerp() {
-  _mlerp_on
-  python3 -m pip install --user \
-    hydra-core omegaconf peft accelerate huggingface_hub datasets
-  echo "OK. Run: source ${REPO_ROOT}/scripts/env.sh"
-}
-
-_setup_local() {
-  cd "$REPO_ROOT"
-  python3 -m venv .venv
-  # shellcheck source=/dev/null
-  source .venv/bin/activate
-  pip install -r requirements.txt
-  echo "OK. Run: source ${REPO_ROOT}/scripts/env.sh"
+# Newest /apps/mambaforge/envs/dsks_* that has a python (override with MLERP_DSKS).
+_dsks() {
+  local p
+  for p in ${MLERP_DSKS:-} $(ls -d /apps/mambaforge/envs/dsks_* 2>/dev/null | sort -rV); do
+    [[ -x "$p/bin/python" ]] && { echo "$p"; return 0; }
+  done
+  return 1
 }
 
 if [[ "${1:-}" == "setup" ]]; then
-  _is_mlerp && _setup_mlerp || _setup_local
+  set -euo pipefail
+  cd "$REPO_ROOT"
+  if dsks="$(_dsks)"; then
+    echo "MLeRP DSKS: $dsks"
+    "$dsks/bin/python" -m pip install --user -r requirements-extras.txt
+  else
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements.txt
+  fi
+  echo "Done. Run: source scripts/env.sh"
   exit 0
 fi
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  echo "Run: source ${REPO_ROOT}/scripts/env.sh" >&2
-  exit 1
-fi
-
-cd "$REPO_ROOT"
-if _is_mlerp; then
-  _mlerp_on
-elif [[ -f .venv/bin/activate ]]; then
-  # shellcheck source=/dev/null
-  source .venv/bin/activate
-  export PYTHONNOUSERSITE=1
-  export PYTHONPATH="${REPO_ROOT}/src"
+cd "$REPO_ROOT" || return 1 2>/dev/null || exit 1
+if dsks="$(_dsks)"; then
+  export PATH="$dsks/bin:$PATH"          # gives `python`, plus DSKS torch/transformers
+elif [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
+  source "$REPO_ROOT/.venv/bin/activate"
 else
-  echo "Run: bash ${REPO_ROOT}/scripts/env.sh setup" >&2
+  echo "No env yet. Run: bash scripts/env.sh setup" >&2
   return 1 2>/dev/null || exit 1
 fi
-
-# dsks only has python3
-python() { python3 "$@"; }
-export -f python 2>/dev/null || true
+export PYTHONPATH="$REPO_ROOT/src"
+# DSKS ships TensorFlow; SFT is PyTorch-only — skip TF imports in transformers.
+export USE_TF=0

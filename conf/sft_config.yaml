@@ -54,6 +54,7 @@ training:
   warmup_ratio: 0.05
   weight_decay: 0.0
   lr_scheduler_type: cosine
+  gradient_checkpointing: true
 
 evaluation:
   sample_size: 200

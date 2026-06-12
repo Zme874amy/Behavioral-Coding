@@ -1,4 +1,5 @@
-"""Lightweight package init: avoid importing Parser/Annotator here (circular imports with datatypes)."""
-from .utils import call_chat_model
+"""Lightweight package init.
 
-__all__ = ["call_chat_model"]
+Do not import optional/heavy deps here (lmstudio, Parser, Annotator).
+Import submodules directly, e.g. ``from components.hf_load import ...``.
+"""

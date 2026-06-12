@@ -160,7 +160,12 @@ def load_model_and_tokenizer(
         device_map = "auto" if on_cuda else None
         device_str = "cuda" if on_cuda else ("mps" if on_mps else "cpu")
     else:
-        torch_dtype = torch.float32
+        # Half precision on CUDA keeps a 7B model near ~15GB instead of ~30GB
+        # (fp32), which OOMs on a 40GB GPU. CPU stays float32 for op coverage.
+        if on_cuda:
+            torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        else:
+            torch_dtype = torch.float32
         device_map = None
         device_str = _select_inference_device(force_cpu=force_cpu)
 

@@ -11,7 +11,6 @@ from omegaconf import OmegaConf, DictConfig
 from datatypes.corpus import Corpus
 from components.parser import Parser
 from components.annotator import Annotator
-from components.fine_tuning import run_fine_tuning
 import os
 import openai
 import logging
