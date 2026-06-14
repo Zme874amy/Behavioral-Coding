@@ -21,6 +21,9 @@ cd "$SLURM_SUBMIT_DIR"
 source "${SLURM_SUBMIT_DIR}/scripts/env.sh"
 export TOKENIZERS_PARALLELISM=false
 
+bash "${SLURM_SUBMIT_DIR}/scripts/check_data.sh"
+mkdir -p outputs/automisc_ft
+
 RUN_DIR="outputs/automisc_ft/qwen7b_miv63a"
 
 python3 src/automisc_ft/main.py \

@@ -27,11 +27,10 @@ conditions is the adapter weights.
 ## Run (CUDA / HPC)
 
 ```bash
-# Hugging Face login first (Qwen 2.5-7B is non-gated). See docs/HF_SETUP.md.
+bash scripts/check_data.sh          # must pass first
+source scripts/env.sh
+python src/sft/preflight_hf.py --model Qwen/Qwen2.5-7B-Instruct
 sbatch scripts/mlerp_automisc_ft.slurm
-# or directly:
-PYTHONPATH=src python src/automisc_ft/main.py \
-  hydra.run.dir=outputs/automisc_ft/qwen7b_miv63a
 ```
 
 Artifacts land in `<run_dir>/automisc_ft_eval/`:

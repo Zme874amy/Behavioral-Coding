@@ -40,7 +40,17 @@ def main() -> int:
             )
             return 1
 
-    print("\n1. Rich prompt token length (MIV6.3A sample)...")
+    print("\n1. Data files...")
+    manual = ROOT / "data" / "manual" / "MIV6.3A_manual.csv"
+    if not manual.exists():
+        print(f"   ERROR: missing {manual}")
+        print("   Manual CSVs are not cloned if *.csv was gitignored.")
+        print("   Fix: git pull (after manual CSVs are pushed), or from Mac:")
+        print("        bash scripts/sync_data_to_mlerp.sh")
+        return 1
+    print(f"   OK: {manual}")
+
+    print("\n2. Rich prompt token length (MIV6.3A sample)...")
     train, _, summary = build_lodo(
         train_datasets=["miv63a"],
         test_dataset="hlqc",
@@ -71,7 +81,7 @@ def main() -> int:
             print("   (no CUDA; using CPU for generate to avoid MPS 4GiB NDArray cap)")
             force_cpu = True
 
-    print("\n2. Model load + single generate()...")
+    print("\n3. Model load + single generate()...")
     model, tokenizer, device = load_model_and_tokenizer(
         args.model,
         for_training=False,

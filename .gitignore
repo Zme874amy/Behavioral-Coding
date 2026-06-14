@@ -1,7 +1,11 @@
 /data/proprietary/
 /models/
 *.jsonl
+# Raw/large CSVs stay local; human evaluation labels in data/manual/ are tracked
+# (required for SFT and automisc_ft on MLeRP — they are not in git otherwise).
 *.csv
+!data/manual/
+!data/manual/*.csv
 .env
 
 # Experiment outputs (large; regenerable)

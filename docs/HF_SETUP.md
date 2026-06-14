@@ -25,6 +25,26 @@ Gemma is gated — accept the license on huggingface.co while logged into the sa
 [gemma-3n-E4B-it](https://huggingface.co/google/gemma-3n-E4B-it),
 [gemma-2-9b-it](https://huggingface.co/google/gemma-2-9b-it). Qwen is open.
 
+## Data on MLeRP
+
+Human evaluation labels live in `data/manual/` and **must** be present before
+SFT or `automisc_ft` runs. They are tracked in git (exception to `*.csv` in
+`.gitignore`).
+
+After clone:
+
+```bash
+bash scripts/check_data.sh
+```
+
+If missing, from your **Mac** (repo with local `data/manual/`):
+
+```bash
+bash scripts/sync_data_to_mlerp.sh
+```
+
+Then on MLeRP: `git pull` if the CSVs were pushed to GitHub, or re-run check.
+
 ## Run
 
 ```bash
