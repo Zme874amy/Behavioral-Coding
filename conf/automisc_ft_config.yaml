@@ -1,0 +1,93 @@
+# AutoMISC + LoRA fine-tuning: fair head-to-head experiment.
+#
+# Runs the ORIGINAL AutoMISC hierarchical (T1 -> T2) annotator as a zero-shot
+# baseline, then trains two LoRA adapters (one for T1, one for T2) and re-runs
+# the SAME pipeline so the only difference between conditions is the adapter
+# weights. Conversation-level K-fold cross-validation on the MIV6.3A clean set;
+# per-speaker Tier-1 accuracy and Tier-2 macro-F1 / accuracy.
+#
+# Usage (CUDA / HPC):
+#   PYTHONPATH=src python src/automisc_ft/main.py \
+#       hydra.run.dir=outputs/automisc_ft/qwen7b_miv63a
+#
+# See docs/HF_SETUP.md for Hugging Face login (Qwen 2.5-7B is non-gated).
+
+defaults:
+  - _self_
+
+# Dataset: the human-consensus manual CSV (already utterance-segmented).
+dataset:
+  name: miv63a
+  manual_csv: data/manual/MIV6.3A_manual.csv
+
+# Optional: cap the number of conversations (smoke testing only; null = all).
+limit_convs: null
+
+# AutoMISC annotator settings (original pipeline).
+annotator:
+  context_mode: interval      # all | cumulative | interval
+  num_context_turns: 3        # paper headline for MIV6.3A
+  # T2 parsing can be restricted to the predicted T1 group's codes. The
+  # original schema (response_formats.py) allows the full T2 vocab, so default
+  # to full-vocab parsing to stay faithful; set true to constrain to the group.
+  restrict_t2_to_group: false
+
+# Cross-validation (conversation-level so no conversation leaks).
+cv:
+  n_folds: 5
+  seed: 42
+
+model:
+  base_model: Qwen/Qwen2.5-7B-Instruct
+  use_peft: true
+  peft_r: 16
+  peft_alpha: 32
+  peft_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  fp16: false
+  bf16: true
+  trust_remote_code: false
+  attn_implementation: sdpa
+
+training:
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 4
+  num_train_epochs: 3
+  learning_rate: 1e-4
+  # The original counsellor T1 prompt (groupings + Permission CoT) reaches
+  # ~2.2k tokens; size generously so the target utterance (at the end) is never
+  # truncated.
+  max_length: 3072            # rich tiered prompt + 3 volleys of context + label
+  max_target_length: 8        # completion is a single label
+  validation_split: 0.0
+  seed: 42
+  logging_steps: 10
+  save_steps: 100000
+  save_total_limit: 1
+  show_tqdm: true
+  max_grad_norm: 1.0
+  warmup_ratio: 0.05
+  weight_decay: 0.0
+  lr_scheduler_type: cosine
+  gradient_checkpointing: true
+
+# Inference / decoding. Identical for zero-shot and fine-tuned conditions.
+# Zero-shot follows the original prompt (explanation THEN label), so generation
+# must be long enough to reach the label; the fine-tuned model emits the label
+# first and stops early at EOS, so the same budget is fair to both.
+inference:
+  max_new_tokens: 200         # room for zero-shot explanation + label
+  max_input_len: 3072         # never truncate the ~2.2k-token T1 prompt
+  force_cpu: false
+
+hydra:
+  run:
+    dir: outputs/automisc_ft/${dataset.name}_${now:%Y-%m-%d_%H-%M-%S}

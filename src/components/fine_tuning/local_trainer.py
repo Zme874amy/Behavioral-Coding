@@ -231,6 +231,19 @@ def run_local_fine_tuning(
     if on_mps:
         ta_kwargs["max_grad_norm"] = 0.0  # disables clipping (NaN-safe)
 
+    # Drop any kwargs the installed transformers version does not accept. Some
+    # arguments were removed across major releases (e.g. `overwrite_output_dir`
+    # and `evaluation_strategy` are gone in transformers 5.x), so filter to the
+    # current signature to stay compatible across versions.
+    accepts_var_kwargs = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in ta_params.values()
+    )
+    if not accepts_var_kwargs:
+        dropped = [k for k in ta_kwargs if k not in ta_params]
+        if dropped:
+            log.info("Dropping unsupported TrainingArguments kwargs: %s", dropped)
+        ta_kwargs = {k: v for k, v in ta_kwargs.items() if k in ta_params}
+
     training_args = TrainingArguments(**ta_kwargs)
     log.info(
         "Training device: %s",

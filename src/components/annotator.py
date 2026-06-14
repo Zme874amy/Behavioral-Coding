@@ -11,6 +11,7 @@ from lmstudio import BaseModel
 import yaml
 from components.utils import call_chat_model, get_provider
 from components.artifact_paths import get_annotated_csv_path
+from components.context import build_context_excerpt
 from tqdm import tqdm
 from components.prompts.loader import render_prompt, render_user_prompt
 
@@ -37,51 +38,13 @@ class Annotator:
                             ) -> str:
         '''
         Get context excerpt for the utterance based on the specified context mode.
+
+        Thin wrapper around `components.context.build_context_excerpt` so the
+        production annotator and the `automisc_ft` fine-tuning pipeline share
+        identical context-construction logic.
         '''
-        row = df.iloc[utt_idx]
-        conv_id = row["conv_id"]
-        conv_utt_idx = row["conv_utt_idx"]
-        conv_vol_idx = row["conv_vol_idx"]
-        conv_df = df[df["conv_id"] == conv_id].reset_index(drop=True)
+        return build_context_excerpt(df, utt_idx, context_mode, num_context_turns)
 
-        if context_mode == "all":
-            context_df = conv_df
-        elif context_mode == "cumulative":
-            context_df = conv_df[conv_df["conv_utt_idx"] <= conv_utt_idx]
-        elif context_mode == "interval":
-            vol_start = max(0, conv_vol_idx - num_context_turns)
-            prev_vol_df = conv_df[
-                (conv_df["conv_vol_idx"] >= vol_start) &
-                (conv_df["conv_vol_idx"] < conv_vol_idx)
-            ]
-            curr_vol_df = conv_df[
-                (conv_df["conv_vol_idx"] == conv_vol_idx) &
-                (conv_df["conv_utt_idx"] <= conv_utt_idx)
-            ]
-            context_df = pd.concat([prev_vol_df, curr_vol_df])
-        else:
-            raise ValueError(f"Invalid context mode: {context_mode}")
-
-        formatted_segments = []
-        prev_speaker = None
-        segment = ""
-
-        for _, row in context_df.iterrows():
-            speaker = row['speaker']
-            text = row['utt_text']
-            if speaker != prev_speaker:
-                if segment:
-                    formatted_segments.append(segment.strip())
-                segment = f"{speaker}: {text}"
-            else:
-                segment += f" {text}"
-            prev_speaker = speaker
-
-        if segment:
-            formatted_segments.append(segment.strip())
-
-        return "\n".join(formatted_segments)
-    
     def annotate_corpus(self, corp: Corpus):
         """
         """
