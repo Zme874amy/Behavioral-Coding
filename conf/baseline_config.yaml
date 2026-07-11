@@ -1,0 +1,28 @@
+# Config for the AutoMISC baseline reproduction study (src/baseline/main.py).
+model: gpt-4o
+provider: azure
+temperature: 0.0
+context_mode: interval
+num_context_turns: 5
+
+eval_csv: data/manual/MIV6.3A_manual.csv
+fewshot_path: data/fewshot/exemplars.json
+output_dir: data/annotated/baseline
+
+# Which condition to run (override on CLI: condition=fewshot_bare)
+condition: zeroshot_rationales
+
+conditions:
+  zeroshot_rationales: {rationales: true, fewshot: false}
+  zeroshot_bare: {rationales: false, fewshot: false}
+  fewshot_rationales: {rationales: true, fewshot: true}
+  fewshot_bare: {rationales: false, fewshot: true}
+  # Fine-tuned model, evaluated zero-shot label-only. Override the model on the
+  # CLI with the fine-tuned deployment name: condition=finetuned model=<deployment>
+  finetuned: {rationales: false, fewshot: false}
+
+# Limit number of utterances (null = all). Use limit=10 for smoke tests.
+limit: null
+
+checkpoint_every: 25
+max_retries: 6

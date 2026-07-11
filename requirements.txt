@@ -4,6 +4,7 @@ lmstudio
 omegaconf
 openai
 pandas
+python-dotenv
 pydantic
 PyYAML
 tqdm

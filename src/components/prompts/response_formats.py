@@ -38,3 +38,25 @@ class ClientUtterance_flat(BaseModel):
     label: Literal["O+", "D+", "AB+", "R+", "N+", "C+", "AC+", "TS+",
                    "O-", "D-", "AB-", "R-", "N-", "C-", "AC-", "TS-",
                    "N"]
+
+
+# Label-only ("no rationales") variants for the baseline reproduction study.
+
+class CounsellorUtterance_t1_bare(BaseModel):
+    label: Literal["CRL", "SRL", "IMC", "IMI", "Q", "O"]
+
+class CounsellorUtterance_t2_bare(BaseModel):
+    label: Literal["CR", "AF", "SU", "RF", "EC",
+                   "SR",
+                   "ADP", "RCP", "GI",
+                   "ADW", "CO", "DI", "RCW", "WA",
+                   "OQ", "CQ",
+                   "FA", "FI", "ST"]
+
+class ClientUtterance_t1_bare(BaseModel):
+    label: Literal["C", "S", "N"]
+
+class ClientUtterance_t2_bare(BaseModel):
+    label: Literal["O+", "D+", "AB+", "R+", "N+", "C+", "AC+", "TS+",
+                   "O-", "D-", "AB-", "R-", "N-", "C-", "AC-", "TS-",
+                   "N"]

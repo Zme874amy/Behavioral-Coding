@@ -1,0 +1,360 @@
+{
+  "counsellor": {
+    "t1": [
+      {
+        "transcript": "client: if I if I tell you what I'm really thinking are you tell my wife but\ncounsellor: no no I mean confidentiality is such that no I want you to know I'd never feel comfortable talking\nclient: I do not assess us but you know I think you you I think you kind of get me kind understanding so I really you know my um my son's in AAA\ncounsellor: okay\nclient: and and you know when he went into his treat treatment and he really was hard on me like he said that he blamed me for him you know get you know going down that path and and and I really felt like maybe I could have done more he and i were really close now we're not as close because he I can tell you this doesn't like to be around me as I drink and my daughter is she sent me a letter a while ago saying that she loved me and that she didn't want me to die and wanted my kids to be around her but her kids to be around me but she um she didn't want him around as much because cuz she didn't like it when I'm drinking so well so yeah I've had I've had those couple things that that maybe go maybe maybe that maybe I need to rethink this yeah and then I'm always one way and that's really like I still want to lose her I just don't\ncounsellor: well you know gosh I really appreciate the Jew did you feel comfortable sharing with me to know who those things with me and and I can see that you know this has been very painful",
+        "speaker": "counsellor",
+        "utterance": "to know who those things with me and and I can see that you know this has been very painful",
+        "t1_label": "CRL",
+        "t2_label": "AF",
+        "t1_explanation": "The counsellor's statement acknowledges the client's emotional experience and validates their feelings by recognizing the pain they are going through. This aligns with the 'Support' (SU) code under the CRL category, as it demonstrates empathy and understanding of the client's perspective."
+      },
+      {
+        "transcript": "client: Mm-hm.\ncounsellor: When, after the baby was born. What, what thoughts do you have about how you might go about balancing that and, and, and thinking about, thinking about that? What have you thought about?\nclient: Well, I guess I think initially that I would need his help more. He would need to help take care of the baby. He didn't do that now, so I don't know, and it'd be kind of scary, that, I don't know what that would look like. So I would have to find some other help to get, to be able to go to work, even just part time.\ncounsellor: Mm-hm.\nclient: So, I've got to get some child care or something.\ncounsellor: Yeah. So you might have to explore some other options for the child care and, and other ways of taking care of the, the baby so that you would be still okay about going back to work.",
+        "speaker": "counsellor",
+        "utterance": "So you might have to explore some other options for the child care and, and other ways of taking care of the, the baby so that you would be still okay about going back to work.",
+        "t1_label": "SRL",
+        "t2_label": "SR",
+        "t1_explanation": "The counsellor's statement paraphrases the client's earlier expressed thoughts about needing to explore child care options and other support to manage work and childcare. This is a Simple Reflection (SR) as it mirrors the client's words without adding new meaning or depth."
+      },
+      {
+        "transcript": "client: not too much to be honest yeah\ncounsellor: okay so setting this goal then of quitting drinking is gonna be really helpful for you and it sounds like it shouldn't be that tough really especially because you can just stop hanging out with the people who drink a lot since you have some other friends yeah so do you have any questions for me? or...\nclient: what should I write yeah I do so what should I say like once let's say I hang out with my friends and I like they why aren't you why aren't you drinking\ncounsellor: mm-hmm\nclient: like how should I go about that situation\ncounsellor: well you know one good option would be to just review with them all the bad things about alcohol you can say you know I thought about it and I realized it's gonna mess up my homework and you know it's really a lot of risk for my health I don't want to become an alcoholic you know I don't want to get liver disease I don't want to end up driving drunk or getting into accidents or getting in fights",
+        "speaker": "counsellor",
+        "utterance": "I don't want to end up driving drunk or getting into accidents or getting in fights",
+        "t1_label": "IMC",
+        "t2_label": "ADP",
+        "t1_explanation": "The counsellor provides advice on how the client could respond to their friends' questions about not drinking, offering specific examples of reasons to share. Permission is granted implicitly, as the client explicitly asked for guidance on how to handle this situation, making this an instance of IMC."
+      },
+      {
+        "transcript": "client: yeah yeah definitely I'll just not have a drink\ncounsellor: okay and then what about your friends who are still drinking\nclient: um I really can't control what they do but I'll definitely try to get my closest friends to maybe stop like I will\ncounsellor: okay and what if they won't\nclient: well then I guess I'll just try to hang around unless or something or try to find things for us to do that don't involve alcohol like a party anything\ncounsellor: yeah probably if your friends won't quit drinking you should just find new friends",
+        "speaker": "counsellor",
+        "utterance": "yeah probably if your friends won't quit drinking you should just find new friends",
+        "t1_label": "IMI",
+        "t2_label": "ADW",
+        "t1_explanation": "The counsellor provides direct advice ('you should just find new friends') without seeking or receiving permission from the client to offer such guidance. There is no indication in the context that the client explicitly or implicitly requested advice or showed openness to receiving it, nor did the counsellor ask for permission before giving the advice. Therefore, the correct label is IMI."
+      },
+      {
+        "transcript": "client: yeah I don't like it people tell me what to do\ncounsellor: yeah no no\nclient: usually I just usually if someone tells me what to do like tell him to back off\ncounsellor: wouldn't know what to do\nclient: and so but she's serious it's time so I don't know what to do so\ncounsellor: all right all right well so I guess that's kind of the that's the dilemma I guess you know on the one hand she's uh she's very out of it she's very concerned and is making her expectation very clear on the other hands you know you're being asked to give up something that you don't particularly want to give up um what do you think what do you think she's what you put why do you think she's so concerned",
+        "speaker": "counsellor",
+        "utterance": "why do you think she's so concerned",
+        "t1_label": "Q",
+        "t2_label": "OQ",
+        "t1_explanation": "The counsellor's final utterance is a question aimed at eliciting the client's perspective on why the other person is concerned. It is an open-ended question, as it invites the client to elaborate and provide their thoughts rather than offering a simple yes or no response, fitting the definition of 'Open Question (OQ)' under the 'Q' category."
+      },
+      {
+        "transcript": "counsellor: I you know you don't have to sign up if you don't want to but you know I'm kind of here to like fix things for you and just make sure everything goes no real smoothly with the different issues that you've been having and just kind of oh you know kind of manage things and just take care of stuff so you know it's again if you want the service you can have it but it's kind of up to you but I am here if you want me to be and you know I'll couldn't kind of teach you about things you might not know about or tell you some things about your house and you know just Marlys make sure everything goes okay so you know you think that might be something you'd be interested in wanting to be a part of because I'd you know really like to help you\nclient: okay well sure when you put it that way sure\ncounsellor: because it seems like I you know you've expressed some health issues lately and I know you've had a lot of problems with your weight so that's certainly something we can talk about and I know a lot about you know weight loss and have helped a lot of people with you know managing their weight and figuring out what they need to do",
+        "speaker": "counsellor",
+        "utterance": "and have helped a lot of people with you know managing their weight and figuring out what they need to do",
+        "t1_label": "O",
+        "t2_label": "ST",
+        "t1_explanation": "The counsellor's final utterance is a continuation of a statement about their experience and expertise in helping others with weight management. It does not directly engage in MI techniques, provide advice, or elicit information, but rather serves as a neutral statement about their background, which aligns with the 'Other/Neutral' category."
+      }
+    ],
+    "t2": {
+      "CRL": [
+        {
+          "transcript": "client: Mm-hm.\ncounsellor: What do you think?\nclient: Well, it, it's it's funny, as you're showing me this, I, I've been thinking that all I've been doing is focusing on the baby, and being a good mom, and and, and yet, I'm also trying to think about getting a job, and I don't know how those two, fit together. And even as I'm just saying that out loud, I'm not even talking about taking care of him, which is weird that I'm not even. When I look at this, these circles I, I'm looking at mothering and children and finances and that seems to be important, yet I'm spend, I spend so much time thinking about him all the time. And right now I'm not.\ncounsellor: Mm-hm. So maybe y, y, you spend a lot of time already thinking about your relationship and really struggling with w, w, what it, where, what it means and where it is.\nclient: Mm-hm.\ncounsellor: And now you are kinda think well maybe I oughta think about some other things and see where I might go with those.",
+          "speaker": "counsellor",
+          "utterance": "And now you are kinda think well maybe I oughta think about some other things and see where I might go with those.",
+          "t1_label": "CRL",
+          "t2_label": "CR",
+          "t2_explanation": "The counsellor's statement reflects the client's thoughts about shifting focus to other areas of her life, adding depth by summarizing her internal conflict and highlighting her consideration of new possibilities. This demonstrates a complex reflection of the client's expressed concerns and evolving perspective."
+        },
+        {
+          "transcript": "counsellor: hey Monica how are you doing today\nclient: I'm okay right now but I'm a little anxious because thinking about how Black Friday is soon and my friends want to go to the mall for Black Friday but I really can't go and I want to go but I really to interesting\ncounsellor: so it sounds like you really want to go to Black Friday with your friends you're feeling a little anxious about it\nclient: yeah Monaco but interesting but I was thinking about it and maybe if I could make an image or something that I could use while I'm there maybe I'd be able to go so I was wondering if I could give you that very well\ncounsellor: that sounds like a great idea",
+          "speaker": "counsellor",
+          "utterance": "that sounds like a great idea",
+          "t1_label": "CRL",
+          "t2_label": "AF",
+          "t2_explanation": "The counsellor's statement acknowledges and compliments the client's idea, highlighting it as a positive and constructive step. This aligns with the 'Affirm' category, as it reinforces the client's strengths and efforts in problem-solving and planning for the situation they are anxious about."
+        },
+        {
+          "transcript": "client: okay\ncounsellor: and then I think the flute journal would be really important because then we'll really have a better idea what you what you truly are eating and how many calories and then we can go from there and deciding you know how many calories you really should be eating in your diet and that way you can do a better job of monitoring it\nclient: okay\ncounsellor: so how about we meet back and say three to four weeks and we can kind of see how that journal is going so\nclient: that seems like a long time I mean I think in three to four weeks a lot of things can happen and I think these things\ncounsellor: yeah if you have any problems along the way before then feel free to give me a call I'm always available so if there is something that you find that's just not working just give me a call we can kind of discuss it but then we can meet in person",
+          "speaker": "counsellor",
+          "utterance": "we can kind of discuss it but then we can meet in person",
+          "t1_label": "CRL",
+          "t2_label": "SU",
+          "t2_explanation": "The counsellor's final utterance expresses understanding and offers reassurance by suggesting they can discuss any issues and meet in person if needed, which aligns with providing support to the client in their journey and addressing their concerns about the timeline. This demonstrates sympathy and compassion for the client's feelings and needs, making 'Support' the appropriate label."
+        },
+        {
+          "transcript": "client: it is usually when I'm at home I'm pretty depressed and thinking this is the rest of my life and it's not something I'm it just doesn't make me happy when I think of it like that so to think there might be alternatives or choices interesting i'm not sure what to do with that honestly\ncounsellor: and something brought you here today it did\nclient: yeah\ncounsellor: what was it that made you decide even with all of that sort of thinking about at home?\nclient: i'm not sure if this is possible or this this may not work out for me\ncounsellor: and yet there was something that brought you here",
+          "speaker": "counsellor",
+          "utterance": "and yet there was something that brought you here",
+          "t1_label": "CRL",
+          "t2_label": "RF",
+          "t2_explanation": "The counsellor's statement reframes the client's uncertainty and doubt by highlighting their action of coming to the session, suggesting a positive and meaningful alternative perspective on their decision to seek help despite their reservations. This shifts the focus from doubt to the proactive step the client has taken, which is characteristic of a reframe. "
+        },
+        {
+          "transcript": "client: I'm okay right now but I'm a little anxious because thinking about how Black Friday is soon and my friends want to go to the mall for Black Friday but I really can't go and I want to go but I really to interesting\ncounsellor: so it sounds like you really want to go to Black Friday with your friends you're feeling a little anxious about it\nclient: yeah Monaco but interesting but I was thinking about it and maybe if I could make an image or something that I could use while I'm there maybe I'd be able to go so I was wondering if I could give you that very well\ncounsellor: that sounds like a great idea can absolutely do that\nclient: okay\ncounsellor: so we have some materials on the table but if you'd like to use anything else that we've used previously just let me know",
+          "speaker": "counsellor",
+          "utterance": "but if you'd like to use anything else that we've used previously just let me know",
+          "t1_label": "CRL",
+          "t2_label": "EC",
+          "t2_explanation": "The counsellor's statement emphasizes the client's autonomy by inviting them to choose materials they prefer, highlighting their freedom to make decisions about the process and tools they use for their plan or activity. This aligns with the 'Emphasize Control' category as it supports the client's sense of agency and choice in the situation."
+        }
+      ],
+      "SRL": [
+        {
+          "transcript": "client: Mm-hm.\ncounsellor: When, after the baby was born. What, what thoughts do you have about how you might go about balancing that and, and, and thinking about, thinking about that? What have you thought about?\nclient: Well, I guess I think initially that I would need his help more. He would need to help take care of the baby. He didn't do that now, so I don't know, and it'd be kind of scary, that, I don't know what that would look like. So I would have to find some other help to get, to be able to go to work, even just part time.\ncounsellor: Mm-hm.\nclient: So, I've got to get some child care or something.\ncounsellor: Yeah. So you might have to explore some other options for the child care and, and other ways of taking care of the, the baby so that you would be still okay about going back to work.",
+          "speaker": "counsellor",
+          "utterance": "So you might have to explore some other options for the child care and, and other ways of taking care of the, the baby so that you would be still okay about going back to work.",
+          "t1_label": "SRL",
+          "t2_label": "SR",
+          "t2_explanation": "The counsellor's final utterance paraphrases the client's concerns about needing child care and other support to balance work and parenting, reflecting the client's thoughts without adding new information or interpretation, which is characteristic of a Simple Reflection (SR)."
+        }
+      ],
+      "IMC": [
+        {
+          "transcript": "client: you could tell me about it\ncounsellor: I mean about what you should be eating for yeah meat size and like you know baseball size for fruit so it's not that you don't know about it you you you do know about poor lighting control\nclient: yeah\ncounsellor: so if you know how much you should be eating and then how is it a means you know how much you should be eating then how do you stop\nclient: well I guess you told me that you know a lot and you can fix my problem so that that's interesting I'm that's one of the reasons why I decided to participate so I was wondering if you could tell me\ncounsellor: well that's great I could do about this yeah because you know there's there's just so many different things when it comes to like weight loss you know and really being able to have some self-control I mean that's a really really important factor this is really being able to have some self-control and you know I found a lot of people just really need to increase their fruits and their vegetables and just not eat any processed foods and you know not eat any anything that might be kind of junk but then you know not not cheat either I mean you want to be able let yourself have some ice cream or some things that you might really like from time to time because you know you don't want to completely not let yourself have good stuff either",
+          "speaker": "counsellor",
+          "utterance": "because you know you don't want to completely not let yourself have good stuff either",
+          "t1_label": "IMC",
+          "t2_label": "ADP",
+          "t2_explanation": "The counsellor provides advice on maintaining balance in dietary habits, suggesting that the client should allow themselves occasional treats while focusing on healthy eating. This advice is given in a supportive manner, aligning with the 'Advise With Permission' category as the client had previously expressed interest in receiving guidance on the topic of weight loss and self-control."
+        },
+        {
+          "transcript": "client: well um on the weekends I like to hang out with my friends maybe go like a party or go to the mall to shop or if there's like a school related event we'll go to like a football game or something like that yeah I like to have a good time\ncounsellor: yeah and you have a lot of friends or a few close people or\nclient: um I would say like a moderate amount I'm not really really popular or like I have no friends um I'm like normal alright that's a good way to be right yeah alright\ncounsellor: so um it sounds like in general your things are going pretty well for you how are your grades right now\nclient: um they're pretty good a zombie's so I'm doing okay okay\ncounsellor: well one thing I want to ask about is you know different people have sort of different values or things that are important to them",
+          "speaker": "counsellor",
+          "utterance": "well one thing I want to ask about is you know different people have sort of different values or things that are important to them",
+          "t1_label": "IMC",
+          "t2_label": "GI",
+          "t2_explanation": "The counsellor's utterance provides general information about the concept of values and things that are important to people, without offering advice or raising concerns. This aligns with the 'Giving Information' category as it aims to educate or explain something to the client without seeking permission first or suggesting action steps directly. The focus is on sharing knowledge rather than guiding or advising the client in any specific direction, which is why the label is GI."
+        }
+      ],
+      "IMI": [
+        {
+          "transcript": "client: that I think I think the possibility okay so make a good plan like I think I'd be able to follow\ncounsellor: okay great so the plan is going to be that you're gonna quit and the friends that you have that you don't think are supportive you're just gonna not hang out with anymore yeah okay and then um you know like are your friends in band drinking?\nclient: um not not really the ones that drink more are the ones like my class friends okay my friends we're focused on bands uh-huh can't relieve\ncounsellor: okay so that might be good is really just to focus more on band um cuz you know the other big concern I have for you is if you want to go to medical school you're not ever gonna get into medical school if you're drinking like this yeah you know like college is gonna be really hard and especially without those pre-med classes you're not gonna be able handle it. Drinking this much you know have you thought about that?\nclient: not too much to be honest yeah\ncounsellor: okay so setting this goal then of quitting drinking is gonna be really helpful for you and it sounds like it shouldn't be that tough really especially because you can just stop hanging out with the people who drink a lot since you have some other friends",
+          "speaker": "counsellor",
+          "utterance": "since you have some other friends",
+          "t1_label": "IMI",
+          "t2_label": "ADW",
+          "t2_explanation": "The counsellor provides a suggestion about quitting drinking and focusing on other friends without explicitly seeking or receiving the client's permission to offer this advice. This aligns with the 'Advise Without Permission' category as the advice is given unprompted and without prior consent from the client."
+        },
+        {
+          "transcript": "client: um I really can't control what they do but I'll definitely try to get my closest friends to maybe stop like I will\ncounsellor: okay and what if they won't\nclient: well then I guess I'll just try to hang around unless or something or try to find things for us to do that don't involve alcohol like a party anything\ncounsellor: yeah probably if your friends won't quit drinking you should just find new friends because you know the problem is if they're drinking they're going to pressure you into drinking and then you're going to feel awkward and you know you're going to be stuck and and not know what to do and really just be better off probably without them if they're if they're the kind of people who are going to keep drinking they're probably not a good influence\nclient: okay yeah\ncounsellor: and then then you'll be better set for college too because you know the issue is you're getting good grades now",
+          "speaker": "counsellor",
+          "utterance": "and then then you'll be better set for college too because you know the issue is you're getting good grades now",
+          "t1_label": "IMI",
+          "t2_label": "RCW",
+          "t2_explanation": "The counsellor raises a concern about the client's current situation by implying that their friends' behavior could negatively impact their academic success and future in college. This concern is shared without explicitly seeking the client's permission to discuss it, which aligns with the RCWP category label."
+        },
+        {
+          "transcript": "client: um definitely yeah I mean what about parties is stuff and it's getting a little late some people that drink like drank too much they start throwing up or they get hurt or they're really loud and obnoxious and that's not fun for anybody\ncounsellor: so you've seen a lot of other kids you had some consequences and decided that's not for you\nclient: yeah\ncounsellor: got it I can understand that any other things that you can think of\nclient: um no I mean I've never you know been friends with anybody that's got into like a serious accident and stuff it's just very like obnoxious thing\ncounsellor: okay well so you know as someone who's not yet it is underage drinking is something that's not legal",
+          "speaker": "counsellor",
+          "utterance": "okay well so you know as someone who's not yet it is underage drinking is something that's not legal",
+          "t1_label": "IMI",
+          "t2_label": "WA",
+          "t2_explanation": "The counsellor's statement highlights the illegality of underage drinking, implying a potential negative consequence (legal trouble) if the client engages in it. This aligns with the definition of a warning, as it suggests a negative outcome without explicitly seeking permission to discuss it further."
+        },
+        {
+          "transcript": "client: my close ones I know they wouldn't be you know have a problem with that but the ones that I'm not that close to its but I'll still like hang out with those are probably the ones that I think made ostracize nice or something\ncounsellor: it sounds like you might be better off without them though there yeah maybe not very good friends probably\nclient: might be too judgmental mm-hmm\ncounsellor: so so I think we should set a goal that you're gonna stop drinking and I think you should probably stop as soon as possible like this weekend okay so the way this normally works is you know we set your goal and then I'll have you come back and we'll talk about it again in a couple weeks and make sure that you actually stopped and so what do you think about?\nclient: that I think I think the possibility okay so make a good plan like I think I'd be able to follow\ncounsellor: okay great so the plan is going to be that you're gonna quit",
+          "speaker": "counsellor",
+          "utterance": "okay great so the plan is going to be that you're gonna quit",
+          "t1_label": "IMI",
+          "t2_label": "DI",
+          "t2_explanation": "The counsellor's final utterance explicitly states the plan as a directive, using imperative language ('the plan is going to be that you're gonna quit'). This makes it a clear example of giving a direction or command, which aligns with the 'Direct' category."
+        },
+        {
+          "transcript": "client: more or less the same amount so right now the most we'll have is maybe like one cup I don't do that one time but sometimes one or two but they can be kind of heavy\ncounsellor: okay so it's one cup but let's imagine not what I drink a lot of alcohol in it okay. so gosh you're you're actually really drinking quite a lot you know your level of drinking puts you in what we call a high-risk group so is that surprising to you?\nclient: a little bit yeah\ncounsellor: so we caught high risk because it means that there's actually quite a bit of chances that you're gonna have some bad consequences from drinking like that so you know things like having car accidents or other accidents or getting in fights or you know sexual assault or health problems or developing alcoholism have you thought about those things?\nclient: not too much to be honest I've always thought since it's you know within my small group of friends and we usually sleep over each other the house we don't get into the problems of drinking and driving and possibly sexual assaults and things like that but I haven't really thought about possible alcoholism or anything\ncounsellor: Okay, so it's good because you are not drinking and driving but you're still really drinking a lot",
+          "speaker": "counsellor",
+          "utterance": "Okay, so it's good because you are not drinking and driving but you're still really drinking a lot",
+          "t1_label": "IMI",
+          "t2_label": "CO",
+          "t2_explanation": "The counsellor's final utterance directly criticizes the client by emphasizing that they are 'still really drinking a lot,' which could be perceived as judgmental or shaming. This aligns with the 'Confront' category as it challenges the client in a way that may feel critical or corrective rather than supportive or collaborative."
+        }
+      ],
+      "Q": [
+        {
+          "transcript": "client: Nice to meet you.\ncounsellor: And how are you? How are you today?\nclient: I'm fine. Thanks. Well, strange, feeling strange for this but okay.\ncounsellor: Yeah it's something really different for you?\nclient: Mm-mm. I have, I have not done this before.\ncounsellor: Well why don't you tell me a little bit about what brings you here today.",
+          "speaker": "counsellor",
+          "utterance": "Well why don't you tell me a little bit about what brings you here today.",
+          "t1_label": "Q",
+          "t2_label": "OQ",
+          "t2_explanation": "The counsellor's question structurally requires the client to provide a descriptive narrative or explanation about their reasons for attending the session. It cannot be answered with a simple yes/no response, making it an open question (OQ)."
+        },
+        {
+          "transcript": "client: hmm I just have a very busy schedule with work with kids and also my wife works awesome so it's really difficult to find coming to exercise not only understand\ncounsellor: okay so how would you like for things to change\nclient: I would like to have more time to exercise at the same time spending time with the plan is important to me\ncounsellor: I see so what kind of things did you do to control your diabetes in the past\nclient: being physically active whenever possible I see\ncounsellor: that's good can you probably give me an example like the activities you did",
+          "speaker": "counsellor",
+          "utterance": "can you probably give me an example like the activities you did",
+          "t1_label": "Q",
+          "t2_label": "CQ",
+          "t2_explanation": "The counsellor's question begins with 'Can you,' which is a modal verb construction that allows for a yes/no response. Although the question invites elaboration, its grammatical structure permits a binary answer, making it a closed question (CQ)."
+        }
+      ],
+      "O": [
+        {
+          "transcript": "client: drink a lot more\ncounsellor: what about at these parties you're going to there are other kids there who are drinking a lot\nclient: yeah there are kids that drink a lot more than I do definitely you\ncounsellor: and do you hang out with them\nclient: not really closely like I know who they are and I'll say hi but not they're not really that close friends of mine\ncounsellor: mm-hmm",
+          "speaker": "counsellor",
+          "utterance": "mm-hmm",
+          "t1_label": "O",
+          "t2_label": "FA",
+          "t2_explanation": "The counsellor's utterance 'mm-hmm' serves as a simple acknowledgment of the client's response, encouraging the conversation to continue without introducing new content or direction. This aligns with the 'Facilitate' category as it functions as a 'keep-going' acknowledgment to support the flow of dialogue without interruption or redirection of focus. It does not provide structure or filler content, making FA the appropriate label for this utterance."
+        },
+        {
+          "transcript": "client: I'm fine. Thanks. Well, strange, feeling strange for this but okay.\ncounsellor: Yeah it's something really different for you?\nclient: Mm-mm. I have, I have not done this before.\ncounsellor: Well why don't you tell me a little bit about what brings you here today.\nclient: I'm not even sure. I heard, about this place and that you work with women who are, having trouble with their relationship and are confused and so, I thought I'd give you guys a call. And so, I'm, thank you so much for taking the time to see me.\ncounsellor: Yeah. So you're, you've heard a little bit about the program here.",
+          "speaker": "counsellor",
+          "utterance": "So you're, you've heard a little bit about the program here.",
+          "t1_label": "O",
+          "t2_label": "FI",
+          "t2_explanation": "The counsellor's final utterance acknowledges the client's statement about hearing about the program but does not advance the conversation or provide structural information. It serves as a conversational filler to maintain rapport and flow, making it a pleasantry rather than a facilitative or structural statement. Therefore, the label is FI."
+        },
+        {
+          "transcript": "client: I hope so yeah yeah\ncounsellor: anything else that might be on your mind or even thinking about or wandering about?\nclient: well I have I don't know if I'm getting ahead of myself or not but I have a little bit of a record for some misdemeanors when I used to drink and so I'm I just really feel like I'm not good for much I don't know who would want me for it to work\ncounsellor: so they're really wondering right now if if if work is possible for you\nclient: yeah\ncounsellor: do you think it is well I hope that through our work together you'll be able to decide that for yourself hmm and my hope in our process is that that we could be partners and thinking about that together",
+          "speaker": "counsellor",
+          "utterance": "and my hope in our process is that that we could be partners and thinking about that together",
+          "t1_label": "O",
+          "t2_label": "ST",
+          "t2_explanation": "The counsellor's final utterance outlines the structure of their collaborative process, emphasizing partnership and shared exploration during the sessions. This aligns with the 'Structure' category as it provides information about the approach and focus of their work together in future sessions or treatment overall, rather than addressing the immediate topic or facilitating further discussion directly in the moment. It sets expectations for the therapeutic process itself rather than continuing the immediate dialogue or offering pleasantries. Thus, the label is ST (Structure)."
+        }
+      ]
+    }
+  },
+  "client": {
+    "t1": [
+      {
+        "transcript": "counsellor: so if we were to ask your second question and that's kind of where the rubber meets the road how confident are you that you could start finding a group activity let's say in the next two weeks\nclient: oh\ncounsellor: you could start one obviously you've got steps to find it\nclient: right\ncounsellor: involved but within two weeks you could find yourself in some type of a group activity\nclient: two weeks seems reasonable I think I can do it within two weeks so I would give that a eight",
+        "speaker": "client",
+        "utterance": "so I would give that a eight",
+        "t1_label": "C",
+        "t2_label": "AB+",
+        "t1_explanation": "The client expresses optimism about their ability to engage in a group activity within two weeks by rating their confidence as an eight, which indicates a positive stance toward making a change."
+      },
+      {
+        "transcript": "client: uh yeah I just got off work and apparently they're going smoke-free so I'm I thought I'd stop by the pharmacy here and see what my options are some of my friends have tried nicotine patches and they say they don't work very well I don't really want to quit smoking I just need somebody to get me through the day\ncounsellor: so you want nicotine replacement but you don't want to quit smoking\nclient: maybe like that during the day nicotine replacement is that I mean do y'all have anything like that\ncounsellor: we don't really recommend that the ideas you would use the nicotine replacement to actually quit so then you wouldn't be smoking at work but you also wouldn't be smoking the rest of the time either\nclient: well I don't really want to quit I mean I like smoking I'll go like after work they have a beer with my friends not smoke cigarettes I mean it's not really a big deal cigarettes aren't that bad",
+        "speaker": "client",
+        "utterance": "cigarettes aren't that bad",
+        "t1_label": "S",
+        "t2_label": "R-",
+        "t1_explanation": "The client is expressing a reason for maintaining their smoking behavior by downplaying the negative aspects of cigarettes, which aligns with sustain talk. This indicates a stance toward continuing the target behavior rather than changing it."
+      },
+      {
+        "transcript": "counsellor: okay\nclient: so else you can say the live\ncounsellor: yeah\nclient: you can say that\ncounsellor: okay max\nclient: I'll work my way up I'm working my way up and once really high up my confident for a retiree",
+        "speaker": "client",
+        "utterance": "my confident for a retiree",
+        "t1_label": "N",
+        "t2_label": "N",
+        "t1_explanation": "The client's statement 'my confident for a retiree' does not clearly express a stance toward changing or maintaining the target behavior. It appears to be a general or neutral comment about their confidence, without a direct connection to the behavior being discussed."
+      }
+    ],
+    "t2": {
+      "C": [
+        {
+          "transcript": "counsellor: alright great and then it sounds like some of the benefits you're expecting are health benefits having an easier time with achieving your academic and career goals and just sort of not having to deal with some of the consequences that your peers do right okay well very good is there anything else that you think would be important for me to know\nclient: um how would you advise me till I get maybe my friends to stop drinking\ncounsellor: oh that's a great question so a lot of times kids who are trying to cut back it's harder if their friends are still drinking and one of the easiest things is trying to have more activities that don't involve alcohol but of course that's harder if you're not the one planning so some of the things that can be useful if you're at a party say and there's already alcohol there and there are other kids that maybe aren't your closest friends some of the things that I would recommend since you're interested are you know carrying around a different drink that looks like it has alcohol in it so you know even carrying an empty beer bottle or beer can or you know if people are having a mixed drink just having the coke say without any all mixed into it often having anything in your hand is a good barrier for people who are trying to offer you alcohol because you already have something in it kind of prevents them from trying to stuff something else in there do you think any of those things might work for you\nclient: yeah for sure\ncounsellor: okay what about in terms of talking to your friends about it have you thought about how you might approach with them or is that something else you'd like some tips about about telling them about your plan too\nclient: I need to stop drinking I was just planning on playing them that I don't really want to drink anymore",
+          "speaker": "client",
+          "utterance": "I was just planning on playing them that I don't really want to drink anymore",
+          "t1_label": "C",
+          "t2_label": "D+",
+          "t2_explanation": "The client expresses a desire to stop drinking by stating that they don't really want to drink anymore. This reflects their internal wish or preference to change their behavior, which aligns with the 'Desire' category."
+        },
+        {
+          "transcript": "counsellor: okay and why'd you say eight or nine rather than even like five or six\nclient: because like I said it's not a big part of my life so it's not really types of people\ncounsellor: okay all right well kind of keeping that in mind it sounds like you do have sort of a vague plan to make some adjustments in your drinking at some point yes and it's moderately important to you it's something you would like to do because you have these big goals for yourself and you actually feel very confident that you could be successful with it what sort of goal do you think might be good to set for today\nclient: um probably to stop maybe next party I go to not have a drink at all\ncounsellor: okay do you feel pretty confident that you could just stop completely\nclient: yeah I mean I can just tell my friends my friends aren't really that pressuring",
+          "speaker": "client",
+          "utterance": "my friends aren't really that pressuring",
+          "t1_label": "C",
+          "t2_label": "AB+",
+          "t2_explanation": "The client expresses confidence in their ability to resist drinking by stating that their friends are not pressuring them, which reflects optimism about their capacity to change their behavior successfully."
+        },
+        {
+          "transcript": "counsellor: okay do you feel pretty confident that you could just stop completely\nclient: yeah I mean I can just tell my friends my friends aren't really that pressuring it's just like outside people that I don't really know that well oh so I could just tell them hey I don't feel like having a drink today\ncounsellor: what might be some benefits of falling through with that goal\nclient: um definitely I'll have like all my senses there and I'll be aware of everything that's going on\ncounsellor: uh-huh anything else\nclient: um health concerns I guess I know alcohol is bad for your health and so that would be one",
+          "speaker": "client",
+          "utterance": "I know alcohol is bad for your health and so that would be one",
+          "t1_label": "C",
+          "t2_label": "R+",
+          "t2_explanation": "The client is providing a reason for changing their behavior by acknowledging the negative health effects of alcohol. This aligns with the 'Reasons (R+)' category, as they are articulating a rationale for why change would be beneficial."
+        },
+        {
+          "transcript": "counsellor: so you're not sure if that played a role in his heart attack or not\nclient: I probably did probably crank song but\ncounsellor: so you're not sure about how well you know he died did it earlier and she points that out as evidence that like you've got media genetic predisposition to having health related problems associated with drinking\nclient: yeah the doctors have said I should quit drinking the doc or they know\ncounsellor: okay you're not convinced\nclient: but with the doc don't exactly that 20 years ago I need to quit drinking and",
+          "speaker": "client",
+          "utterance": "I need to quit drinking and",
+          "t1_label": "C",
+          "t2_label": "N+",
+          "t2_explanation": "The client explicitly states 'I need to quit drinking,' which directly expresses a sense of necessity to change the target behavior of drinking. This aligns with the 'Need' category (N+)."
+        },
+        {
+          "transcript": "counsellor: I guess and you have some hope for your future that things can be different for you.\nclient: I hope so. I'm sure what that looks like yet.\ncounsellor: Don't know what it looks like.\nclient: yeah\ncounsellor: so what do you think if the two of us together um could potentially start exploring that journey a little bit some of the things you mentioned just in our brief interaction right now have been that you that you have a son that lives with you that is really doing okay and so you're able to start thinking about yourself in your life and that maybe you're a little concerned about what the future might bring and what some of the things in your life that you're dealing with your criminal history for instance might potentially get in your way and how could you how could you get around that what life could you have for yourself at home it's more than sitting in that easy chair watching your oldies mhm so if we may be delved into a bit more of that sort of what you're thinking about working how does\nclient: that sound sounds really good I I haven't worked for years and or maybe eight but it's been a long time and things have changed so much I just know it won't be easy but I'm ready for that",
+          "speaker": "client",
+          "utterance": "but I'm ready for that",
+          "t1_label": "C",
+          "t2_label": "C+",
+          "t2_explanation": "The client explicitly states their readiness to face the challenges of returning to work, which indicates a clear commitment to taking action towards change. This aligns with the 'Commitment' category as it reflects a firm intention to act on their goals."
+        },
+        {
+          "transcript": "counsellor: hey Monica how are you doing today\nclient: I'm okay right now but I'm a little anxious because thinking about how Black Friday is soon and my friends want to go to the mall for Black Friday but I really can't go and I want to go but I really to interesting\ncounsellor: so it sounds like you really want to go to Black Friday with your friends you're feeling a little anxious about it\nclient: yeah Monaco but interesting but I was thinking about it and maybe if I could make an image or something that I could use while I'm there",
+          "speaker": "client",
+          "utterance": "but I was thinking about it and maybe if I could make an image or something that I could use while I'm there",
+          "t1_label": "C",
+          "t2_label": "AC+",
+          "t2_explanation": "The client is considering a specific action\u2014creating an image to use while at the mall\u2014which indicates a willingness to take steps towards managing their anxiety in the situation. This reflects activation towards change or action, aligning with the AC+ label."
+        },
+        {
+          "transcript": "counsellor: okay can you expand on that a little bit more what do you mean\nclient: I mean I don't think I would be you know drinking as much or going to parties as much if I'm studying for school or in college or trying to get it off things like that\ncounsellor: okay so the alcohol is something that might make it harder to reach your goals\nclient: yeah definitely\ncounsellor: so when you're sort of looking ahead how often do you think you might be drinking say when you get to college\nclient: um maybe less than I am now",
+          "speaker": "client",
+          "utterance": "um maybe less than I am now",
+          "t1_label": "C",
+          "t2_label": "O+",
+          "t2_explanation": "The client is expressing a hypothetical scenario about drinking less in the future, which reflects a recognition of the problem and a potential shift in behavior. This fits the 'Other' category as it doesn't explicitly express desire, ability, reasons, need, commitment, activation, or taking steps."
+        }
+      ],
+      "S": [
+        {
+          "transcript": "counsellor: okay all right so pretty important to you I mean she's taking the stance on it your kids have said similar things\nclient: yeah\ncounsellor: and now you're here I mean it's gotten point that you've you agreed to go ahead and go into treatment she's saying not just get treatment she's saying quit I mean Jesus she's being pretty\nclient: yeah she just wants me to stop pretty\ncounsellor: out of about it okay so what do you think\nclient: well I'm thinking that I've worked hard my whole life and I should be able to to drink if I want but you know I don't you know I never been arrested you know I've got I've done really good with the money that we have you know we live a pretty good life she gets to do what you wanted I get to do what I want and this is just something that I want to do",
+          "speaker": "client",
+          "utterance": "and this is just something that I want to do",
+          "t1_label": "S",
+          "t2_label": "D-",
+          "t2_explanation": "The client expresses a clear desire to continue drinking, emphasizing that it is something they want to do despite external pressures or opinions. This aligns with the 'Desire' category as it reflects their personal wish to maintain the target behavior."
+        },
+        {
+          "transcript": "counsellor: fantastic well thanks so much for going through all of that e note was a lot to ask and I'm so glad that you're here and that you made it and we can most certainly go through any of that that would be useful for you today okay and I'm wondering if maybe at first before we get started I'd like to check in with you and just see if there's any questions things that you've been thinking about or wondering about since you first heard about our program that might have brought you here might be on your mind\nclient: um-hmm that's a good question well I not really I know a little bit about the program actually because I was a client about seven or eight years ago and didn't really things didn't turn out well so I'm interested to know how things might be different and I'm I'm just not sure I'm just not sure with my situation if you can help me out or not\ncounsellor: sure so you're back with us again and thinking about gosh this time might be different for you and may be wondering what that might look like\nclient: I hope so yeah yeah\ncounsellor: anything else that might be on your mind or even thinking about or wandering about?\nclient: well I have I don't know if I'm getting ahead of myself or not but I have a little bit of a record for some misdemeanors when I used to drink and so I'm I just really feel like I'm not good for much",
+          "speaker": "client",
+          "utterance": "and so I'm I just really feel like I'm not good for much",
+          "t1_label": "S",
+          "t2_label": "AB-",
+          "t2_explanation": "The client expresses a lack of confidence in their own value or ability, which aligns with pessimism about their ability to change or improve their situation. This fits the 'Ability' category as it reflects doubt in their capacity to make progress or be 'good for much'. "
+        },
+        {
+          "transcript": "client: uh yeah I just got off work and apparently they're going smoke-free so I'm I thought I'd stop by the pharmacy here and see what my options are some of my friends have tried nicotine patches and they say they don't work very well I don't really want to quit smoking I just need somebody to get me through the day\ncounsellor: so you want nicotine replacement but you don't want to quit smoking\nclient: maybe like that during the day nicotine replacement is that I mean do y'all have anything like that\ncounsellor: we don't really recommend that the ideas you would use the nicotine replacement to actually quit so then you wouldn't be smoking at work but you also wouldn't be smoking the rest of the time either\nclient: well I don't really want to quit I mean I like smoking I'll go like after work they have a beer with my friends not smoke cigarettes I mean it's not really a big deal cigarettes aren't that bad",
+          "speaker": "client",
+          "utterance": "cigarettes aren't that bad",
+          "t1_label": "S",
+          "t2_label": "R-",
+          "t2_explanation": "The client is providing a reason for maintaining their smoking habit by downplaying the negative aspects of cigarettes, suggesting they are 'not that bad'. This aligns with the 'Reasons' category as it justifies the continuation of the target behavior."
+        },
+        {
+          "transcript": "counsellor: we don't really recommend that the ideas you would use the nicotine replacement to actually quit so then you wouldn't be smoking at work but you also wouldn't be smoking the rest of the time either\nclient: well I don't really want to quit I mean I like smoking I'll go like after work they have a beer with my friends not smoke cigarettes I mean it's not really a big deal cigarettes aren't that bad I mean I know that the it's popular to say that smoking is bad for you but you know I like it so I'm gonna keep doing it\ncounsellor: okay well smoking really is really bad for you you know it causes things like lung cancer emphysema heart disease\nclient: yeah okay oh well what are my options you know I assuming that I'm right what are my options\ncounsellor: well to be honest with you you mentioned the patch I can't recommend a patch to you if you're gonna continue smoking that can actually be pretty dangerous for you in order to advise you about this at all I need you to tell me a little bit more about your smoking history and how much you're smoking now\nclient: I mean I spent barely a pack a day. I mean I probably smoked about five or six years now. It's not really a lot of cigarettes.",
+          "speaker": "client",
+          "utterance": "It's not really a lot of cigarettes.",
+          "t1_label": "S",
+          "t2_label": "N-",
+          "t2_explanation": "The client is downplaying the amount they smoke, suggesting a perceived lack of urgency or need to change their smoking behavior. This aligns with expressing a need to maintain the behavior, as they do not see their smoking as problematic or excessive."
+        },
+        {
+          "transcript": "client: uh yeah I just got off work and apparently they're going smoke-free so I'm I thought I'd stop by the pharmacy here and see what my options are some of my friends have tried nicotine patches and they say they don't work very well I don't really want to quit smoking I just need somebody to get me through the day\ncounsellor: so you want nicotine replacement but you don't want to quit smoking\nclient: maybe like that during the day nicotine replacement is that I mean do y'all have anything like that\ncounsellor: we don't really recommend that the ideas you would use the nicotine replacement to actually quit so then you wouldn't be smoking at work but you also wouldn't be smoking the rest of the time either\nclient: well I don't really want to quit I mean I like smoking I'll go like after work they have a beer with my friends not smoke cigarettes I mean it's not really a big deal cigarettes aren't that bad I mean I know that the it's popular to say that smoking is bad for you but you know I like it so I'm gonna keep doing it",
+          "speaker": "client",
+          "utterance": "so I'm gonna keep doing it",
+          "t1_label": "S",
+          "t2_label": "C-",
+          "t2_explanation": "The client explicitly states their intention to continue smoking with the phrase 'so I'm gonna keep doing it,' which reflects a clear commitment to maintaining the target behavior of smoking."
+        },
+        {
+          "transcript": "counsellor: um what are the benefits of not exercising to you\nclient: won't look and I just I don't see any benefits of not exercising\ncounsellor: and what are the costs of not exercising\nclient: it will make my diabetes worse to a point where I have to start taking medication I'm saying\ncounsellor: okay so what are the costs maybe of finding time to exercise\nclient: mm i would have to make time out of my busy schedule and cut down on things that I like doing",
+          "speaker": "client",
+          "utterance": "and cut down on things that I like doing",
+          "t1_label": "S",
+          "t2_label": "O-",
+          "t2_explanation": "The client is recognizing a potential downside of exercising, which involves cutting down on activities they enjoy. This statement reflects problem recognition related to the target behavior but does not fit into the other categories, making 'Other' the appropriate label."
+        }
+      ],
+      "N": [
+        {
+          "transcript": "counsellor: okay\nclient: so else you can say the live\ncounsellor: yeah\nclient: you can say that\ncounsellor: okay max\nclient: I'll work my way up I'm working my way up and once really high up my confident for a retiree",
+          "speaker": "client",
+          "utterance": "my confident for a retiree",
+          "t1_label": "N",
+          "t2_label": "N",
+          "t2_explanation": "The client's statement does not clearly express support for or opposition to change. It appears to be a general comment about their confidence as a retiree, without a clear stance on making a change or maintaining the status quo."
+        }
+      ]
+    }
+  }
+}

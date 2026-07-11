@@ -1,0 +1,8 @@
+{
+  "job_id": "ftjob-d8b97676188d4321aec51d3cefb4234a",
+  "status": "pending",
+  "train_file": "file-36d0c9aa743144ceae948f5bbb3a719b",
+  "valid_file": "file-98722f9f734d46e8ad48d283b46fd5d7",
+  "base_model": "gpt-4o-2024-08-06",
+  "n_epochs": 1
+}

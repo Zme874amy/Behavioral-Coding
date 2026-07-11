@@ -28,11 +28,25 @@ for f in "${FILES[@]}"; do
   fi
 done
 
-echo "Creating remote data/manual/ on ${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}"
-ssh "${MLERP_USER}@${MLERP_HOST}" "mkdir -p ${REMOTE_REPO}/data/manual"
+echo "Creating remote data dirs on ${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}"
+ssh "${MLERP_USER}@${MLERP_HOST}" "mkdir -p ${REMOTE_REPO}/data/manual ${REMOTE_REPO}/data/fewshot"
 
 echo "Copying manual evaluation CSVs..."
 scp "${FILES[@]}" "${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}/data/manual/"
+
+# Baseline reproduction extras: frozen few-shot exemplars + Azure credentials.
+if [[ -f "data/fewshot/exemplars.json" ]]; then
+  echo "Copying few-shot exemplars..."
+  scp "data/fewshot/exemplars.json" "${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}/data/fewshot/"
+else
+  echo "WARN: data/fewshot/exemplars.json not found (needed for few-shot baseline runs)"
+fi
+if [[ -f ".env" ]]; then
+  echo "Copying .env (Azure credentials)..."
+  scp ".env" "${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}/.env"
+else
+  echo "WARN: .env not found (needed for Azure OpenAI baseline runs)"
+fi
 
 echo "Verifying on MLeRP..."
 ssh "${MLERP_USER}@${MLERP_HOST}" "wc -l ${REMOTE_REPO}/data/manual/*.csv"

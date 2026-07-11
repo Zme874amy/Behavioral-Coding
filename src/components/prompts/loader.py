@@ -19,7 +19,8 @@ def render_prompt(speaker: str, structure: str, tier: str = None, **kwargs) -> s
     template = env.get_template(f"{speaker}/{file_name}")
     
     # If this is a t2 prompt and 'label' is passed, inject the relevant spec
-    if structure == "t2" and "label" in kwargs:
+    # (covers both "t2" and the label-only "t2_bare" variant)
+    if structure.startswith("t2") and "label" in kwargs:
         spec_dict = load_spec(speaker, "t2")
         kwargs["spec"] = spec_dict.get(kwargs["label"], "")
     

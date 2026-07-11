@@ -7,3 +7,5 @@ accelerate
 openai
 lmstudio
 tf-keras
+python-dotenv
+tqdm
