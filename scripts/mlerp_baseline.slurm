@@ -3,10 +3,11 @@
 # Runs all four prompting conditions in parallel (they are API-bound, no GPU
 # needed) and then the evaluation. Submit from repo root:
 #
-#   sbatch scripts/mlerp_baseline.slurm
+#   sbatch scripts/mlerp_baseline.slurm                # ctx=5 (default)
+#   CTX=3 sbatch scripts/mlerp_baseline.slurm          # 3 context volleys
 #
 # Run a single condition instead:
-#   CONDITIONS=fewshot_bare sbatch scripts/mlerp_baseline.slurm
+#   CONDITIONS=fewshot_bare CTX=3 sbatch scripts/mlerp_baseline.slurm
 #
 # Prerequisites on MLeRP (see scripts/sync_data_to_mlerp.sh):
 #   - data/manual/*.csv, data/fewshot/exemplars.json
@@ -37,12 +38,13 @@ fi
 mkdir -p outputs/baseline_runs data/annotated/baseline
 
 CONDITIONS="${CONDITIONS:-zeroshot_rationales zeroshot_bare fewshot_rationales fewshot_bare}"
+CTX="${CTX:-5}"
 
 pids=()
 for cond in $CONDITIONS; do
-  echo "Launching condition: $cond"
-  python3 -m baseline.main "condition=${cond}" \
-    > "outputs/baseline_runs/${SLURM_JOB_ID}_${cond}.log" 2>&1 &
+  echo "Launching condition: $cond (ctx=${CTX})"
+  python3 -m baseline.main "condition=${cond}" "num_context_turns=${CTX}" \
+    > "outputs/baseline_runs/${SLURM_JOB_ID}_${cond}_ctx${CTX}.log" 2>&1 &
   pids+=($!)
 done
 

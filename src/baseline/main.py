@@ -11,9 +11,10 @@ human-labelled MIV6.3A_manual.csv for one prompting condition:
 Usage:
     PYTHONPATH=src .venv/bin/python -m baseline.main condition=zeroshot_rationales
     PYTHONPATH=src .venv/bin/python -m baseline.main condition=fewshot_bare limit=10
+    PYTHONPATH=src .venv/bin/python -m baseline.main condition=zeroshot_rationales num_context_turns=3
 
-Writes data/annotated/baseline/<condition>.csv with checkpoint/resume on
-corp_utt_idx, mirroring the production annotator's behaviour.
+Writes data/annotated/baseline/<condition>_ctx<N>.csv (N = num_context_turns)
+with checkpoint/resume on corp_utt_idx, mirroring the production annotator.
 """
 from __future__ import annotations
 
@@ -29,7 +30,7 @@ from components.context import build_context_excerpt
 from components.prompts.loader import render_prompt, render_user_prompt
 from components.prompts import response_formats as rf
 from components.utils import call_chat_model
-from baseline.fewshot import load_exemplars, build_fewshot_messages
+from baseline.fewshot import exemplars_path, load_exemplars, build_fewshot_messages
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -102,7 +103,17 @@ def main():
     rationales = bool(cond_cfg.rationales)
     fewshot = bool(cond_cfg.fewshot)
 
-    exemplars = load_exemplars(REPO_ROOT / cfg.fewshot_path) if fewshot else None
+    ctx = int(cfg.num_context_turns)
+    exemplars = None
+    if fewshot:
+        ex_path = exemplars_path(ctx)
+        if not ex_path.exists():
+            raise FileNotFoundError(
+                f"No few-shot exemplars for ctx={ctx} at {ex_path}. "
+                f"Build them first: python -m baseline.fewshot --ctx {ctx}"
+            )
+        exemplars = load_exemplars(ex_path)
+        print(f"Loaded few-shot exemplars from {ex_path}")
 
     df = pd.read_csv(REPO_ROOT / cfg.eval_csv).reset_index(drop=True)
     # Drop any pre-existing auto columns from the source file; we produce our own.
@@ -113,7 +124,12 @@ def main():
 
     out_dir = REPO_ROOT / cfg.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    save_path = out_dir / f"{condition}.csv"
+    save_path = out_dir / f"{condition}_ctx{ctx}.csv"
+    # Results produced before the ctx suffix existed were all run at ctx=5.
+    legacy_path = out_dir / f"{condition}.csv"
+    if ctx == 5 and not save_path.exists() and legacy_path.exists():
+        legacy_path.rename(save_path)
+        print(f"Renamed legacy {legacy_path.name} -> {save_path.name}")
 
     utt_checkpoint = -1
     existing_df = None
@@ -136,7 +152,7 @@ def main():
         existing_df = out
         output_rows = []
 
-    print(f"Condition={condition} (rationales={rationales}, fewshot={fewshot}) "
+    print(f"Condition={condition} (rationales={rationales}, fewshot={fewshot}, ctx={ctx}) "
           f"model={cfg.model} n={n_total} -> {save_path}")
 
     try:

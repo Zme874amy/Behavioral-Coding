@@ -7,8 +7,12 @@ T2 prompts. Rationales for the "few-shot with rationales" condition are
 generated once with gpt-4o conditioned on the gold label and frozen to a JSON
 file so runs are reproducible.
 
-Run as a script to (re)build the exemplar file:
-    PYTHONPATH=src .venv/bin/python -m baseline.fewshot
+Exemplar transcripts are built with the same number of prior context volleys as
+the run that consumes them, so each context setting has its own frozen file:
+data/fewshot/exemplars_ctx<N>.json (the original exemplars.json is the ctx5 file).
+
+Run as a script to (re)build an exemplar file:
+    PYTHONPATH=src .venv/bin/python -m baseline.fewshot --ctx 3
 """
 from __future__ import annotations
 
@@ -22,12 +26,24 @@ from components.context import build_context_excerpt
 from components.prompts.loader import render_prompt, render_user_prompt
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FEWSHOT_PATH = REPO_ROOT / "data" / "fewshot" / "exemplars.json"
+FEWSHOT_DIR = REPO_ROOT / "data" / "fewshot"
 HLQC_PATH = REPO_ROOT / "data" / "manual" / "HLQC_balanced_manual.csv"
 
 SEED = 42
 CONTEXT_MODE = "interval"
-NUM_CONTEXT_TURNS = 5
+DEFAULT_CONTEXT_TURNS = 5
+
+
+def exemplars_path(num_context_turns: int) -> Path:
+    """Frozen exemplar file for a given context length. The pre-ctx-suffix
+    file (exemplars.json) was built with 5 turns and doubles as the ctx5 file."""
+    suffixed = FEWSHOT_DIR / f"exemplars_ctx{num_context_turns}.json"
+    if suffixed.exists():
+        return suffixed
+    legacy = FEWSHOT_DIR / "exemplars.json"
+    if num_context_turns == 5 and legacy.exists():
+        return legacy
+    return suffixed
 
 # Valid T2 codes per T1 group (from the prompt specs / response formats).
 T2_GROUPS = {
@@ -51,7 +67,7 @@ class _Rationale(BaseModel):
     explanation: str
 
 
-def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame) -> dict | None:
+def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame, num_context_turns: int) -> dict | None:
     """Pick one exemplar row, preferring mid-length utterances."""
     if candidates.empty:
         return None
@@ -61,7 +77,7 @@ def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame) -> dict | None:
     pool = preferred if not preferred.empty else candidates
     row = pool.sample(1, random_state=SEED).iloc[0]
     transcript = build_context_excerpt(
-        df, int(row.name), CONTEXT_MODE, NUM_CONTEXT_TURNS
+        df, int(row.name), CONTEXT_MODE, num_context_turns
     )
     return {
         "transcript": transcript,
@@ -72,7 +88,7 @@ def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame) -> dict | None:
     }
 
 
-def build_exemplars() -> dict:
+def build_exemplars(num_context_turns: int = DEFAULT_CONTEXT_TURNS) -> dict:
     df = pd.read_csv(HLQC_PATH).reset_index(drop=True)
     exemplars = {}
     for speaker, groups in T2_GROUPS.items():
@@ -86,7 +102,7 @@ def build_exemplars() -> dict:
                 (spk_df["t1_label_GT"] == t1_code)
                 & (spk_df["t2_label_GT"].isin(t2_codes))
             ]
-            ex = _pick_exemplar(df, consistent)
+            ex = _pick_exemplar(df, consistent, num_context_turns)
             if ex is not None:
                 t1_exemplars.append(ex)
             else:
@@ -95,7 +111,7 @@ def build_exemplars() -> dict:
             group_list = []
             for t2_code in t2_codes:
                 cand = consistent[consistent["t2_label_GT"] == t2_code]
-                ex2 = _pick_exemplar(df, cand)
+                ex2 = _pick_exemplar(df, cand, num_context_turns)
                 if ex2 is not None:
                     group_list.append(ex2)
                 else:
@@ -142,7 +158,7 @@ def generate_rationales(exemplars: dict, model: str = "gpt-4o", provider: str = 
                 print(f"rationale t2 {speaker}/{t1_code}/{ex['t2_label']}: {ex['t2_explanation'][:80]}...")
 
 
-def load_exemplars(path: Path = FEWSHOT_PATH) -> dict:
+def load_exemplars(path: Path) -> dict:
     with open(path) as f:
         return json.load(f)
 
@@ -183,14 +199,22 @@ def build_fewshot_messages(
 
 
 def main():
-    exemplars = build_exemplars()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ctx", type=int, default=DEFAULT_CONTEXT_TURNS,
+                        help="number of prior context volleys in exemplar transcripts")
+    args = parser.parse_args()
+
+    exemplars = build_exemplars(num_context_turns=args.ctx)
     generate_rationales(exemplars)
-    FEWSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(FEWSHOT_PATH, "w") as f:
+    out_path = FEWSHOT_DIR / f"exemplars_ctx{args.ctx}.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as f:
         json.dump(exemplars, f, indent=2)
     n_t1 = sum(len(v["t1"]) for v in exemplars.values())
     n_t2 = sum(len(g) for v in exemplars.values() for g in v["t2"].values())
-    print(f"Saved {n_t1} T1 + {n_t2} T2 exemplars to {FEWSHOT_PATH}")
+    print(f"Saved {n_t1} T1 + {n_t2} T2 exemplars to {out_path}")
 
 
 if __name__ == "__main__":

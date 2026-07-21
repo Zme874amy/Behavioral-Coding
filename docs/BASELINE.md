@@ -1,12 +1,15 @@
 # AutoMISC Baseline Reproduction — Runbook (MLeRP)
 
 Reproduces the AutoMISC gpt-4o baseline on Azure OpenAI with a 2x2 prompting
-matrix plus a fine-tuned condition, evaluated against human consensus labels.
+matrix plus fine-tuned conditions, evaluated against human consensus labels,
+across two context lengths (3 vs 5 prior volleys).
 
 ## Experiment matrix
 
 All conditions: Azure `gpt-4o` deployment, temperature 0, hierarchical T1→T2
-prompts, interval context of 5 turns.
+prompts, interval context. Context length (ctx) is a compared dimension:
+ctx=3 matches the paper's setting (GPT-4.1, 3 context volleys); ctx=5 was the
+repo default used in the first round.
 
 | Condition | Prompt | Shots |
 |---|---|---|
@@ -14,18 +17,20 @@ prompts, interval context of 5 turns.
 | `zeroshot_bare` | label-only | 0 |
 | `fewshot_rationales` | explanation + label | stratified HLQC exemplars |
 | `fewshot_bare` | label-only | stratified HLQC exemplars |
-| `finetuned` | label-only, zero-shot | fine-tuned gpt-4o |
+| `finetuned` | label-only, zero-shot | fine-tuned gpt-4o (matched ctx) |
 
 - **Eval set:** `data/manual/MIV6.3A_manual.csv` (821 utterances, `t1_label_GT`/`t2_label_GT`).
 - **Few-shot exemplars + fine-tuning data:** `data/manual/HLQC_balanced_manual.csv` (held out; no leakage).
-- Few-shot exemplars are frozen in `data/fewshot/exemplars.json` (9 T1 + 32 T2,
-  one per code; rationales generated once by gpt-4o conditioned on the gold label).
-  Rebuild only if needed: `python3 -m baseline.fewshot`.
+- Few-shot exemplars are frozen per context length in
+  `data/fewshot/exemplars_ctx3.json` and `data/fewshot/exemplars.json` (= ctx5).
+  Rebuild only if needed: `python3 -m baseline.fewshot --ctx <N>`.
+- Fine-tuning is matched: one model per context length, trained on prompts
+  built with the same number of context volleys it is evaluated with.
 
 ## One-time setup
 
-From your Mac (repo root) — copies manual CSVs, few-shot exemplars, and `.env`
-(Azure credentials) to MLeRP:
+From your Mac (repo root) — copies manual CSVs, few-shot exemplar files, and
+`.env` (Azure credentials) to MLeRP:
 
 ```bash
 bash scripts/sync_data_to_mlerp.sh
@@ -39,48 +44,56 @@ git pull
 bash scripts/env.sh setup                   # installs requirements-extras.txt
 ```
 
-## Run the four prompting conditions
+## Run the prompting conditions
 
 ```bash
-sbatch scripts/mlerp_baseline.slurm
+CTX=3 sbatch scripts/mlerp_baseline.slurm    # the 4 conditions at 3 volleys
+sbatch scripts/mlerp_baseline.slurm          # same at 5 volleys (already done)
 ```
 
-This runs all four conditions in parallel (API-bound, no GPU) and then the
-evaluation. Each condition writes `data/annotated/baseline/<condition>.csv`
-with checkpoint/resume on `corp_utt_idx`, so a requeued job continues where it
-stopped. A single condition: `CONDITIONS=fewshot_bare sbatch scripts/mlerp_baseline.slurm`.
+Each condition writes `data/annotated/baseline/<condition>_ctx<N>.csv` with
+checkpoint/resume on `corp_utt_idx`, so a requeued job continues where it
+stopped. Single condition: `CONDITIONS=fewshot_bare CTX=3 sbatch scripts/mlerp_baseline.slurm`.
 
-Interactive alternative (login/compute node, no sbatch):
+Interactive alternative:
 
 ```bash
 source scripts/env.sh
-python3 -m baseline.main condition=zeroshot_rationales   # etc.
+python3 -m baseline.main condition=zeroshot_rationales num_context_turns=3
 ```
 
-Expected wall-clock: ~25–45 min per condition (821 utterances x 2 calls at
-~1.6–2.6 s/utterance).
+Expected wall-clock: ~25–45 min per condition (821 utterances x 2 calls).
 
-## Fine-tuning (Azure-side; already submitted)
+## Fine-tuning (Azure-side)
 
-The job trains on Azure servers, not locally. Job metadata lives in
-`data/fine_tuning/baseline/job_metadata.json` (job `ftjob-d8b97676188d4321aec51d3cefb4234a`,
-base `gpt-4o-2024-08-06`, 1 epoch, 3465 train / 385 valid examples, ~4.1M
-training tokens ≈ $100 at $25/M).
+Two jobs, one per context length; metadata in
+`data/fine_tuning/baseline/job_metadata*.json`:
+
+| ctx | Job | Status |
+|---|---|---|
+| 5 | `ftjob-d8b97676188d4321aec51d3cefb4234a` | succeeded — model `gpt-4o-2024-08-06.ft-d8b97676...-automisc-baseline` |
+| 3 | `ftjob-1487dbf17d6b417f85f31cb3e566f007` | submitted (1 epoch, ~3.8M tokens ≈ $96) |
 
 ```bash
-python3 -m baseline.finetune status     # poll until status: succeeded
-python3 -m baseline.finetune deploy     # tries data-plane deployment API
+python3 -m baseline.finetune status --ctx 3      # poll until status: succeeded
+python3 -m baseline.finetune deploy --ctx 3      # data-plane deploy attempt
 ```
 
-If `deploy` fails with a permission error, deploy the fine-tuned model in the
-Azure portal (Deployments -> Create -> select the fine-tuned model), then:
+The data-plane deployment API returns 404 on this resource, so deployment must
+be done in the Azure portal / AI Foundry: Deployments -> Create -> select the
+fine-tuned model -> name it exactly `automisc-ft-ctx5` / `automisc-ft-ctx3`.
+Then evaluate (matched context):
 
 ```bash
-python3 -m baseline.main condition=finetuned model=<deployment-name>
+python3 -m baseline.main condition=finetuned model=automisc-ft-ctx5 num_context_turns=5
+python3 -m baseline.main condition=finetuned model=automisc-ft-ctx3 num_context_turns=3
 ```
 
-To rebuild/resubmit training data: `python3 -m baseline.finetune build` then
-`python3 -m baseline.finetune submit`.
+Delete the fine-tuned deployments in the portal after evaluation to stop
+hourly hosting charges.
+
+To rebuild/resubmit training data: `python3 -m baseline.finetune build --ctx <N>`
+then `submit --ctx <N>`.
 
 ## Evaluation
 
@@ -90,25 +103,27 @@ Runs automatically at the end of the slurm job, or manually:
 python3 -m baseline.eval
 ```
 
-Outputs:
+It discovers every `<condition>_ctx<N>.csv` present (legacy un-suffixed files
+count as ctx5) and writes:
 
-- `docs/BASELINE_RESULTS.md` — combined comparison table (accuracy, Cohen's
-  kappa, macro-F1 for T1 and T2, overall and per speaker).
-- `outputs/baseline_eval/comparison.csv` — same table as CSV.
-- `outputs/baseline_eval/<condition>_<tier>_report.csv` — per-code P/R/F1.
+- `docs/BASELINE_RESULTS.md` — comparison tables grouped by tier and context,
+  with the paper's GPT-4.1 reference numbers.
+- `outputs/baseline_eval/comparison.csv` — same as CSV.
+- `outputs/baseline_eval/<condition>_ctx<N>_<tier>_report.csv` — per-code P/R/F1.
 
-Conditions whose CSVs are missing are skipped, so you can evaluate as results
-come in and re-run after the fine-tuned condition finishes.
+Two macro-F1 columns are reported: `Macro-F1 (gold)` averages only over codes
+present in the gold labels (comparable to the paper); `Macro-F1 (all)` also
+counts predicted-but-never-gold codes, each contributing 0.
 
 ## Code map
 
 | File | Role |
 |---|---|
 | `src/baseline/main.py` | Condition runner (T1→T2 loop, checkpoint/resume, retry) |
-| `src/baseline/fewshot.py` | Exemplar builder/loader; frozen rationale generation |
-| `src/baseline/finetune.py` | JSONL build, Azure fine-tune submit/status/deploy |
-| `src/baseline/eval.py` | Metrics + comparison table |
+| `src/baseline/fewshot.py` | Per-ctx exemplar builder/loader; frozen rationale generation |
+| `src/baseline/finetune.py` | Per-ctx JSONL build, Azure fine-tune submit/status/deploy |
+| `src/baseline/eval.py` | Metrics + comparison table across conditions and contexts |
 | `conf/baseline_config.yaml` | Model/provider, conditions, context settings |
 | `src/components/prompts/templates/*/t{1,2}_bare.j2` | Label-only prompt variants |
 | `src/components/prompts/response_formats.py` | `*_bare` label-only schemas |
-| `scripts/mlerp_baseline.slurm` | Batch job for all conditions + eval |
+| `scripts/mlerp_baseline.slurm` | Batch job for all conditions + eval (`CTX` env var) |

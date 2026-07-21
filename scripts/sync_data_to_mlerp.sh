@@ -3,18 +3,18 @@
 #
 # Usage:
 #   bash scripts/sync_data_to_mlerp.sh
-#   MLERP_USER=you MLERP_HOST=login.example.edu bash scripts/sync_data_to_mlerp.sh
+#   MLERP_SSH=user@host bash scripts/sync_data_to_mlerp.sh
 #
-# Defaults match a typical MLeRP layout; override MLERP_* if yours differs.
+# MLERP_SSH is any ssh destination or ~/.ssh/config alias; the default is the
+# Strudel2 alias which carries the right key and login node.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-MLERP_USER="${MLERP_USER:-jia-wen}"
-MLERP_HOST="${MLERP_HOST:-mlerp.cloud.edu.au}"
-REMOTE_REPO="${REMOTE_REPO:-/mnt/userdata4/${MLERP_USER}/Behavioral-Coding}"
+MLERP_SSH="${MLERP_SSH:-jia-wen_MLeRP_Monash}"
+REMOTE_REPO="${REMOTE_REPO:-/mnt/userdata4/jia-wen/Behavioral-Coding}"
 
 FILES=(
   "data/manual/MIV6.3A_manual.csv"
@@ -28,27 +28,29 @@ for f in "${FILES[@]}"; do
   fi
 done
 
-echo "Creating remote data dirs on ${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}"
-ssh "${MLERP_USER}@${MLERP_HOST}" "mkdir -p ${REMOTE_REPO}/data/manual ${REMOTE_REPO}/data/fewshot"
+echo "Creating remote data dirs on ${MLERP_SSH}:${REMOTE_REPO}"
+ssh "${MLERP_SSH}" "mkdir -p ${REMOTE_REPO}/data/manual ${REMOTE_REPO}/data/fewshot"
 
 echo "Copying manual evaluation CSVs..."
-scp "${FILES[@]}" "${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}/data/manual/"
+scp "${FILES[@]}" "${MLERP_SSH}:${REMOTE_REPO}/data/manual/"
 
 # Baseline reproduction extras: frozen few-shot exemplars + Azure credentials.
-if [[ -f "data/fewshot/exemplars.json" ]]; then
-  echo "Copying few-shot exemplars..."
-  scp "data/fewshot/exemplars.json" "${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}/data/fewshot/"
+shopt -s nullglob
+exemplar_files=(data/fewshot/exemplars*.json)
+if (( ${#exemplar_files[@]} )); then
+  echo "Copying few-shot exemplars (${exemplar_files[*]})..."
+  scp "${exemplar_files[@]}" "${MLERP_SSH}:${REMOTE_REPO}/data/fewshot/"
 else
-  echo "WARN: data/fewshot/exemplars.json not found (needed for few-shot baseline runs)"
+  echo "WARN: no data/fewshot/exemplars*.json found (needed for few-shot baseline runs)"
 fi
 if [[ -f ".env" ]]; then
   echo "Copying .env (Azure credentials)..."
-  scp ".env" "${MLERP_USER}@${MLERP_HOST}:${REMOTE_REPO}/.env"
+  scp ".env" "${MLERP_SSH}:${REMOTE_REPO}/.env"
 else
   echo "WARN: .env not found (needed for Azure OpenAI baseline runs)"
 fi
 
 echo "Verifying on MLeRP..."
-ssh "${MLERP_USER}@${MLERP_HOST}" "wc -l ${REMOTE_REPO}/data/manual/*.csv"
+ssh "${MLERP_SSH}" "wc -l ${REMOTE_REPO}/data/manual/*.csv"
 
 echo "Done. On MLeRP run:  bash scripts/check_data.sh"
