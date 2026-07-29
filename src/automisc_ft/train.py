@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from hydra.utils import log
 from omegaconf import DictConfig
@@ -85,13 +85,22 @@ def _save_jsonl(rows: List[Dict[str, str]], path: Path) -> None:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def train_fold_adapters(
+def train_adapter_pair(
     cfg: DictConfig,
     df,
     train_positions: List[int],
-    fold_dir: Path,
+    out_dir: Path,
+    structure_suffix: str = "",
+    rationales: Optional[Dict[str, dict]] = None,
 ) -> Tuple[Path, Path]:
-    """Train the T1 and T2 LoRA adapters for one fold.
+    """Train one T1 + T2 LoRA adapter pair over the given rows.
+
+    Args:
+        structure_suffix: prompt variant to train on ("" rationale-first,
+            "_bare" label-only).
+        rationales: frozen distilled-rationale store. When given, completion
+            targets become rationale + label instead of the bare label (the
+            `ft_rat` arm).
 
     Returns ``(t1_adapter_dir, t2_adapter_dir)`` pointing at the saved adapters.
     """
@@ -101,31 +110,48 @@ def train_fold_adapters(
     tokenizer = _load_tokenizer(cfg)
 
     t1_examples: List[TierExample] = build_tier_examples(
-        df, train_positions, "t1", context_mode, num_context_turns
+        df, train_positions, "t1", context_mode, num_context_turns,
+        structure_suffix, rationales,
     )
     t2_examples: List[TierExample] = build_tier_examples(
-        df, train_positions, "t2", context_mode, num_context_turns
+        df, train_positions, "t2", context_mode, num_context_turns,
+        structure_suffix, rationales,
     )
     log.info(
-        "Fold training examples: T1=%d  T2=%d (from %d rows)",
+        "Training examples: T1=%d  T2=%d (from %d rows)",
         len(t1_examples), len(t2_examples), len(train_positions),
     )
+    if not t1_examples or not t2_examples:
+        raise RuntimeError(
+            "No training examples were built. If this is the ft_rat arm, the "
+            "frozen rationale file for this context length is missing or empty."
+        )
 
     t1_rows = examples_to_prompt_completion(t1_examples, tokenizer)
     t2_rows = examples_to_prompt_completion(t2_examples, tokenizer)
 
-    artifacts = fold_dir / "sft_artifacts"
+    artifacts = out_dir / "sft_artifacts"
     _save_jsonl(t1_rows, artifacts / "t1_train.jsonl")
     _save_jsonl(t2_rows, artifacts / "t2_train.jsonl")
 
     # T1 adapter
-    log.info("Training T1 adapter -> %s", fold_dir / "t1")
-    t1_cfg = _local_trainer_config(cfg, fold_dir / "t1")
+    log.info("Training T1 adapter -> %s", out_dir / "t1")
+    t1_cfg = _local_trainer_config(cfg, out_dir / "t1")
     t1_model_dir = run_local_fine_tuning(t1_cfg, t1_rows, None)
 
     # T2 adapter
-    log.info("Training T2 adapter -> %s", fold_dir / "t2")
-    t2_cfg = _local_trainer_config(cfg, fold_dir / "t2")
+    log.info("Training T2 adapter -> %s", out_dir / "t2")
+    t2_cfg = _local_trainer_config(cfg, out_dir / "t2")
     t2_model_dir = run_local_fine_tuning(t2_cfg, t2_rows, None)
 
     return Path(t1_model_dir), Path(t2_model_dir)
+
+
+def train_fold_adapters(
+    cfg: DictConfig,
+    df,
+    train_positions: List[int],
+    fold_dir: Path,
+) -> Tuple[Path, Path]:
+    """Train the T1 and T2 LoRA adapters for one cross-validation fold."""
+    return train_adapter_pair(cfg, df, train_positions, fold_dir)

@@ -14,13 +14,27 @@ output_dir: data/annotated/baseline
 condition: zeroshot_rationales
 
 conditions:
+  # The four in-context cells. These predate the tier/arm/style naming, so
+  # src/baseline/eval.py maps them via LEGACY_STEMS:
+  #   zeroshot_rationales -> gpt4o_zs_inf_cot      zeroshot_bare -> gpt4o_zs_inf_bare
+  #   fewshot_rationales  -> gpt4o_fs_inf_cot      fewshot_bare  -> gpt4o_fs_inf_bare
   zeroshot_rationales: {rationales: true, fewshot: false}
   zeroshot_bare: {rationales: false, fewshot: false}
   fewshot_rationales: {rationales: true, fewshot: true}
   fewshot_bare: {rationales: false, fewshot: true}
-  # Fine-tuned model, evaluated zero-shot label-only. Override the model on the
-  # CLI with the fine-tuned deployment name: condition=finetuned model=<deployment>
+  # Fine-tuned model, evaluated zero-shot label-only (legacy name for
+  # gpt4o_ft_bare_inf_bare). Kept so existing result files stay addressable.
   finetuned: {rationales: false, fewshot: false}
+
+  # The four gpt-4o fine-tuning cells, named so their output files parse directly.
+  # Each needs the corresponding deployment passed on the CLI, e.g.
+  #   condition=gpt4o_ft_rat_inf_cot model=automisc-ft-rat-ctx5
+  # `_inf_bare` uses label-only prompts and schema, `_inf_cot` rationale-first,
+  # which is how the training-target vs inference-instruction cross is tested.
+  gpt4o_ft_bare_inf_bare: {rationales: false, fewshot: false}
+  gpt4o_ft_bare_inf_cot: {rationales: true, fewshot: false}
+  gpt4o_ft_rat_inf_bare: {rationales: false, fewshot: false}
+  gpt4o_ft_rat_inf_cot: {rationales: true, fewshot: false}
 
 # Limit number of utterances (null = all). Use limit=10 for smoke tests.
 limit: null

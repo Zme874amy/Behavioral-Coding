@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
 from tqdm import tqdm
@@ -87,6 +87,33 @@ def parse_label(generated: str, allowed: List[str]) -> str:
     return "UNKNOWN"
 
 
+_EXPLANATION_FIELD = re.compile(
+    r'explanation["\']?\s*[:=]\s*(.+)', flags=re.IGNORECASE | re.DOTALL
+)
+
+
+def emitted_rationale(generated: str, min_words: int = 4) -> bool:
+    """Whether a generation contains a rationale rather than just a label.
+
+    This is the instruction-compliance signal for the fine-tuning arms: an
+    `inf_bare` prompt should yield a bare code, an `inf_cot` prompt a rationale.
+    Because the local model generates freely, either instruction can be ignored,
+    and that is exactly what the FT-Bare/FT-Rat cross is measuring.
+
+    Detection is deliberately simple: an explicit non-trivial ``explanation``
+    field, or failing that enough prose words that the output cannot be a bare
+    code. Codes themselves are 1-3 characters and never reach `min_words`.
+    """
+    if not generated:
+        return False
+    text = generated.strip()
+    m = _EXPLANATION_FIELD.search(text)
+    if m:
+        return len(m.group(1).strip(" \"'{}\n").split()) >= 2
+    words = [w for w in re.split(r"[\s,;.\n]+", text) if any(c.isalpha() for c in w)]
+    return len(words) >= min_words
+
+
 class TieredAnnotator:
     """Two-stage T1 -> T2 classifier over a HuggingFace causal LM.
 
@@ -95,6 +122,11 @@ class TieredAnnotator:
         t1_adapter_dir / t2_adapter_dir: optional LoRA adapter dirs. If both are
             None the annotator is zero-shot (plain base model). If provided, the
             base model is wrapped once and both adapters are attached.
+        structure_suffix: prompt variant, "" for rationale-first (``inf_cot``)
+            or "_bare" for label-only (``inf_bare``).
+        fewshot_provider: optional callable ``(speaker, tier, t1_label) -> list``
+            of alternating user/assistant exemplar messages, spliced between the
+            system prompt and the target utterance.
     """
 
     def __init__(
@@ -106,9 +138,13 @@ class TieredAnnotator:
         trust_remote_code: bool = False,
         max_new_tokens: int = 8,
         max_input_len: int = 1024,
+        structure_suffix: str = "",
+        fewshot_provider: Optional[Callable[[str, str, Optional[str]], List[Dict[str, str]]]] = None,
     ):
         self.max_new_tokens = int(max_new_tokens)
         self.max_input_len = int(max_input_len)
+        self.structure_suffix = structure_suffix
+        self.fewshot_provider = fewshot_provider
         self.is_finetuned = bool(t1_adapter_dir and t2_adapter_dir)
 
         model, tokenizer, device = load_model_and_tokenizer(
@@ -135,7 +171,13 @@ class TieredAnnotator:
         if self.is_finetuned:
             self.model.set_adapter(name)
 
-    def _generate(self, messages: List[Dict[str, str]]) -> str:
+    def _generate(self, messages: List[Dict[str, str]]) -> Tuple[str, int, int]:
+        """Greedy-decode a reply.
+
+        Returns ``(text, n_prompt_tokens, n_generated_tokens)``. The token counts
+        let the caller tell a genuinely short reply from one clipped by
+        `max_new_tokens`, and spot prompts truncated by `max_input_len`.
+        """
         import torch
 
         prompt = self.tokenizer.apply_chat_template(
@@ -149,6 +191,7 @@ class TieredAnnotator:
             add_special_tokens=False,
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        n_prompt = int(inputs["input_ids"].shape[1])
         with torch.no_grad():
             out = self.model.generate(
                 **inputs,
@@ -156,12 +199,16 @@ class TieredAnnotator:
                 do_sample=False,
                 pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
             )
-        gen = self.tokenizer.decode(
-            out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True
-        )
-        return gen
+        new_ids = out[0, n_prompt:]
+        gen = self.tokenizer.decode(new_ids, skip_special_tokens=True)
+        return gen, n_prompt, int(new_ids.shape[0])
 
     # -- public ------------------------------------------------------------
+    def _fewshot(self, speaker: str, tier: str, t1_label: Optional[str]) -> Optional[List[Dict[str, str]]]:
+        if self.fewshot_provider is None:
+            return None
+        return self.fewshot_provider(speaker, tier, t1_label)
+
     def predict_row(
         self,
         df: pd.DataFrame,
@@ -169,14 +216,22 @@ class TieredAnnotator:
         context_mode: str,
         num_context_turns: int,
         restrict_t2_to_group: bool = False,
-    ) -> Tuple[str, str]:
-        """Return ``(t1_pred, t2_pred)`` for the utterance at ``row_pos``."""
+    ) -> Dict[str, object]:
+        """Annotate the utterance at ``row_pos``.
+
+        Returns the parsed labels plus the raw generations, generated token
+        counts, and rationale-emission flags, so instruction compliance can be
+        scored downstream (it is not recoverable from a parsed label alone).
+        """
         speaker = df.iloc[row_pos]["speaker"]
 
         # Tier 1
         self._set_adapter("t1")
-        t1_messages = build_messages_t1(df, row_pos, context_mode, num_context_turns)
-        t1_raw = self._generate(t1_messages)
+        t1_messages = build_messages_t1(
+            df, row_pos, context_mode, num_context_turns,
+            self.structure_suffix, self._fewshot(speaker, "t1", None),
+        )
+        t1_raw, t1_n_prompt, t1_n_gen = self._generate(t1_messages)
         t1_pred = parse_label(t1_raw, t1_codes_for_speaker(speaker))
 
         # Tier 2 conditioned on the predicted T1 group. If T1 was unparseable,
@@ -188,11 +243,25 @@ class TieredAnnotator:
             t2_allowed = t2_codes_for_speaker(speaker)
 
         self._set_adapter("t2")
-        t2_messages = build_messages_t2(df, row_pos, t1_for_prompt, context_mode, num_context_turns)
-        t2_raw = self._generate(t2_messages)
+        t2_messages = build_messages_t2(
+            df, row_pos, t1_for_prompt, context_mode, num_context_turns,
+            self.structure_suffix, self._fewshot(speaker, "t2", t1_for_prompt),
+        )
+        t2_raw, t2_n_prompt, t2_n_gen = self._generate(t2_messages)
         t2_pred = parse_label(t2_raw, t2_allowed)
 
-        return t1_pred, t2_pred
+        return {
+            "t1_pred": t1_pred,
+            "t2_pred": t2_pred,
+            "t1_raw": t1_raw,
+            "t2_raw": t2_raw,
+            "t1_n_prompt_tokens": t1_n_prompt,
+            "t2_n_prompt_tokens": t2_n_prompt,
+            "t1_n_gen_tokens": t1_n_gen,
+            "t2_n_gen_tokens": t2_n_gen,
+            "t1_emitted_rationale": emitted_rationale(t1_raw),
+            "t2_emitted_rationale": emitted_rationale(t2_raw),
+        }
 
     def predict_rows(
         self,
@@ -208,7 +277,7 @@ class TieredAnnotator:
         results: List[Dict[str, str]] = []
         for pos in tqdm(row_positions, desc=desc):
             row = df.iloc[pos]
-            t1_pred, t2_pred = self.predict_row(
+            pred = self.predict_row(
                 df, pos, context_mode, num_context_turns, restrict_t2_to_group
             )
             results.append(
@@ -219,8 +288,7 @@ class TieredAnnotator:
                     "utt_text": row["utt_text"],
                     "t1_label_GT": row.get("t1_label_GT"),
                     "t2_label_GT": row.get("t2_label_GT"),
-                    "t1_pred": t1_pred,
-                    "t2_pred": t2_pred,
+                    **pred,
                 }
             )
         return results
@@ -242,4 +310,4 @@ class TieredAnnotator:
             pass
 
 
-__all__ = ["TieredAnnotator", "parse_label", "LABEL_ALIASES"]
+__all__ = ["TieredAnnotator", "parse_label", "emitted_rationale", "LABEL_ALIASES"]

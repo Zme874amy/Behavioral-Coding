@@ -1,0 +1,107 @@
+# Qwen tier of the Model Scale x Adaptation x Rationale Alignment grid.
+#
+# Eight conditions: 4 adaptation arms (zs, fs, ft_bare, ft_rat) x 2 inference
+# styles (inf_bare, inf_cot). Driven by src/baseline/local_arm.py, which writes
+# results into data/annotated/baseline/ in the layout src/baseline/eval.py reads,
+# so the Qwen rows sit alongside the gpt-4o rows in one comparison.
+#
+# Usage:
+#   PYTHONPATH=src python -m baseline.local_arm train   --target bare --ctx 5
+#   PYTHONPATH=src python -m baseline.local_arm train   --target rat  --ctx 5
+#   PYTHONPATH=src python -m baseline.local_arm predict --arm ft_rat --inf cot --ctx 5
+#
+# See docs/BASELINE.md for the full grid and docs/HF_SETUP.md for HF auth
+# (Qwen2.5-7B is non-gated, so no token is required).
+
+defaults:
+  - _self_
+
+tier: qwen
+
+dataset:
+  # Fine-tuning data: held out from the evaluation set, no leakage.
+  train_csv: data/manual/HLQC_balanced_manual.csv
+  eval_csv: data/manual/MIV6.3A_manual.csv
+
+annotator:
+  context_mode: interval      # all | cumulative | interval
+  num_context_turns: 5        # matches the completed gpt-4o rows; 3 is the paper setting
+  # The original schema (response_formats.py) allows the full per-speaker T2
+  # vocabulary, so default to full-vocab parsing to stay faithful to the
+  # gpt-4o conditions; set true to constrain to the predicted T1 group.
+  restrict_t2_to_group: false
+
+# Frozen artifacts, both resolved per context length.
+paths:
+  adapter_dir: data/fine_tuning/baseline_local
+  rationale_dir: data/fine_tuning/rationales
+  fewshot_dir: data/fewshot
+  output_dir: data/annotated/baseline
+
+model:
+  base_model: Qwen/Qwen2.5-7B-Instruct
+  use_peft: true
+  peft_r: 16
+  peft_alpha: 32
+  peft_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  fp16: false
+  bf16: true
+  trust_remote_code: false
+  attn_implementation: sdpa
+
+training:
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 4
+  num_train_epochs: 3
+  learning_rate: 1e-4
+  # Measured: the T1 prompt (codebook + Permission CoT + context) reaches ~3.0k
+  # tokens at 5 volleys. 4096 leaves headroom so the target utterance, which
+  # sits at the END of the prompt, is never the thing that gets truncated.
+  max_length: 4096
+  # ft_bare targets are a single code (~3 tokens); ft_rat targets are a rationale
+  # plus label as JSON. Measured over the frozen ctx5 rationales with the Qwen2.5
+  # tokenizer: mean 69, p99 138, max 247. Set above the max so no target is
+  # truncated mid-sentence, which would train the model to emit unterminated JSON.
+  max_target_length: 256
+  validation_split: 0.0
+  seed: 42
+  logging_steps: 10
+  save_steps: 100000
+  save_total_limit: 1
+  show_tqdm: true
+  max_grad_norm: 1.0
+  warmup_ratio: 0.05
+  weight_decay: 0.0
+  lr_scheduler_type: cosine
+  gradient_checkpointing: true
+
+inference:
+  # Uniform across all eight cells, and deliberately generous. Four of the cells
+  # measure instruction compliance (does a label-trained model emit a rationale
+  # when asked, does a rationale-trained model suppress one when told to). A
+  # tight budget would clip a non-compliant rationale mid-sentence and surface it
+  # as a parse failure, turning a truncation artifact into a fake finding.
+  max_new_tokens: 256
+  # Per-arm input windows. Measured maxima at 5 volleys: zs/ft T1 ~3.0k, fs T1
+  # ~5.4k (exemplar transcripts dominate). Qwen2.5 handles 32k, so the only cost
+  # of the larger window is memory and speed on the few-shot arms.
+  max_input_len:
+    zs: 4096
+    fs: 8192
+    ft_bare: 4096
+    ft_rat: 4096
+  force_cpu: false
+
+# Cap the number of evaluation utterances (null = all 821). Smoke testing only.
+limit: null
+
+checkpoint_every: 25
