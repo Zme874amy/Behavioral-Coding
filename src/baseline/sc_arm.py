@@ -43,7 +43,18 @@ from tqdm import tqdm
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = REPO_ROOT / "conf" / "grpo_config.yaml"
 
-ARMS = ("sc_zs", "sc_ft_bare", "sc_ft_rat", "sc_grpo")
+# The three GRPO runs differ only in training configuration, so they must not
+# share a result filename or an adapter directory: Phase 2 would silently
+# overwrite Phase 1 and the ablation would end up compared against itself.
+GRPO_VARIANTS = {
+    "weighted": "sc_grpo",        # Phase 1 headline
+    "unweighted": "sc_grpo_unw",  # Phase 2: no rare-class emphasis
+    "coldstart": "sc_grpo_cold",  # Phase 2: init from the base model
+}
+GRPO_ARMS = tuple(GRPO_VARIANTS.values())
+ARM_TO_VARIANT = {v: k for k, v in GRPO_VARIANTS.items()}
+
+ARMS = ("sc_zs", "sc_ft_bare", "sc_ft_rat", *GRPO_ARMS)
 TRAIN_TARGETS = ("bare", "rat")
 # Which arms carry a rationale at inference. The two supervised arms are
 # evaluated in the style they were trained in; comparing a rationale-trained
@@ -53,7 +64,7 @@ ARM_EMITS_RATIONALE = {
     "sc_zs": True,
     "sc_ft_bare": False,
     "sc_ft_rat": True,
-    "sc_grpo": True,
+    **{arm: True for arm in GRPO_ARMS},
 }
 
 
@@ -85,13 +96,14 @@ def sft_adapter_dir(cfg: DictConfig, target: str, ctx: int) -> Path:
     )
 
 
-def grpo_adapter_dir(cfg: DictConfig, ctx: int, seed: int, weighted: bool = True) -> Path:
-    variant = "weighted" if weighted else "unweighted"
+def grpo_adapter_dir(cfg: DictConfig, ctx: int, seed: int, variant: str = "weighted") -> Path:
+    if variant not in GRPO_VARIANTS:
+        raise ValueError(f"unknown GRPO variant {variant!r}")
     return REPO_ROOT / cfg.paths.grpo_adapter_dir / f"ctx{ctx}" / variant / f"seed{seed}"
 
 
 def adapter_for_arm(
-    cfg: DictConfig, arm: str, ctx: int, seed: Optional[int], weighted: bool = True
+    cfg: DictConfig, arm: str, ctx: int, seed: Optional[int]
 ) -> Optional[Path]:
     if arm == "sc_zs":
         return None
@@ -99,10 +111,10 @@ def adapter_for_arm(
         return sft_adapter_dir(cfg, "bare", ctx)
     if arm == "sc_ft_rat":
         return sft_adapter_dir(cfg, "rat", ctx)
-    if arm == "sc_grpo":
+    if arm in ARM_TO_VARIANT:
         if seed is None:
-            raise SystemExit("--seed is required for the sc_grpo arm")
-        return grpo_adapter_dir(cfg, ctx, seed, weighted)
+            raise SystemExit(f"--seed is required for the {arm} arm")
+        return grpo_adapter_dir(cfg, ctx, seed, ARM_TO_VARIANT[arm])
     raise ValueError(f"unknown arm {arm!r}")
 
 
@@ -248,7 +260,7 @@ def cmd_predict(args) -> None:
         print(f"Nothing to do; {save_path} is already complete.")
         return
 
-    adapter = adapter_for_arm(cfg, arm, ctx, args.seed, not args.unweighted)
+    adapter = adapter_for_arm(cfg, arm, ctx, args.seed)
     if adapter is not None and not adapter.exists():
         raise SystemExit(f"Missing adapter {adapter}. Train it first.")
 
@@ -339,12 +351,7 @@ def main() -> None:
     p_pred = sub.add_parser("predict", help="annotate the evaluation set")
     p_pred.add_argument("--arm", choices=ARMS, required=True)
     p_pred.add_argument(
-        "--seed", type=int, default=None, help="GRPO seed (required for sc_grpo)"
-    )
-    p_pred.add_argument(
-        "--unweighted",
-        action="store_true",
-        help="load the Phase 2 no-rare-class-weighting GRPO adapter",
+        "--seed", type=int, default=None, help="GRPO seed (required for the GRPO arms)"
     )
 
     for p in (p_train, p_pred):

@@ -165,12 +165,28 @@ def _field(text: str, key: str) -> Optional[str]:
 
 
 def _rationale_field(text: str) -> str:
-    m = re.search(
+    """Rationale text from output that is not valid JSON.
+
+    Two shapes, tried in order: a quoted value (broken JSON that still quotes
+    its strings) and an unquoted one (`rationale: the counsellor ...`, which a
+    model drifting out of JSON tends to produce). The unquoted form has to stop
+    at a newline, since without a closing quote there is nothing else to bound
+    it. Missing this case would report a real rationale as absent and show up
+    as a false instruction-compliance failure.
+    """
+    quoted = re.search(
         r'["\']?(?:rationale|explanation)["\']?\s*[:=]\s*["\'](.*?)["\']\s*(?:[,}]|$)',
         text,
         flags=re.IGNORECASE | re.DOTALL,
     )
-    return m.group(1).strip() if m else ""
+    if quoted:
+        return quoted.group(1).strip()
+    unquoted = re.search(
+        r'["\']?(?:rationale|explanation)["\']?\s*[:=]\s*([^\n"\']+)',
+        text,
+        flags=re.IGNORECASE,
+    )
+    return unquoted.group(1).strip().rstrip(",}") if unquoted else ""
 
 
 def parse_completion(text: str, speaker: str) -> Dict[str, object]:

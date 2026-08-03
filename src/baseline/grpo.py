@@ -474,7 +474,16 @@ def cmd_train(args) -> None:
     weighted = bool(cfg.grpo.rare_class_weighting) and not args.no_rare_weighting
     _check_weighting_is_live(cfg.grpo.scale_rewards, weighted)
 
-    out_dir = grpo_adapter_dir(cfg, ctx, seed, weighted)
+    # Cold start is reported as its own arm even though it keeps the weighting,
+    # since it answers a different question (does GRPO need a competent
+    # initialisation) than the weighting ablation does.
+    if args.cold_start:
+        variant = "coldstart"
+    elif weighted:
+        variant = "weighted"
+    else:
+        variant = "unweighted"
+    out_dir = grpo_adapter_dir(cfg, ctx, seed, variant)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     full_df = load_manual(REPO_ROOT / cfg.dataset.train_csv)
@@ -583,9 +592,12 @@ def cmd_train(args) -> None:
         print("No validation improvement recorded; saving the final policy.")
         trainer.model.save_pretrained(str(out_dir))
 
+    from baseline.sc_arm import GRPO_VARIANTS
+
     meta = {
         "format": "single_call",
-        "arm": "sc_grpo",
+        "arm": GRPO_VARIANTS[variant],
+        "variant": variant,
         "seed": seed,
         "num_context_turns": ctx,
         "rare_class_weighting": weighted,

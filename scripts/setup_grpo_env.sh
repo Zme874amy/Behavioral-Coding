@@ -9,15 +9,25 @@
 # runs against; vLLM pins its own torch and would break it. Nothing here
 # touches DSKS.
 #
-# The venv and the HuggingFace cache both live OUTSIDE the repo. A Qwen2.5-7B
-# download is ~15GB and a venv with vLLM is several GB more; neither belongs
-# anywhere near a directory that gets committed.
+# The venv lives OUTSIDE the repo; a vLLM install is well over 10GB and does
+# not belong near a directory that gets committed.
+#
+# HF_HOME defaults to the cache that already exists on MLeRP, which already
+# holds Qwen2.5-7B-Instruct (~15GB). Pointing it at a fresh directory would
+# silently re-download the whole model into a home directory that is under a
+# 50GB quota, which is how this script ran out of disk the first time.
 
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 GRPO_ENV="${GRPO_ENV:-$(dirname "$REPO_ROOT")/grpo-env}"
-export HF_HOME="${HF_HOME:-$(dirname "$REPO_ROOT")/hf-cache}"
+export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+
+# /tmp on the MLeRP login node is a 30GB root filesystem shared by every user
+# and typically has ~2GB free, which is not enough to unpack the CUDA wheels
+# vLLM depends on (several are 200-500MB each). Keep scratch on the same
+# volume as the venv.
+export TMPDIR="${TMPDIR_OVERRIDE:-$(dirname "$REPO_ROOT")/tmp}"
 
 _activate() {
   # shellcheck disable=SC1091
@@ -43,6 +53,23 @@ fi
 set -e
 echo "Building GRPO env at $GRPO_ENV"
 echo "HuggingFace cache at $HF_HOME"
+echo "Scratch (TMPDIR) at $TMPDIR"
+
+# Fail here rather than 20 minutes into an install. The home directory is under
+# a 50GB quota and a resolved vLLM stack (torch + the nvidia-* CUDA wheels) is
+# 12-16GB installed, plus transient unpacking room.
+NEED_GB=20
+avail_gb="$(df -BG --output=avail "$(dirname "$GRPO_ENV")" 2>/dev/null | tail -1 | tr -dc '0-9')"
+if [[ -n "$avail_gb" && "$avail_gb" -lt "$NEED_GB" ]]; then
+  echo "ERROR: only ${avail_gb}GB free at $(dirname "$GRPO_ENV"), need ~${NEED_GB}GB." >&2
+  echo "Reclaim space first. Optimizer state from COMPLETED training runs is" >&2
+  echo "the usual culprit and is safe to delete (it is only used to resume an" >&2
+  echo "interrupted run; the adapters are what matter):" >&2
+  echo "  find outputs data -type f \\( -name optimizer.pt -o -name scheduler.pt \\" >&2
+  echo "       -o -name rng_state.pth \\) -delete" >&2
+  echo "  rm -rf ~/.cache/pip" >&2
+  exit 1
+fi
 
 # 3.10+ required by vLLM. Prefer an explicit interpreter over `python3`, which
 # on a login node may already be a conda env we do not want to inherit from.
@@ -56,14 +83,18 @@ done
 [[ -n "$PY" ]] || { echo "Need python >= 3.10, found none" >&2; exit 1; }
 echo "Base interpreter: $PY ($("$PY" --version 2>&1))"
 
-mkdir -p "$HF_HOME"
+mkdir -p "$HF_HOME" "$TMPDIR"
 "$PY" -m venv "$GRPO_ENV"
 _activate
 
-python -m pip install --upgrade pip wheel
+python -m pip install --no-cache-dir --upgrade pip wheel
+# --no-cache-dir because the wheel cache for this stack runs to ~7GB and lands
+# in the quota'd home directory, where it is pure overhead: the env is built
+# once and the cache is never reused.
+#
 # vLLM resolves and installs its own torch build; let it lead so pip does not
 # first pull a torch that vLLM then has to replace.
-python -m pip install -r "$REPO_ROOT/requirements-grpo.txt"
+python -m pip install --no-cache-dir -r "$REPO_ROOT/requirements-grpo.txt"
 
 echo
 echo "=== resolved versions ==="

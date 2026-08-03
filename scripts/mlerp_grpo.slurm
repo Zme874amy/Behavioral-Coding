@@ -9,7 +9,9 @@
 #   STAGE=grpo SEED=0 sbatch scripts/mlerp_grpo.slurm          # headline arm
 #   STAGE=grpo SEED=0 WEIGHTING=off sbatch scripts/mlerp_grpo.slurm   # Phase 2
 #   STAGE=grpo SEED=0 INIT=cold      sbatch scripts/mlerp_grpo.slurm  # Phase 2
-#   STAGE=predict ARM=sc_grpo SEED=0 sbatch scripts/mlerp_grpo.slurm
+#   STAGE=predict ARM=sc_grpo      SEED=0 sbatch scripts/mlerp_grpo.slurm
+#   STAGE=predict ARM=sc_grpo_unw  SEED=0 sbatch scripts/mlerp_grpo.slurm
+#   STAGE=predict ARM=sc_grpo_cold SEED=0 sbatch scripts/mlerp_grpo.slurm
 #
 # CTX defaults to 5 (Phase 1); pass CTX=3 for the Phase 3 replication.
 #
@@ -69,8 +71,7 @@ case "$STAGE" in
     ;;
   predict)
     PRED=(--arm "$ARM" --ctx "$CTX")
-    [[ "$ARM" == "sc_grpo" ]] && PRED+=(--seed "$SEED")
-    [[ "$WEIGHTING" == "off" ]] && PRED+=(--unweighted)
+    [[ "$ARM" == sc_grpo* ]] && PRED+=(--seed "$SEED")
     python -m baseline.sc_arm predict "${PRED[@]}"
     ;;
   *)
