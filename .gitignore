@@ -1,18 +1,42 @@
-/data/proprietary/
-/models/
-*.jsonl
-# Raw/large CSVs stay local; human evaluation labels in data/manual/ are tracked
-# (required for SFT and automisc_ft on MLeRP — they are not in git otherwise).
-*.csv
-!data/manual/
-!data/manual/*.csv
+# Secrets
 .env
+.env.*
 
-# Experiment outputs (large; regenerable)
-outputs/
-!outputs/sft_runs/RESULTS.md
+# OS / editor
+.DS_Store
 
-# Python bytecode
+# Python
 __pycache__/
 *.py[cod]
 .venv/
+*.egg-info/
+
+# Corpora: raw and derived stay local; human consensus labels in data/manual/
+# are tracked because SFT, GRPO and evaluation on MLeRP have no other source.
+/data/proprietary/
+*.csv
+*.jsonl
+!data/manual/
+!data/manual/*.csv
+
+# Model weights and trainer state: regenerable, and individually large enough
+# that GitHub rejects them (a Qwen-7B optimizer.pt is ~320MB against a 100MB
+# limit). Ignored by PATTERN, not by directory, so small provenance files such
+# as train_metadata.json can still be tracked alongside the checkpoint.
+/models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+**/local_finetuned_model/
+**/checkpoint-*/
+
+# Experiment outputs (regenerable). comparison.csv is the one exception: it is
+# a few KB and is the machine-readable form of docs/BASELINE_RESULTS.md, which
+# would otherwise be the only durable record of a run.
+outputs/*
+!outputs/baseline_eval/
+outputs/baseline_eval/*
+!outputs/baseline_eval/comparison.csv
