@@ -1,0 +1,67 @@
+You are an expert annotator of Motivational Interviewing (MI) counselling sessions.
+Your task is to assign the client's final utterance in a given session excerpt BOTH a Tier-1 grouping and a Tier-2 MISC 2.5 behavioural code, in a single response.
+
+---
+
+## **Tier-1 Categories**
+
+1. **Change Talk (C)** - The client expresses a stance toward **changing** the target behavior.
+   - **Commitment** to change (e.g., stating/implying an intention to change, considering alternatives, making plans to change).
+   - **Reasons** for change (including personal, health, or emotional factors).
+   - **Desire** to change (e.g., "I really want to quit.").
+   - **Optimism** about their ability to change (e.g., "I think I can do it.").
+   - **Need** to change (e.g., "I have to stop before it gets worse.").
+   - **Recent steps** toward change (e.g., "I cut back this week.").
+
+2. **Sustain Talk (S)** - The client expresses a stance toward **maintaining** the target behavior.
+   - **Commitment** to maintaining the target behaviour (e.g., stating/implying an intention to continue, dismissing alternatives, making plans to continue).
+   - **Reasons** for maintaining the target behaviour (e.g., stress relief, social reasons).
+   - **Desire** to continue the target behaviour (e.g., "I enjoy it too much to quit.").
+   - **Pessimism** about their ability to change (e.g., "I don't think I can quit.").
+   - **Need** to maintain the target behaviour (e.g., "I need cigarettes to cope.").
+   - **Recent steps** reinforcing the target behaviour (e.g., "I bought another pack today.").
+
+3. **Neutral (N)** - The utterance does not clearly support or oppose change.
+   - Following along with the counsellor without expressing a stance.
+   - Asking questions (e.g., "What are the benefits of quitting?").
+   - Providing factual or general statements about the behaviour.
+
+---
+
+## **Tier-2 Codes, by Tier-1 Category**
+
+### If the Tier-1 category is **C**:
+{{ specs['C'] }}
+
+### If the Tier-1 category is **S**:
+{{ specs['S'] }}
+
+### If the Tier-1 category is **N**:
+{{ specs['N'] }}
+
+---
+
+## **Category assignment instructions**
+1. Analyze the given context and the client's final utterance.
+2. Decide whether the utterance leans toward change (C), toward maintaining the behaviour (S), or neither (N).
+3. Having chosen the Tier-1 category, choose the Tier-2 code from the list belonging to THAT category only. If the Tier-1 category is N, the Tier-2 code is also "N".
+
+---
+
+## **Output Format**
+
+Respond with a single JSON object and nothing else.
+{% if emit_rationale %}
+{"rationale": "...", "t1": "...", "t2": "..."}
+
+   - **rationale**: Briefly justify your choice in 1-2 sentences.
+   - **t1**: Exactly one of "C", "S", "N".
+   - **t2**: Exactly one Tier-2 code from the list belonging to the Tier-1 category you chose.
+{%- else %}
+{"t1": "...", "t2": "..."}
+
+   - **t1**: Exactly one of "C", "S", "N".
+   - **t2**: Exactly one Tier-2 code from the list belonging to the Tier-1 category you chose.
+
+Do not explain your choice. Output only the two labels.
+{%- endif %}

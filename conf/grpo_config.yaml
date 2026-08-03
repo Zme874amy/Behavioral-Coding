@@ -1,0 +1,190 @@
+# Single-call GRPO ladder on Qwen2.5-7B-Instruct.
+#
+# Five arms, all sharing one prompt format (rationale -> t1 -> t2 in a single
+# generation, see src/baseline/single_call.py):
+#
+#   sc_ft_bare   LoRA on HLQC, bare-label targets            floor
+#   sc_ft_rat    LoRA on HLQC, distilled gpt-4o rationales   imitation baseline
+#   sc_grpo      GRPO from sc_ft_bare, self-discovered       headline
+#
+# The two decisive contrasts are sc_grpo vs sc_ft_bare (does reasoning help)
+# and sc_grpo vs sc_ft_rat (does discovered reasoning beat imitated).
+#
+# Usage:
+#   PYTHONPATH=src python -m baseline.sc_arm train   --target bare --ctx 5
+#   PYTHONPATH=src python -m baseline.grpo   train   --seed 0 --ctx 5
+#   PYTHONPATH=src python -m baseline.sc_arm predict --arm sc_grpo --seed 0 --ctx 5
+#
+# See docs/GRPO.md for the phase plan and the GPU-hour budget.
+
+defaults:
+  - _self_
+
+tier: qwen
+
+dataset:
+  # Held out from the evaluation set; no leakage in either direction.
+  train_csv: data/manual/HLQC_balanced_manual.csv
+  eval_csv: data/manual/MIV6.3A_manual.csv
+
+annotator:
+  context_mode: interval
+  # ctx5 for Phase 1. Not because it is better (the gpt-4o rows say ctx3 wins
+  # on T2) but because it holds one variable fixed: if single-call sc_ft_bare
+  # lands near the two-call ctx5 T2-all accuracy of 0.660, the format port is
+  # validated rather than merely assumed. ctx3 is a Phase 3 sweep.
+  num_context_turns: 5
+
+paths:
+  sft_adapter_dir: data/fine_tuning/single_call
+  grpo_adapter_dir: data/fine_tuning/grpo
+  rationale_dir: data/fine_tuning/rationales
+  output_dir: data/annotated/baseline
+
+model:
+  # Identical LoRA geometry to conf/baseline_ft_local_config.yaml so the
+  # single-call arms differ from the two-call arms in format alone.
+  base_model: Qwen/Qwen2.5-7B-Instruct
+  use_peft: true
+  peft_r: 16
+  peft_alpha: 32
+  peft_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  fp16: false
+  bf16: true
+  trust_remote_code: false
+  attn_implementation: sdpa
+
+# Supervised fine-tuning for the sc_ft_bare / sc_ft_rat arms. Copied verbatim
+# from the two-call config; changing anything here breaks the format-port check.
+training:
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 4
+  num_train_epochs: 3
+  learning_rate: 1e-4
+  # Measured: the joint counsellor prompt reaches ~2.7k tokens at 5 volleys
+  # (smaller than the two-call T1 prompt, because the verbose per-code
+  # descriptions moved into the T2 spec block). 4096 leaves headroom so the
+  # target utterance, which sits at the END of the prompt, is never truncated.
+  max_length: 4096
+  max_target_length: 256
+  validation_split: 0.0
+  seed: 42
+  logging_steps: 10
+  save_steps: 100000
+  save_total_limit: 1
+  show_tqdm: true
+  max_grad_norm: 1.0
+  warmup_ratio: 0.05
+  weight_decay: 0.0
+  lr_scheduler_type: cosine
+  gradient_checkpointing: true
+
+grpo:
+  # Initialisation. `sc_ft_bare` gives the policy a working label distribution
+  # to explore from; a cold base model at T2-all 0.38 accuracy produces groups
+  # where every rollout is wrong, which is zero advantage and zero gradient.
+  # The cold-start run is the Phase 2 ablation that demonstrates this.
+  init_from: sc_ft_bare        # sc_ft_bare | none (cold start)
+
+  num_generations: 8           # G, rollouts per prompt
+  num_train_epochs: 2
+  learning_rate: 1e-6
+  temperature: 1.0             # exploration; at 0 every rollout is identical
+  top_p: 1.0
+  max_completion_length: 256
+
+  # KL to the reference policy. With PEFT, TRL uses the adapter-disabled base
+  # model as the reference, so this costs no extra memory. Non-zero because the
+  # reward only scores labels and format: without an anchor the cheapest policy
+  # drifts toward degenerate rationales that still collect the label points.
+  beta: 0.02
+
+  # MUST stay "none". The rare-class weight multiplies every rollout in a group
+  # by the same constant (one prompt, one gold label), so under the default
+  # "group" scaling it cancels in both the mean subtraction and the std
+  # division and the weighting silently does nothing. baseline.grpo asserts
+  # this rather than trusting the config.
+  scale_rewards: none
+  loss_type: dr_grpo
+  epsilon: 0.2
+  num_iterations: 1
+
+  # TRL requires generation_batch_size (per_device x accum x n_proc) to divide
+  # evenly by num_generations. 4 x 8 = 32 over G=8 gives 4 unique prompts per
+  # optimizer step while only 4 sequences are resident at once.
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+  warmup_ratio: 0.03
+  lr_scheduler_type: constant_with_warmup
+
+  # Rare-class emphasis. Toggled OFF for the Phase 2 ablation; that contrast is
+  # what shows a macro-F1 lift came from rebalancing rather than from the
+  # majority class. Weights are inverse-frequency on the gold T2 code, computed
+  # per speaker (the vocabularies are disjoint) from TRAINING counts only.
+  rare_class_weighting: true
+  weight_power: 0.5
+  weight_floor: 0.5
+  weight_ceiling: 3.0
+  # Oversampling compounds with the reward weight (a code at weight 2.5 with 2
+  # copies gets roughly 5x the gradient), so this stays small. It addresses a
+  # different problem: SU is 9 of 1040 counsellor rows, so without it an epoch
+  # contains almost no steps that involve the code at all.
+  oversample_max_copies: 2
+
+  # Checkpoint selection on a conversation-level split of the TRAINING corpus;
+  # MIV6.3A is never read during training or selection. Splitting by
+  # conversation rather than by row is required -- utterances from one session
+  # share context windows, so a row-level split puts validation text inside
+  # training prompts.
+  #
+  # HLQC contains only 10 conversations, so the split is coarse and fold sizes
+  # vary a lot (from 35 to 503 rows). Fold 0 of 7 was picked before any
+  # training, on the basis that it holds out 369 rows / 19% spanning 22
+  # distinct T2 codes, all of which also occur in the training slice. That is
+  # selection on label coverage, not on any model's score.
+  val_folds: 7
+  val_fold: 0
+  val_every_steps: 50
+  # Cap on validation prompts per check. Validation decodes with HF generate,
+  # not vLLM, so it is the expensive part of an otherwise cheap callback.
+  val_max_examples: 200
+  # Abort if the mean rationale collapses below this. The reward puts a floor
+  # under rationale length at the format point, but a policy can still trade
+  # that 0.1 away for the 0.8 of label reward; if it does, the run is measuring
+  # something other than reasoning and should stop rather than burn GPU hours.
+  min_mean_rationale_words: 4.0
+
+  log_completions: true
+  num_completions_to_print: 4
+  save_steps: 200
+  logging_steps: 5
+
+vllm:
+  enabled: true
+  mode: colocate
+  # Colocate shares one GPU between the policy and the rollout engine. 0.30
+  # leaves room for a 7B bf16 policy plus LoRA optimizer state on a 40GB A100;
+  # raise it on the 2-GPU server-mode setup where vLLM has a card to itself.
+  gpu_memory_utilization: 0.30
+  max_model_length: 8192
+
+inference:
+  max_new_tokens: 256
+  max_input_len: 8192
+  force_cpu: false
+  batch_size: 16
+
+# Cap evaluation utterances (null = all 821). Smoke testing only.
+limit: null
+checkpoint_every: 50
