@@ -1,0 +1,30 @@
+{
+  "tier": "qwen",
+  "target": "rat",
+  "num_context_turns": 5,
+  "context_mode": "interval",
+  "structure_suffix": "",
+  "base_model": "Qwen/Qwen2.5-7B-Instruct",
+  "train_csv": "data/manual/HLQC_balanced_manual.csv",
+  "n_rows": 1925,
+  "n_epochs": 3,
+  "learning_rate": 0.0001,
+  "max_length": 4096,
+  "max_target_length": 256,
+  "lora": {
+    "r": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ]
+  },
+  "t1_adapter": "/mnt/userdata4/jia-wen/Behavioral-Coding/data/fine_tuning/baseline_local/ctx5/rat/t1/local_finetuned_model",
+  "t2_adapter": "/mnt/userdata4/jia-wen/Behavioral-Coding/data/fine_tuning/baseline_local/ctx5/rat/t2/local_finetuned_model"
+}
