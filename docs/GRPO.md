@@ -45,6 +45,7 @@ All five arms share one prompt format, so they differ in training signal alone.
 |---|---|---|
 | `sc_ft_bare` | nothing (label targets) | floor |
 | `sc_zs` | prompt only | reference |
+| `sc_fs` | prompt plus HLQC exemplars | reference (Phase 3) |
 | `sc_ft_rat` | copied gpt-4o rationale | imitation baseline |
 | `sc_grpo` | self-discovered, reward-filtered | **headline** |
 | gpt-4o (two-call, already run) | — | frontier ceiling |
@@ -204,12 +205,31 @@ STAGE=predict ARM=sc_grpo_unw  SEED=0    sbatch scripts/mlerp_grpo.slurm
 STAGE=predict ARM=sc_grpo_cold SEED=0    sbatch scripts/mlerp_grpo.slurm
 
 # Phase 3
-PYTHONPATH=src python -m baseline.faithfulness --arm sc_grpo --seed 0 --ctx 5
-PYTHONPATH=src python -m baseline.faithfulness --arm sc_ft_rat --ctx 5
+STAGE=predict ARM=sc_zs                  sbatch scripts/mlerp_grpo.slurm
+STAGE=predict ARM=sc_fs                  sbatch scripts/mlerp_grpo.slurm
+STAGE=faith   ARM=sc_grpo SEED=0         sbatch scripts/mlerp_grpo.slurm
+STAGE=faith   ARM=sc_ft_rat              sbatch scripts/mlerp_grpo.slurm
+STAGE=predict ARM=sc_grpo SEED=0 CTX=3   sbatch scripts/mlerp_grpo.slurm
 
 # Score everything, both ladders, into docs/BASELINE_RESULTS.md
 PYTHONPATH=src python -m baseline.eval
 ```
+
+Only `grpo` and `calibrate` need a full A100: they colocate a vLLM engine with
+the policy, and 30% of a 20GB MIG slice cannot even hold the 7B weights.
+`predict`, `sft` and `faith` are single-sequence HF decoding at ~16GB, so they
+fit a slice and should be submitted with `--gres=gpu:3g.20gb:1`. This is worth
+doing rather than tidy: BigCats routinely has every 40GB card allocated while
+the MIG slices sit idle, and the two prediction arms above ran immediately on
+slices instead of waiting behind a six-hour queue.
+
+The `sc_fs` prompt carries one exemplar per T1 group — six for the counsellor,
+which at ctx5 adds ~2.6k tokens to an already ~4.3k-token prompt. That fits
+`inference.max_input_len: 8192`, but not by much. Truncation here is right-side,
+so it would remove the utterance being coded rather than the exemplars and the
+model would answer a question it was never asked; `sc_arm predict` therefore
+counts truncated prompts and warns. If that warning ever fires, raise
+`max_input_len` rather than trusting the run.
 
 Each GRPO variant writes to its own adapter directory and its own result
 filename (`sc_grpo`, `sc_grpo_unw`, `sc_grpo_cold`). They must not be allowed to
