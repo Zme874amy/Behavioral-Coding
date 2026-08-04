@@ -72,16 +72,41 @@ if [[ -n "$avail_gb" && "$avail_gb" -lt "$NEED_GB" ]]; then
   exit 1
 fi
 
-# 3.10+ required by vLLM. Prefer an explicit interpreter over `python3`, which
-# on a login node may already be a conda env we do not want to inherit from.
+# 3.10+ required by vLLM, and the interpreter MUST ship Python.h.
+#
+# Triton JIT-compiles a small CUDA helper the first time a kernel runs, and it
+# finds the headers through sysconfig on whatever interpreter the venv was
+# built from. MLeRP's /usr/bin/python3.10 has no dev headers, so a venv built
+# from it installs perfectly and then dies at the first GPU kernel with
+# "fatal error: Python.h: No such file or directory" -- an hour into the job,
+# not at setup. The DSKS conda interpreters do ship headers, and a venv built
+# from one inherits its include path.
+_has_headers() {
+  "$1" - <<'PYEOF' >/dev/null 2>&1
+import os, sys, sysconfig
+inc = sysconfig.get_paths()["include"]
+sys.exit(0 if os.path.exists(os.path.join(inc, "Python.h")) else 1)
+PYEOF
+}
+
 PY=""
-for cand in python3.12 python3.11 python3.10 python3; do
-  if command -v "$cand" >/dev/null 2>&1; then
-    ver="$("$cand" -c 'import sys; print("%d%02d" % sys.version_info[:2])')"
-    if [[ "$ver" -ge 310 ]]; then PY="$cand"; break; fi
-  fi
+CANDIDATES=(
+  ${GRPO_PYTHON:-}
+  $(ls -d /apps/mambaforge/envs/dsks_*/bin/python3 2>/dev/null | sort -rV)
+  python3.12 python3.11 python3.10 python3
+)
+for cand in "${CANDIDATES[@]}"; do
+  command -v "$cand" >/dev/null 2>&1 || continue
+  ver="$("$cand" -c 'import sys; print("%d%02d" % sys.version_info[:2])' 2>/dev/null)" || continue
+  [[ "${ver:-0}" -ge 310 ]] || continue
+  if _has_headers "$cand"; then PY="$cand"; break; fi
+  echo "  skipping $cand: no Python.h (Triton could not JIT)"
 done
-[[ -n "$PY" ]] || { echo "Need python >= 3.10, found none" >&2; exit 1; }
+[[ -n "$PY" ]] || {
+  echo "No python >= 3.10 with development headers found." >&2
+  echo "Set GRPO_PYTHON to an interpreter whose sysconfig include dir has Python.h." >&2
+  exit 1
+}
 echo "Base interpreter: $PY ($("$PY" --version 2>&1))"
 
 mkdir -p "$HF_HOME" "$TMPDIR"
