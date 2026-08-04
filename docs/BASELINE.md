@@ -8,6 +8,14 @@ The grid grew out of the AutoMISC gpt-4o baseline reproduction (a 2x2 prompting
 matrix plus a fine-tuned condition). Everything from that round is still here,
 just renamed into the tier/arm/style scheme.
 
+> **This grid is the two-call pipeline** (a Tier-1 call, then a Tier-2 call
+> conditioned on its answer). The GRPO experiment that follows from these
+> results uses a single-call format instead and is documented separately in
+> [GRPO.md](GRPO.md). Its arms are prefixed `sc_` and appear as their own block
+> in [BASELINE_RESULTS.md](BASELINE_RESULTS.md); the two formats are each
+> internally comparable but not comparable to each other. Nothing below is
+> affected by it.
+
 ## The grid
 
 **Tiers** — model scale.
@@ -316,3 +324,6 @@ prompt/generated token counts.
 | `scripts/mlerp_local_train.slurm` | One Qwen adapter pair (`TARGET`, `CTX`) |
 | `scripts/mlerp_local_predict.slurm` | One Qwen cell (`ARM`, `INF`, `CTX`) |
 | `scripts/submit_local_grid.sh` | Whole Qwen tier with training dependencies |
+
+The single-call GRPO ladder is a separate set of modules and does not share any
+of the runners above; see the code map in [GRPO.md](GRPO.md).
