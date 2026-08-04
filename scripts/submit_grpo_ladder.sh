@@ -3,7 +3,9 @@
 #
 #   bash scripts/submit_grpo_ladder.sh              # submits calibration too
 #   CAL=158198 bash scripts/submit_grpo_ladder.sh   # reuse a queued calibration
-#   DRYRUN=1 bash scripts/submit_grpo_ladder.sh     # print the graph, submit nothing
+#   CAL=none   bash scripts/submit_grpo_ladder.sh   # calibration already passed
+#   SFT3=done  bash scripts/submit_grpo_ladder.sh   # ctx3 sc_ft_bare already trained
+#   DRYRUN=1   bash scripts/submit_grpo_ladder.sh   # print the graph, submit nothing
 #
 # Every training job hangs off `afterok` on calibration, so a configuration
 # that cannot even start vLLM costs one short job rather than eight 20-hour
@@ -41,7 +43,12 @@ submit() {
     *) echo "bad partition $where" >&2; exit 1 ;;
   esac
   case "$kind" in
-    train) res="--gres=gpu:40gb:1 --mem=64G --time=20:00:00" ;;
+    # 24h is the ceiling on both the lion and tabby QOS. Calibration measured
+    # 17.8 s/prompt, so two epochs over the ~1650-prompt training split is
+    # ~16.3h before oversampling and the validation callbacks, which lands near
+    # 21h. Anything shorter would wall-clock out; the best-checkpoint callback
+    # means a job that does hit the wall still leaves a usable adapter.
+    train) res="--gres=gpu:40gb:1 --mem=64G --time=24:00:00" ;;
     cal)   res="--gres=gpu:40gb:1 --mem=64G --time=01:00:00" ;;
     light) res="--gres=gpu:3g.20gb:1 --mem=48G --time=08:00:00" ;;
     *) echo "bad kind $kind" >&2; exit 1 ;;
@@ -67,7 +74,10 @@ submit() {
 }
 
 echo "=== Phase 0: calibration ===" >&2
-if [ -n "${CAL:-}" ]; then
+if [ "${CAL:-}" = "none" ]; then
+  echo "  calibration already passed; training jobs ungated" >&2
+  CAL=""
+elif [ -n "${CAL:-}" ]; then
   echo "  reusing queued calibration $CAL" >&2
 else
   CAL=$(submit cal housecats cal "" STAGE=calibrate CTX=5)
@@ -98,12 +108,19 @@ echo "=== Phase 3: defence ===" >&2
 submit faith_grpo bigcats light "$P0" \
   STAGE=faith ARM=sc_grpo SEED=0 CTX=5 >/dev/null
 
-# ctx3 replication. There is no ctx3 sc_ft_bare adapter yet and GRPO
-# initialises from it, so that SFT heads this branch. It needs no calibration:
-# it is the supervised recipe already run at ctx5, not the RL loop.
-SFT3=$(submit sft3_bare bigcats train "" STAGE=sft TARGET=bare CTX=3)
+# ctx3 replication. GRPO initialises from a ctx3 sc_ft_bare adapter, so that
+# SFT heads this branch. It needs no calibration: it is the supervised recipe
+# already run at ctx5, not the RL loop.
+if [ "${SFT3:-}" = "done" ]; then
+  echo "  ctx3 sc_ft_bare already trained" >&2
+  SFT3=""
+else
+  SFT3=$(submit sft3_bare bigcats train "" STAGE=sft TARGET=bare CTX=3)
+fi
 submit p3_bare bigcats light "$SFT3" STAGE=predict ARM=sc_ft_bare CTX=3 >/dev/null
-G3=$(submit g3_s0 bigcats train "$SFT3:$CAL" STAGE=grpo SEED=0 CTX=3)
+# Join whichever of the two gates actually exist into one afterok list.
+G3DEP=$(echo "$SFT3:$CAL" | sed 's/^://; s/:$//')
+G3=$(submit g3_s0 bigcats train "$G3DEP" STAGE=grpo SEED=0 CTX=3)
 submit p3_s0 bigcats light "$G3" STAGE=predict ARM=sc_grpo SEED=0 CTX=3 >/dev/null
 
 echo >&2

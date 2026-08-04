@@ -52,6 +52,12 @@ source "${SLURM_SUBMIT_DIR}/scripts/setup_grpo_env.sh" use
 export MASTER_ADDR="${MASTER_ADDR:-127.0.0.1}"
 export MASTER_PORT="${MASTER_PORT:-$(( 20000 + SLURM_JOB_ID % 20000 ))}"
 
+# Calibration peaked at 39.9 GiB reserved on a 39.5 GiB card: the colocated
+# policy and vLLM engine leave no slack, and sleep mode repeatedly frees and
+# reclaims a large block, which is exactly the pattern that fragments the
+# caching allocator. Over a 20-hour run that turns into an OOM at hour 12.
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+
 STAGE="${STAGE:-calibrate}"
 CTX="${CTX:-5}"
 SEED="${SEED:-0}"

@@ -140,21 +140,31 @@ training slice. That is selection on label coverage, not on any model's score.
 
 ## Phases and budget
 
-Estimates below are the planning figures. **Run `calibrate` first** and re-cost
-against `projected_run_hours` before submitting the ladder; the planning numbers
-assume a vLLM prefix-cache hit rate that nobody has measured on this prompt
-shape, so treat them as within a factor of two until then.
+Measured on a 40GB A100 (`outputs/grpo/calibration_ctx5.json`), not estimated:
+**71.0 s per optimizer step**, 4 prompts per step, so **17.8 s per prompt**. Two
+epochs over the ~1650-prompt training split is **16.3 GPU-h per GRPO run**
+before oversampling and the validation callbacks, which in practice lands near
+21h — hence the 24h wall on every training job.
 
-| Phase | Runs | GPU-h | Cut? |
+| Phase | GRPO runs | GPU-h | Cut? |
 |---|---|---:|---|
-| 0 — env and calibration | venv, `sc_ft_bare`, 50-prompt timing | ~3 | never |
-| 1 — the ladder | `sc_ft_bare`, `sc_ft_rat`, `sc_grpo` x 3 seeds, 5 predictions | ~24 | never |
-| 2 — why it worked | weighting off x 3 seeds, cold start x 1 | ~25 | keep if possible |
-| 3 — reviewer defence | few-shot, faithfulness probe, ctx3 replication | ~11 | cut first |
+| 0 — env and calibration | — | ~3 | never |
+| 1 — the ladder | `sc_grpo` x 3 seeds | ~54 | never |
+| 2 — why it worked | weighting off x 3, cold start x 1 | ~66 | keep if possible |
+| 3 — reviewer defence | ctx3 replication x 1 | ~19 | cut first |
+
+That is ~140 GPU-h of RL across eight runs, plus roughly 6h of prediction and
+probing on 20GB MIG slices, which run in parallel and are not the constraint.
 
 The dominant cost is the policy forward/backward over ~2.5k-token prompts, not
 generation. If the budget bites, the lever is `num_generations` (8 to 6) and
-prompts per epoch, not the rollout engine.
+prompts per epoch, not the rollout engine. One number worth watching in the
+calibration log is `frac_reward_zero_std`, which was **0.75** at step 5: three
+groups in four had every rollout score the same, so they contributed no
+gradient. That is expected when initialising from a competent policy — GRPO
+learns only where rollouts disagree — but if it stays that high deep into
+training, most of the 16h is being spent on prompts the model has already
+settled, and cutting `num_generations` would cost less than it appears to.
 
 ## Running it
 
