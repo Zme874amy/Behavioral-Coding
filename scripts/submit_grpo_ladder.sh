@@ -37,9 +37,15 @@ trap 'rm -f "$TALLY"' EXIT
 submit() {
   label="$1"; where="$2"; kind="$3"; dep="$4"; shift 4
 
+  # Concurrency is capped per QOS, not per user: lion allows 4 running jobs,
+  # panther 4, tabby 1. Eight GRPO runs all sit under lion by default and six
+  # of them would idle behind the cap for a full 20-hour wave, so the training
+  # jobs are spread across all three. BigCats permits lion and panther alike;
+  # panther differs only in a 7-day wall, which nothing here needs.
   case "$where" in
     housecats) place="--partition=HouseCats --qos=tabby" ;;
     bigcats)   place="--partition=BigCats --qos=lion" ;;
+    panther)   place="--partition=BigCats --qos=panther" ;;
     *) echo "bad partition $where" >&2; exit 1 ;;
   esac
   case "$kind" in
@@ -84,10 +90,11 @@ else
 fi
 
 echo "=== Phase 1: headline arm, 3 seeds ===" >&2
-# Seeds 0 and 1 to HouseCats' two cards, seed 2 into the BigCats pool.
+# One seed onto tabby's single slot, the other two onto panther, leaving all
+# four lion slots for Phase 2 so that every training job can run concurrently.
 G0=$(submit g_s0 housecats train "$CAL" STAGE=grpo SEED=0 CTX=5)
-G1=$(submit g_s1 housecats train "$CAL" STAGE=grpo SEED=1 CTX=5)
-G2=$(submit g_s2 bigcats   train "$CAL" STAGE=grpo SEED=2 CTX=5)
+G1=$(submit g_s1 panther   train "$CAL" STAGE=grpo SEED=1 CTX=5)
+G2=$(submit g_s2 panther   train "$CAL" STAGE=grpo SEED=2 CTX=5)
 P0=$(submit p_s0 bigcats light "$G0" STAGE=predict ARM=sc_grpo SEED=0 CTX=5)
 submit p_s1 bigcats light "$G1" STAGE=predict ARM=sc_grpo SEED=1 CTX=5 >/dev/null
 submit p_s2 bigcats light "$G2" STAGE=predict ARM=sc_grpo SEED=2 CTX=5 >/dev/null
@@ -117,10 +124,10 @@ if [ "${SFT3:-}" = "done" ]; then
 else
   SFT3=$(submit sft3_bare bigcats train "" STAGE=sft TARGET=bare CTX=3)
 fi
-submit p3_bare bigcats light "$SFT3" STAGE=predict ARM=sc_ft_bare CTX=3 >/dev/null
+submit p3_bare panther light "$SFT3" STAGE=predict ARM=sc_ft_bare CTX=3 >/dev/null
 # Join whichever of the two gates actually exist into one afterok list.
 G3DEP=$(echo "$SFT3:$CAL" | sed 's/^://; s/:$//')
-G3=$(submit g3_s0 bigcats train "$G3DEP" STAGE=grpo SEED=0 CTX=3)
+G3=$(submit g3_s0 panther train "$G3DEP" STAGE=grpo SEED=0 CTX=3)
 submit p3_s0 bigcats light "$G3" STAGE=predict ARM=sc_grpo SEED=0 CTX=3 >/dev/null
 
 echo >&2
