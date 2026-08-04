@@ -5,6 +5,7 @@ T1+T2 format in `baseline.single_call`:
 
     arm          how the model is adapted
       sc_zs        none (plain base model)
+      sc_fs        none; HLQC exemplars in the prompt, one per T1 group
       sc_ft_bare   LoRA on HLQC, bare-label targets
       sc_ft_rat    LoRA on HLQC, distilled gpt-4o rationale + label targets
       sc_grpo      GRPO from sc_ft_bare (trained by `baseline.grpo`)
@@ -54,14 +55,17 @@ GRPO_VARIANTS = {
 GRPO_ARMS = tuple(GRPO_VARIANTS.values())
 ARM_TO_VARIANT = {v: k for k, v in GRPO_VARIANTS.items()}
 
-ARMS = ("sc_zs", "sc_ft_bare", "sc_ft_rat", *GRPO_ARMS)
+ARMS = ("sc_zs", "sc_fs", "sc_ft_bare", "sc_ft_rat", *GRPO_ARMS)
 TRAIN_TARGETS = ("bare", "rat")
+# Arms that put HLQC exemplars in the prompt instead of in a LoRA adapter.
+FEWSHOT_ARMS = ("sc_fs",)
 # Which arms carry a rationale at inference. The two supervised arms are
 # evaluated in the style they were trained in; comparing a rationale-trained
 # model under a bare prompt is the two-call experiment's question, already
 # answered, and re-asking it here would double the run count for no new claim.
 ARM_EMITS_RATIONALE = {
     "sc_zs": True,
+    "sc_fs": True,
     "sc_ft_bare": False,
     "sc_ft_rat": True,
     **{arm: True for arm in GRPO_ARMS},
@@ -105,7 +109,7 @@ def grpo_adapter_dir(cfg: DictConfig, ctx: int, seed: int, variant: str = "weigh
 def adapter_for_arm(
     cfg: DictConfig, arm: str, ctx: int, seed: Optional[int]
 ) -> Optional[Path]:
-    if arm == "sc_zs":
+    if arm in ("sc_zs", *FEWSHOT_ARMS):
         return None
     if arm == "sc_ft_bare":
         return sft_adapter_dir(cfg, "bare", ctx)
@@ -264,6 +268,18 @@ def cmd_predict(args) -> None:
     if adapter is not None and not adapter.exists():
         raise SystemExit(f"Missing adapter {adapter}. Train it first.")
 
+    exemplars = None
+    if arm in FEWSHOT_ARMS:
+        from baseline.fewshot import exemplars_path, load_exemplars
+
+        ex_path = exemplars_path(ctx)
+        if not ex_path.exists():
+            raise SystemExit(
+                f"Missing exemplars {ex_path}. Build them first (needs Azure, not a GPU):\n"
+                f"  PYTHONPATH=src python -m baseline.fewshot --ctx {ctx}"
+            )
+        exemplars = load_exemplars(ex_path)
+
     cond = condition_name(cfg.tier, arm, emit_rationale)
     print(
         f"Condition={cond} ctx={ctx} seed={args.seed} model={cfg.model.base_model} "
@@ -278,6 +294,7 @@ def cmd_predict(args) -> None:
         max_input_len=int(cfg.inference.max_input_len),
         force_cpu=bool(cfg.inference.force_cpu),
         trust_remote_code=bool(cfg.model.get("trust_remote_code", False)),
+        fewshot=exemplars,
     )
 
     context_mode = cfg.annotator.context_mode
@@ -302,9 +319,17 @@ def cmd_predict(args) -> None:
                 save()
     finally:
         save()
+        n_truncated = annotator.n_truncated
         annotator.close()
 
     _report(existing_df, cond, save_path, int(cfg.inference.max_new_tokens))
+    if n_truncated:
+        print(
+            f"  WARNING: {n_truncated} prompts hit max_input_len="
+            f"{cfg.inference.max_input_len} and were truncated from the right, "
+            "which removes the utterance being coded. Raise max_input_len or "
+            "shorten the exemplars before trusting these rows."
+        )
 
 
 def _report(df: Optional[pd.DataFrame], cond: str, save_path: Path, max_new_tokens: int) -> None:

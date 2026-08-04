@@ -107,6 +107,32 @@ def build_target(t1: str, t2: str, rationale: Optional[str] = None) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
+def build_fewshot_messages(
+    exemplars: Dict, speaker: str, emit_rationale: bool = True
+) -> List[Dict[str, str]]:
+    """Joint-format few-shot exemplars: one per T1 group for this speaker.
+
+    The two-call builder in `baseline.fewshot` emits a separate block per tier,
+    which here would mean one exemplar per T2 code -- 22 for the counsellor, on
+    top of a prompt that is already ~4.3k tokens at ctx5. The T1 pool carries
+    both gold labels on every entry, so taking it instead covers each T1 group
+    once and demonstrates the joint output shape at a ninth of the length.
+    """
+    pool = exemplars.get(speaker, {}).get("t1", [])
+    messages: List[Dict[str, str]] = []
+    for ex in pool:
+        user = render_user_prompt(
+            transcript=ex["transcript"], speaker=ex["speaker"], utterance=ex["utterance"]
+        )
+        # The T1 rationale is the one that argues the group, which is the
+        # decision the joint call has to make first.
+        rationale = ex.get("t1_explanation") if emit_rationale else None
+        reply = build_target(ex["t1_label"], ex["t2_label"], rationale)
+        messages.append({"role": "user", "content": user})
+        messages.append({"role": "assistant", "content": reply})
+    return messages
+
+
 # -----------------------------------------------------------------------------
 # Parsing
 # -----------------------------------------------------------------------------
@@ -357,6 +383,7 @@ __all__ = [
     "MIN_RATIONALE_WORDS",
     "build_messages",
     "build_target",
+    "build_fewshot_messages",
     "parse_completion",
     "rationale_word_count",
     "is_hierarchically_consistent",

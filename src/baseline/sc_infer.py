@@ -17,6 +17,7 @@ import pandas as pd
 
 from baseline.single_call import (
     UNKNOWN,
+    build_fewshot_messages,
     build_messages,
     is_hierarchically_consistent,
     parse_completion,
@@ -33,6 +34,8 @@ class SingleCallAnnotator:
         adapter_dir: optional LoRA adapter. None gives the zero-shot arm.
         emit_rationale: which Output Format block the prompt asks for. Only the
             output contract changes; the taxonomy is identical either way.
+        fewshot: optional loaded exemplar file. Supplied only by the `sc_fs`
+            arm; every other arm leaves the prompt zero-shot.
     """
 
     def __init__(
@@ -44,8 +47,12 @@ class SingleCallAnnotator:
         trust_remote_code: bool = False,
         max_new_tokens: int = 256,
         max_input_len: int = 8192,
+        fewshot: Optional[Dict] = None,
     ):
         self.emit_rationale = bool(emit_rationale)
+        self.fewshot = fewshot
+        self._fewshot_cache: Dict[str, List[Dict[str, str]]] = {}
+        self.n_truncated = 0
         self.max_new_tokens = int(max_new_tokens)
         self.max_input_len = int(max_input_len)
 
@@ -81,6 +88,11 @@ class SingleCallAnnotator:
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         n_prompt = int(inputs["input_ids"].shape[1])
+        if n_prompt >= self.max_input_len:
+            # Truncation is right-side, so it eats the utterance being coded and
+            # the generation prompt, not the exemplars. That produces plausible
+            # output for the wrong input, which scoring cannot detect.
+            self.n_truncated += 1
         with torch.no_grad():
             out = self.model.generate(
                 **inputs,
@@ -95,6 +107,15 @@ class SingleCallAnnotator:
             int(new_ids.shape[0]),
         )
 
+    def _fewshot_for(self, speaker: str) -> Optional[List[Dict[str, str]]]:
+        if not self.fewshot:
+            return None
+        if speaker not in self._fewshot_cache:
+            self._fewshot_cache[speaker] = build_fewshot_messages(
+                self.fewshot, speaker, self.emit_rationale
+            )
+        return self._fewshot_cache[speaker]
+
     def predict_row(
         self,
         df: pd.DataFrame,
@@ -104,7 +125,12 @@ class SingleCallAnnotator:
     ) -> Dict[str, object]:
         speaker = df.iloc[row_pos]["speaker"]
         messages = build_messages(
-            df, row_pos, context_mode, num_context_turns, self.emit_rationale
+            df,
+            row_pos,
+            context_mode,
+            num_context_turns,
+            self.emit_rationale,
+            self._fewshot_for(speaker),
         )
         raw, n_prompt, n_gen = self._generate(messages)
         parsed = parse_completion(raw, speaker)

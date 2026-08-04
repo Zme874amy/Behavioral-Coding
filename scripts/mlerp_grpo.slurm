@@ -12,6 +12,12 @@
 #   STAGE=predict ARM=sc_grpo      SEED=0 sbatch scripts/mlerp_grpo.slurm
 #   STAGE=predict ARM=sc_grpo_unw  SEED=0 sbatch scripts/mlerp_grpo.slurm
 #   STAGE=predict ARM=sc_grpo_cold SEED=0 sbatch scripts/mlerp_grpo.slurm
+#   STAGE=faith   ARM=sc_grpo      SEED=0 sbatch scripts/mlerp_grpo.slurm
+#
+# Only `grpo` and `calibrate` need a full 40GB card; they colocate a vLLM engine
+# with the policy. `predict`, `sft` and `faith` are single-sequence HF decoding
+# and fit a 20GB MIG slice, which on BigCats is usually free when the A100s are
+# not:  ... sbatch --gres=gpu:3g.20gb:1 scripts/mlerp_grpo.slurm
 #
 # CTX defaults to 5 (Phase 1); pass CTX=3 for the Phase 3 replication.
 #
@@ -78,8 +84,13 @@ case "$STAGE" in
     [[ "$ARM" == sc_grpo* ]] && PRED+=(--seed "$SEED")
     python -m baseline.sc_arm predict "${PRED[@]}"
     ;;
+  faith)
+    PROBE=(--arm "$ARM" --ctx "$CTX")
+    [[ "$ARM" == sc_grpo* ]] && PROBE+=(--seed "$SEED")
+    python -m baseline.faithfulness "${PROBE[@]}"
+    ;;
   *)
-    echo "Unknown STAGE=$STAGE (calibrate|sft|grpo|predict)" >&2
+    echo "Unknown STAGE=$STAGE (calibrate|sft|grpo|predict|faith)" >&2
     exit 1
     ;;
 esac
