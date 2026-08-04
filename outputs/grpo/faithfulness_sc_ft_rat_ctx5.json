@@ -1,0 +1,15 @@
+{
+  "arm": "sc_ft_rat",
+  "ctx": 5,
+  "seed": null,
+  "pair_seed": 0,
+  "n": 821,
+  "t1_control_flip_rate": 0.010962241169305725,
+  "t1_swap_flip_rate": 0.7917174177831913,
+  "t1_net_flip_rate": 0.7807551766138855,
+  "t2_control_flip_rate": 0.04141291108404385,
+  "t2_swap_flip_rate": 0.7393422655298416,
+  "t2_net_flip_rate": 0.6979293544457977,
+  "t2_donor_match_rate": 0.6676342525399129,
+  "n_donor_differs": 689
+}
