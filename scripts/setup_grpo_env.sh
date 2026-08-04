@@ -56,9 +56,10 @@ echo "HuggingFace cache at $HF_HOME"
 echo "Scratch (TMPDIR) at $TMPDIR"
 
 # Fail here rather than 20 minutes into an install. The home directory is under
-# a 50GB quota and a resolved vLLM stack (torch + the nvidia-* CUDA wheels) is
-# 12-16GB installed, plus transient unpacking room.
-NEED_GB=20
+# a 50GB quota and the resolved vLLM stack (torch plus the nvidia-* CUDA 13
+# wheels, flashinfer, triton) is the bulk of it. Override with NEED_GB=n if a
+# future pin resolves smaller.
+NEED_GB="${NEED_GB:-18}"
 avail_gb="$(df -BG --output=avail "$(dirname "$GRPO_ENV")" 2>/dev/null | tail -1 | tr -dc '0-9')"
 if [[ -n "$avail_gb" && "$avail_gb" -lt "$NEED_GB" ]]; then
   echo "ERROR: only ${avail_gb}GB free at $(dirname "$GRPO_ENV"), need ~${NEED_GB}GB." >&2
