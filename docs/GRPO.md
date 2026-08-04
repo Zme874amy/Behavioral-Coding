@@ -253,36 +253,42 @@ reported effect is the difference.
   random third code shows the swap confused the model, landing on the donor's
   own code shows it actually followed the substituted reasoning.
 
-### Result for `sc_ft_rat` (ctx5, 821 rows)
+### Results so far (ctx5, 821 rows, T2)
 
-| | T1 | T2 |
-|---|---:|---:|
-| control flip (own rationale re-forced) | 0.011 | 0.041 |
-| swap flip (donor rationale) | 0.792 | 0.739 |
-| **net flip** | **+0.781** | **+0.698** |
+| Arm | control flip | swap flip | **net flip** | donor-match |
+|---|---:|---:|---:|---:|
+| `sc_zs` (untrained) | 0.066 | 0.868 | **+0.803** | 0.757 |
+| `sc_ft_rat` | 0.041 | 0.739 | **+0.698** | 0.668 |
+| `sc_grpo` | — | — | — | — |
 
-Donor-match rate 0.668 over the 689 rows where the donor's own prediction
-differed. The control is near zero, so re-decoding is not what moves the label.
+**Run `sc_zs` before reading any of this.** Taken alone, FT-Rat's +0.698 looks
+like a finding: swap the rationale and the label follows it two thirds of the
+time, to the donor's own code rather than to a random third one, against a 4%
+re-decode control. The tempting conclusion is that FT-Rat learned a function
+from rationale to label, and that this is what its rationale training bought.
 
-This inverts the obvious reading of the FT-Rat result. The imitated rationale is
-not decoration the model ignores: swap it and the label follows it two thirds of
-the time, and to the *donor's* code specifically rather than to a random third
-one. FT-Rat has learned something close to a function from rationale to label.
+The zero-shot control says otherwise. A model with no rationale training at all
+scores **higher** on every column. So a forced rationale prefix steering the
+label is not evidence about training — it is what an autoregressive model does
+with any prefix. The probe's absolute magnitude mostly measures the format.
 
-That is why it scores below FT-Bare (T2 0.564 against 0.653) rather than in
-spite of it. Its rationales were written by gpt-4o conditioned on the gold
-label, so during training the rationale is always already correct and predicting
-the label from it is nearly free. At inference the model has to write the
-rationale itself, and it has never had to make that step carry any weight — so
-every error in the generated rationale is inherited by the label, with no
-independent read of the utterance left to correct it.
+What survives is the comparison. FT-Rat is *less* swayed by a substituted
+rationale than the untrained model is, so fine-tuning on labels moved weight
+back onto the utterance rather than onto the rationale. Its deficit against
+FT-Bare (T2 0.564 against 0.653) therefore is not over-reliance it acquired. The
+coupling belongs to the format, and it costs FT-Rat because FT-Rat has to
+generate the rationale it then conditions on, while its training rationales were
+written by gpt-4o from the gold label and so were never wrong. FT-Bare pays
+nothing here because it has no rationale to get wrong.
 
-So the case for GRPO is sharper than "rationales did not help". The channel from
-reasoning to label is open and load-bearing; what is missing is any pressure on
-the reasoning to be *right* when the model is the one producing it. That is
-exactly the pressure a reward on the resulting label applies, and it predicts
-what the GRPO arm has to show to count: a comparable net flip rate (the channel
-stays open) with higher accuracy (what flows through it is better).
+This is what GRPO is for, and it is also what makes the GRPO arm falsifiable.
+The channel from reasoning to label is open in every arm, at roughly the same
+strength, without anyone training for it; what no arm has is pressure on the
+model's *own* rationale to be correct. A reward on the resulting label is that
+pressure. So the GRPO row has to show accuracy above FT-Rat while its net flip
+stays in this same 0.7–0.8 band. Net flip far below the band would mean GRPO
+solved the problem by learning to ignore its own rationale, which would raise
+accuracy while abandoning the claim the experiment is meant to support.
 
 ## Code map
 
