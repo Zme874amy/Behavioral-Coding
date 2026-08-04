@@ -89,6 +89,12 @@ Where an arm was run at several seeds, the figure is the mean over seeds and the
 | FT-Rat_Inf-CoT | all | 821 | 0.725 | 0.679 | 0.624 | 0.624 | 0.624 |
 | FT-Rat_Inf-CoT | counsellor | 580 | 0.703 | 0.624 | 0.575 | 0.575 | 0.575 |
 | FT-Rat_Inf-CoT | client | 241 | 0.776 | 0.600 | 0.722 | 0.722 | 0.722 |
+| SC ZS-CoT | all | 821 | 0.642 | 0.588 | 0.595 | 0.595 | 0.535 |
+| SC ZS-CoT | counsellor | 580 | 0.603 | 0.503 | 0.520 | 0.520 | 0.446 |
+| SC ZS-CoT | client | 241 | 0.734 | 0.590 | 0.743 | 0.743 | 0.743 |
+| SC FS-CoT | all | 821 | 0.677 | 0.627 | 0.615 | 0.615 | 0.554 |
+| SC FS-CoT | counsellor | 580 | 0.648 | 0.555 | 0.540 | 0.540 | 0.463 |
+| SC FS-CoT | client | 241 | 0.747 | 0.610 | 0.766 | 0.766 | 0.766 |
 | SC FT-Bare | all | 821 | 0.790 | 0.756 | 0.708 | 0.708 | 0.708 |
 | SC FT-Bare | counsellor | 580 | 0.767 | 0.703 | 0.644 | 0.644 | 0.644 |
 | SC FT-Bare | client | 241 | 0.846 | 0.745 | 0.838 | 0.838 | 0.838 |
@@ -162,6 +168,12 @@ Where an arm was run at several seeds, the figure is the mean over seeds and the
 | FT-Rat_Inf-CoT | all | 821 | 0.620 | 0.587 | 0.410 | 0.443 | 0.346 |
 | FT-Rat_Inf-CoT | counsellor | 580 | 0.597 | 0.554 | 0.456 | 0.456 | 0.375 |
 | FT-Rat_Inf-CoT | client | 241 | 0.676 | 0.483 | 0.361 | 0.427 | 0.313 |
+| SC ZS-CoT | all | 821 | 0.421 | 0.379 | 0.315 | 0.327 | 0.258 |
+| SC ZS-CoT | counsellor | 580 | 0.369 | 0.297 | 0.283 | 0.283 | 0.247 |
+| SC ZS-CoT | client | 241 | 0.548 | 0.428 | 0.350 | 0.383 | 0.268 |
+| SC FS-CoT | all | 821 | 0.431 | 0.394 | 0.352 | 0.374 | 0.280 |
+| SC FS-CoT | counsellor | 580 | 0.374 | 0.315 | 0.321 | 0.321 | 0.264 |
+| SC FS-CoT | client | 241 | 0.568 | 0.455 | 0.386 | 0.442 | 0.295 |
 | SC FT-Bare | all | 821 | 0.653 | 0.622 | 0.484 | 0.496 | 0.408 |
 | SC FT-Bare | counsellor | 580 | 0.622 | 0.577 | 0.459 | 0.459 | 0.402 |
 | SC FT-Bare | client | 241 | 0.726 | 0.600 | 0.510 | 0.542 | 0.414 |
@@ -216,6 +228,10 @@ Rows marked `constrained` were decoded through a JSON schema that forced the out
 | Qwen2.5-7B-Instruct (SLM) | FT-Rat_Inf-Bare | T2 | 821 | no | 0 (0.0%) | 100.0% | 0 (0.0%) | free |
 | Qwen2.5-7B-Instruct (SLM) | FT-Rat_Inf-CoT | T1 | 821 | yes | 821 (100.0%) | 100.0% | 0 (0.0%) | free |
 | Qwen2.5-7B-Instruct (SLM) | FT-Rat_Inf-CoT | T2 | 821 | yes | 821 (100.0%) | 100.0% | 0 (0.0%) | free |
+| Qwen2.5-7B-Instruct (SLM) | SC ZS-CoT | T1 | 821 | yes | 821 (100.0%) | 100.0% | 2 (0.2%) | free |
+| Qwen2.5-7B-Instruct (SLM) | SC ZS-CoT | T2 | 821 | yes | 821 (100.0%) | 100.0% | 11 (1.3%) | free |
+| Qwen2.5-7B-Instruct (SLM) | SC FS-CoT | T1 | 821 | yes | 817 (99.5%) | 99.5% | 1 (0.1%) | free |
+| Qwen2.5-7B-Instruct (SLM) | SC FS-CoT | T2 | 821 | yes | 817 (99.5%) | 99.5% | 1 (0.1%) | free |
 | Qwen2.5-7B-Instruct (SLM) | SC FT-Bare | T1 | 821 | no | 0 (0.0%) | 100.0% | 0 (0.0%) | free |
 | Qwen2.5-7B-Instruct (SLM) | SC FT-Bare | T2 | 821 | no | 0 (0.0%) | 100.0% | 0 (0.0%) | free |
 | Qwen2.5-7B-Instruct (SLM) | SC FT-Rat | T1 | 821 | yes | 821 (100.0%) | 100.0% | 0 (0.0%) | free |
