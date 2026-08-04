@@ -11,7 +11,7 @@ Here the model emits a rationale and both labels in one generation:
 
 One rollout is therefore one sequence with one scalar reward covering both
 tiers, and the prefill cost is roughly what the two calls cost together
-(measured at ctx5: joint counsellor prompt ~4.3k tokens against 3.0k + 1.4k).
+(measured at ctx5: joint counsellor prompt ~2.5k tokens, client ~1.4k).
 
 Every arm of the single-call ladder -- `sc_ft_bare`, `sc_ft_rat`, `sc_grpo` --
 builds prompts through `build_messages`, so the only thing that differs between
@@ -114,7 +114,7 @@ def build_fewshot_messages(
 
     The two-call builder in `baseline.fewshot` emits a separate block per tier,
     which here would mean one exemplar per T2 code -- 22 for the counsellor, on
-    top of a prompt that is already ~4.3k tokens at ctx5. The T1 pool carries
+    top of a prompt that is already ~2.5k tokens at ctx5. The T1 pool carries
     both gold labels on every entry, so taking it instead covers each T1 group
     once and demonstrates the joint output shape at a ninth of the length.
     """

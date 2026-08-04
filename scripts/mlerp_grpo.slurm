@@ -44,6 +44,14 @@ mkdir -p outputs/grpo
 # shellcheck disable=SC1091
 source "${SLURM_SUBMIT_DIR}/scripts/setup_grpo_env.sh" use
 
+# vLLM initialises a torch.distributed process group even for a single GPU, and
+# the default rendezvous port is hardcoded to 29500. MLeRP packs several jobs
+# onto a node, so anything else already holding 29500 -- another tenant, or a
+# second job of this ladder -- takes the run down with EADDRINUSE before any
+# work starts. Derive a per-job port so concurrent jobs cannot collide.
+export MASTER_ADDR="${MASTER_ADDR:-127.0.0.1}"
+export MASTER_PORT="${MASTER_PORT:-$(( 20000 + SLURM_JOB_ID % 20000 ))}"
+
 STAGE="${STAGE:-calibrate}"
 CTX="${CTX:-5}"
 SEED="${SEED:-0}"
@@ -53,6 +61,7 @@ WEIGHTING="${WEIGHTING:-on}"
 INIT="${INIT:-ft_bare}"
 
 echo "=== stage=$STAGE ctx=$CTX seed=$SEED target=$TARGET arm=$ARM"
+echo "=== master_port=$MASTER_PORT"
 echo "=== weighting=$WEIGHTING init=$INIT"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 

@@ -67,7 +67,7 @@ non-stationary problems. Here one generation produces everything:
 
 One rollout is one sequence with one scalar reward covering both tiers. Prefill
 is roughly what the two calls cost together (measured at ctx5: joint counsellor
-prompt ~4.3k tokens against 3.0k + 1.4k), so the saving is one generation per
+prompt ~2.5k tokens, client ~1.4k), so the saving is one generation per
 utterance rather than two.
 
 Because the format differs, **single-call numbers are not comparable to the
@@ -152,7 +152,7 @@ shape, so treat them as within a factor of two until then.
 | 2 — why it worked | weighting off x 3 seeds, cold start x 1 | ~25 | keep if possible |
 | 3 — reviewer defence | few-shot, faithfulness probe, ctx3 replication | ~11 | cut first |
 
-The dominant cost is the policy forward/backward over ~4.3k-token prompts, not
+The dominant cost is the policy forward/backward over ~2.5k-token prompts, not
 generation. If the budget bites, the lever is `num_generations` (8 to 6) and
 prompts per epoch, not the rollout engine.
 
@@ -224,7 +224,7 @@ the MIG slices sit idle, and the two prediction arms above ran immediately on
 slices instead of waiting behind a six-hour queue.
 
 The `sc_fs` prompt carries one exemplar per T1 group — six for the counsellor,
-which at ctx5 adds ~2.6k tokens to an already ~4.3k-token prompt. That fits
+which at ctx5 adds ~2.6k tokens to an already ~2.5k-token prompt. That fits
 `inference.max_input_len: 8192`, but not by much. Truncation here is right-side,
 so it would remove the utterance being coded rather than the exemplars and the
 model would answer a question it was never asked; `sc_arm predict` therefore
