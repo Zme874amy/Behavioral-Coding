@@ -253,6 +253,37 @@ reported effect is the difference.
   random third code shows the swap confused the model, landing on the donor's
   own code shows it actually followed the substituted reasoning.
 
+### Result for `sc_ft_rat` (ctx5, 821 rows)
+
+| | T1 | T2 |
+|---|---:|---:|
+| control flip (own rationale re-forced) | 0.011 | 0.041 |
+| swap flip (donor rationale) | 0.792 | 0.739 |
+| **net flip** | **+0.781** | **+0.698** |
+
+Donor-match rate 0.668 over the 689 rows where the donor's own prediction
+differed. The control is near zero, so re-decoding is not what moves the label.
+
+This inverts the obvious reading of the FT-Rat result. The imitated rationale is
+not decoration the model ignores: swap it and the label follows it two thirds of
+the time, and to the *donor's* code specifically rather than to a random third
+one. FT-Rat has learned something close to a function from rationale to label.
+
+That is why it scores below FT-Bare (T2 0.564 against 0.653) rather than in
+spite of it. Its rationales were written by gpt-4o conditioned on the gold
+label, so during training the rationale is always already correct and predicting
+the label from it is nearly free. At inference the model has to write the
+rationale itself, and it has never had to make that step carry any weight — so
+every error in the generated rationale is inherited by the label, with no
+independent read of the utterance left to correct it.
+
+So the case for GRPO is sharper than "rationales did not help". The channel from
+reasoning to label is open and load-bearing; what is missing is any pressure on
+the reasoning to be *right* when the model is the one producing it. That is
+exactly the pressure a reward on the resulting label applies, and it predicts
+what the GRPO arm has to show to count: a comparable net flip rate (the channel
+stays open) with higher accuracy (what flows through it is better).
+
 ## Code map
 
 | Path | Role |

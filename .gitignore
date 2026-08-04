@@ -33,10 +33,16 @@ __pycache__/
 **/local_finetuned_model/
 **/checkpoint-*/
 
-# Experiment outputs (regenerable). comparison.csv is the one exception: it is
-# a few KB and is the machine-readable form of docs/BASELINE_RESULTS.md, which
-# would otherwise be the only durable record of a run.
+# Experiment outputs (regenerable). The exceptions are sub-kilobyte summaries
+# that are the only durable record of a run: comparison.csv is the
+# machine-readable form of docs/BASELINE_RESULTS.md, and the GRPO JSONs each
+# cost an hour or more of A100 time to reproduce. The per-row probe CSVs and
+# every model artifact stay out.
 outputs/*
 !outputs/baseline_eval/
 outputs/baseline_eval/*
 !outputs/baseline_eval/comparison.csv
+!outputs/grpo/
+outputs/grpo/*
+!outputs/grpo/faithfulness_*.json
+!outputs/grpo/calibration_*.json
