@@ -50,13 +50,17 @@ echo "=== stage=$STAGE ctx=$CTX seed=$SEED target=$TARGET arm=$ARM"
 echo "=== weighting=$WEIGHTING init=$INIT"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 
-FLAGS=()
+# `calibrate` only times the loop, so it takes --cold-start (which changes what
+# gets loaded and therefore the timing) but not --no-rare-weighting, which it
+# does not define. Passing it would abort the job on an argparse error.
+COLD=()
+[[ "$INIT" == "cold" ]] && COLD+=(--cold-start)
+FLAGS=("${COLD[@]}")
 [[ "$WEIGHTING" == "off" ]] && FLAGS+=(--no-rare-weighting)
-[[ "$INIT" == "cold" ]] && FLAGS+=(--cold-start)
 
 case "$STAGE" in
   calibrate)
-    python -m baseline.grpo calibrate --ctx "$CTX" --limit 64 --steps 5 "${FLAGS[@]}"
+    python -m baseline.grpo calibrate --ctx "$CTX" --limit 64 --steps 5 "${COLD[@]}"
     ;;
   sft)
     if [[ "$TARGET" == "rat" && ! -f "data/fine_tuning/rationales/hlqc_rationales_ctx${CTX}.json" ]]; then
