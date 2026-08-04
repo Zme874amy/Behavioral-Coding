@@ -557,6 +557,7 @@ def cmd_train(args) -> None:
         vllm_mode=str(cfg.vllm.mode),
         vllm_gpu_memory_utilization=float(cfg.vllm.gpu_memory_utilization),
         vllm_max_model_length=int(cfg.vllm.max_model_length),
+        vllm_enable_sleep_mode=bool(cfg.vllm.get("enable_sleep_mode", False)),
         log_completions=bool(cfg.grpo.log_completions),
         num_completions_to_print=int(cfg.grpo.num_completions_to_print),
         logging_steps=int(cfg.grpo.logging_steps),
@@ -627,6 +628,21 @@ def cmd_train(args) -> None:
 # -----------------------------------------------------------------------------
 # calibrate
 # -----------------------------------------------------------------------------
+def _prompt_tokens(tokenizer, messages) -> int:
+    """Token count of a rendered chat prompt.
+
+    Not `apply_chat_template(tokenize=True)`: transformers 5 returns a
+    BatchEncoding there where 4.x returned a list of ids, so `len()` silently
+    reports the number of dict keys. That reads as a plausible "2" rather than
+    as an error, and the whole point of calibration is to size the run from
+    real prompt lengths.
+    """
+    text = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
+    )
+    return len(tokenizer(text, add_special_tokens=False)["input_ids"])
+
+
 def cmd_calibrate(args) -> None:
     """Measure throughput on a few prompts, then extrapolate the phase budget.
 
@@ -651,14 +667,7 @@ def cmd_calibrate(args) -> None:
     records = build_records(train_df, full_df, cfg, ctx, None)[:n_prompts]
 
     model, tokenizer, peft_config = load_policy(cfg, ctx, args.cold_start)
-    lengths = [
-        len(
-            tokenizer.apply_chat_template(
-                r["prompt"], tokenize=True, add_generation_prompt=True
-            )
-        )
-        for r in records
-    ]
+    lengths = [_prompt_tokens(tokenizer, r["prompt"]) for r in records]
     by_speaker: Dict[str, List[int]] = {}
     for rec, n in zip(records, lengths):
         by_speaker.setdefault(rec["speaker"], []).append(n)
@@ -689,6 +698,7 @@ def cmd_calibrate(args) -> None:
         vllm_mode=str(cfg.vllm.mode),
         vllm_gpu_memory_utilization=float(cfg.vllm.gpu_memory_utilization),
         vllm_max_model_length=int(cfg.vllm.max_model_length),
+        vllm_enable_sleep_mode=bool(cfg.vllm.get("enable_sleep_mode", False)),
         logging_steps=1,
         save_strategy="no",
         report_to=[],
@@ -703,9 +713,18 @@ def cmd_calibrate(args) -> None:
     )
 
     print(f"\n=== timing {args.steps} GRPO steps ===")
+    import torch
+
+    torch.cuda.reset_peak_memory_stats()
     started = time.time()
     trainer.train()
     elapsed = time.time() - started
+    # Colocate lives or dies on this number: two 15.2GB weight copies plus KV
+    # plus activations have to fit one 40GB card, and the margin decides whether
+    # vllm.gpu_memory_utilization can stay where it is.
+    peak_gb = torch.cuda.max_memory_reserved() / 1024**3
+    total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+    print(f"peak reserved {peak_gb:.1f} GiB of {total_gb:.1f} GiB")
 
     per_step = elapsed / max(1, int(args.steps))
     prompts_per_step = (
@@ -730,6 +749,10 @@ def cmd_calibrate(args) -> None:
         "projected_phase2_hours": round(run_hours * 4 + 1, 1),
         "projected_phase3_hours": round(run_hours + 3, 1),
         "reward_components": stats.summary(),
+        "peak_reserved_gib": round(peak_gb, 1),
+        "gpu_total_gib": round(total_gb, 1),
+        "vllm_gpu_memory_utilization": float(cfg.vllm.gpu_memory_utilization),
+        "vllm_sleep_mode": bool(cfg.vllm.get("enable_sleep_mode", False)),
         "prompt_tokens": {
             spk: {"mean": round(statistics.fmean(ns)), "max": max(ns)}
             for spk, ns in by_speaker.items()

@@ -173,10 +173,20 @@ grpo:
 vllm:
   enabled: true
   mode: colocate
-  # Colocate shares one GPU between the policy and the rollout engine. 0.30
-  # leaves room for a 7B bf16 policy plus LoRA optimizer state on a 40GB A100;
-  # raise it on the 2-GPU server-mode setup where vLLM has a card to itself.
-  gpu_memory_utilization: 0.30
+  # NOT a share of the GPU handed to vLLM. vLLM sizes its KV cache as
+  # `total_memory * utilization - memory_already_in_use`, and in colocate mode
+  # the 15.2GB bf16 policy is already resident when the engine initialises. So
+  # the budget has to cover the policy AND vLLM's own weight copy (another
+  # 15.2GB) before any KV cache exists at all: 0.30 of a 40GB A100 is 12GB,
+  # less than one copy of the weights, and vLLM aborts with "No available
+  # memory for the cache blocks". 0.85 is 34GB, which leaves ~3.6GB of KV --
+  # ample here because the G rollouts of a prompt share its prefix, so a step
+  # holds ~4 prompts plus 32 short completions, not 32 full sequences.
+  gpu_memory_utilization: 0.85
+  # Offload the engine between rollout and optimiser step. Without it the peak
+  # is both weight copies plus activations at once, which on 40GB leaves no
+  # room to absorb a long generation.
+  enable_sleep_mode: true
   max_model_length: 8192
 
 inference:
