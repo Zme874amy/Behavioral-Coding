@@ -69,32 +69,51 @@ if [ -n "$CALIBRATE" ]; then
   exit 0
 fi
 
+# Optional space-separated list to restrict which arms to submit (e.g. to
+# resubmit only the paths that failed without duplicating healthy jobs).
+ARMS_FILTER="${ARMS_FILTER:-}"
+
+# Submit the train job(s) for one arm/seed/variant and echo a colon-joined dep of
+# their job id(s). Decoupled pair splits into two INDEPENDENT stage jobs (t1, t2),
+# each fitting the wall; mix and joint are a single job.
+submit_train() {  # <lab> <regime> <credit> <seed> <extra VAR=val ...>
+  local lab="$1" regime="$2" credit="$3" seed="$4"; shift 4
+  if [ "$regime" = "pair" ] && [ "$credit" = "dec" ]; then
+    local a b
+    a=$(submit "tr_${lab}_t1" "$full" "" STAGE=train REGIME=pair CREDIT=dec SEED="$seed" TIER=t1 CTX="$CTX" "$@")
+    b=$(submit "tr_${lab}_t2" "$full" "" STAGE=train REGIME=pair CREDIT=dec SEED="$seed" TIER=t2 CTX="$CTX" "$@")
+    echo "${a}:${b}"
+  else
+    submit "tr_${lab}" "$full" "" STAGE=train REGIME="$regime" CREDIT="$credit" SEED="$seed" CTX="$CTX" "$@"
+  fi
+}
+
 predict_ids=()
 
 echo "--- train + predict + recovery ---" >&2
 for entry in "${ARMS[@]}"; do
   arm="${entry%%:*}"; rc="${entry#*:}"; regime="${rc% *}"; credit="${rc#* }"
+  if [ -n "$ARMS_FILTER" ] && ! printf '%s\n' $ARMS_FILTER | grep -qx "$arm"; then
+    continue
+  fi
   for seed in $SEEDS; do
     # Phase 1: the weighted headline arm.
-    tid=$(submit "tr_${arm}_s${seed}_c${CTX}" "$full" "" \
-      STAGE=train REGIME="$regime" CREDIT="$credit" SEED="$seed" CTX="$CTX")
-    pid=$(submit "pr_${arm}_s${seed}_c${CTX}" "$mig" "$tid" \
+    tdep=$(submit_train "${arm}_s${seed}_c${CTX}" "$regime" "$credit" "$seed")
+    pid=$(submit "pr_${arm}_s${seed}_c${CTX}" "$mig" "$tdep" \
       STAGE=predict ARM="$arm" SEED="$seed" VARIANT=weighted CTX="$CTX")
     predict_ids+=("$pid")
-    submit "rc_${arm}_s${seed}_c${CTX}" "$mig" "$tid" \
+    submit "rc_${arm}_s${seed}_c${CTX}" "$mig" "$tdep" \
       STAGE=recovery ARM="$arm" SEED="$seed" VARIANT=weighted CTX="$CTX" >/dev/null
 
     if [ -n "$ABLATE" ]; then
       # Phase 2: weighting-off at every seed; cold-start at seed 0 only.
-      tuid=$(submit "tr_${arm}_unw_s${seed}_c${CTX}" "$full" "" \
-        STAGE=train REGIME="$regime" CREDIT="$credit" SEED="$seed" WEIGHTING=off CTX="$CTX")
-      pid=$(submit "pr_${arm}_unw_s${seed}_c${CTX}" "$mig" "$tuid" \
+      tdep=$(submit_train "${arm}_unw_s${seed}_c${CTX}" "$regime" "$credit" "$seed" WEIGHTING=off)
+      pid=$(submit "pr_${arm}_unw_s${seed}_c${CTX}" "$mig" "$tdep" \
         STAGE=predict ARM="$arm" SEED="$seed" VARIANT=unweighted CTX="$CTX")
       predict_ids+=("$pid")
       if [ "$seed" = "0" ]; then
-        tcid=$(submit "tr_${arm}_cold_s0_c${CTX}" "$full" "" \
-          STAGE=train REGIME="$regime" CREDIT="$credit" SEED=0 INIT=cold CTX="$CTX")
-        pid=$(submit "pr_${arm}_cold_s0_c${CTX}" "$mig" "$tcid" \
+        tdep=$(submit_train "${arm}_cold_s0_c${CTX}" "$regime" "$credit" 0 INIT=cold)
+        pid=$(submit "pr_${arm}_cold_s0_c${CTX}" "$mig" "$tdep" \
           STAGE=predict ARM="$arm" SEED=0 VARIANT=coldstart CTX="$CTX")
         predict_ids+=("$pid")
       fi
@@ -102,10 +121,16 @@ for entry in "${ARMS[@]}"; do
   done
 done
 
-echo "--- recovery baselines (SFT warm-starts, no training) ---" >&2
-for base in ft_bare ft1mix_bare; do
-  submit "rc_${base}_c${CTX}" "$mig" "" STAGE=recovery ARM="$base" CTX="$CTX" >/dev/null
-done
+if [ -z "$ARMS_FILTER" ]; then
+  echo "--- recovery baselines (SFT warm-starts, no training) ---" >&2
+  for base in ft_bare ft1mix_bare; do
+    submit "rc_${base}_c${CTX}" "$mig" "" STAGE=recovery ARM="$base" CTX="$CTX" >/dev/null
+  done
+else
+  echo "--- ARMS_FILTER set: skipping baseline recovery + auto-rescore (run eval manually) ---" >&2
+  echo "=== submitted (filtered). Run 'python -m baseline.eval' after all cells land. ===" >&2
+  exit 0
+fi
 
 echo "--- rescore (after every prediction lands) ---" >&2
 dep=""

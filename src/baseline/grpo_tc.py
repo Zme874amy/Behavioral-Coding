@@ -591,10 +591,17 @@ def cmd_train(args) -> None:
         return build_tier_records(df, full_df, cfg, ctx, tier, weights,
                                   predicted_t1 if tier == "t2" else None)
 
+    # Pair runs two GRPO stages. They are INDEPENDENT -- T2 conditions on the
+    # frozen oof T1, not the RL'd T1 -- so `--stage t1|t2` can split them into
+    # separate (even parallel) jobs, each fitting the wall; `both` runs them in
+    # one process. Mix ignores this (one shared run).
+    stages = ("t1", "t2") if args.stage == "both" else (args.stage,)
     meta_stages: Dict[str, object] = {}
     if regime == "pair":
         # Stage 1: T1 adapter. Stage 2: T2 adapter on frozen predicted-T1.
         for tier, warm in (("t1", warm_t1), ("t2", warm_t2)):
+            if tier not in stages:
+                continue
             train_recs = records_for(tier, train_df)
             val_recs = records_for(tier, val_df)
             if args.limit:
@@ -635,7 +642,7 @@ def cmd_train(args) -> None:
     root.mkdir(parents=True, exist_ok=True)
     meta = {
         "format": "two_call", "arm": arm, "regime": regime, "credit": args.credit,
-        "variant": variant, "seed": seed, "num_context_turns": ctx,
+        "variant": variant, "seed": seed, "num_context_turns": ctx, "stage": args.stage,
         "rare_class_weighting": weighted, "cold_start": bool(args.cold_start),
         "base_model": cfg.model.base_model,
         "warmstart": {"t1": str(warm_t1), "t2": str(warm_t2)},
@@ -643,8 +650,12 @@ def cmd_train(args) -> None:
         "grpo": OmegaConf.to_container(cfg.grpo, resolve=True),
         "stages": meta_stages,
     }
-    (root / "train_metadata.json").write_text(json.dumps(meta, indent=2, default=str))
-    print(f"\nDone. Metadata -> {root / 'train_metadata.json'}")
+    # Split pair stages run as separate jobs, so each writes its own metadata file
+    # rather than racing on one shared name.
+    meta_name = ("train_metadata.json" if (regime == "mix" or args.stage == "both")
+                 else f"train_metadata_{args.stage}.json")
+    (root / meta_name).write_text(json.dumps(meta, indent=2, default=str))
+    print(f"\nDone. Metadata -> {root / meta_name}")
 
 
 # -----------------------------------------------------------------------------
@@ -843,6 +854,9 @@ def main() -> None:
     p_train.add_argument("--regime", choices=REGIMES, required=True)
     p_train.add_argument("--credit", choices=CREDITS, required=True)
     p_train.add_argument("--seed", type=int, required=True)
+    p_train.add_argument("--stage", choices=("t1", "t2", "both"), default="both",
+                         help="pair regime only: run one decoupled stage per job "
+                              "(the stages are independent) or both in one process")
     p_train.add_argument("--no-rare-weighting", action="store_true",
                          help="Phase 2 ablation: uniform weights, no oversampling")
     p_train.add_argument("--limit", type=int, default=None, help="cap prompts (smoke test)")

@@ -224,10 +224,17 @@ def train_step(model, tok, batch, cfg, adapter_names, optimizer, device, stats):
             trajectories.append((t1_msgs, t1_ids, t2_msgs, t2_ids, r - baseline))
 
     # Loss over all trajectories' tokens: -A*logp + beta*KL(policy||ref), dr_grpo norm.
-    total = torch.zeros((), device=device)
+    #
+    # Backprop is done PER TURN, immediately, so only one sequence's forward graph
+    # is ever alive -- summing the loss across all G x prompts x 2 turns into one
+    # graph before a single backward() piles up every activation at once and OOMs
+    # the 40GB card. Gradients accumulate in `.grad` across turns; one step() at
+    # the end. Constant `norm * n_traj` denominator keeps it dr_grpo-normalised and
+    # matched to the old averaged loss.
+    optimizer.zero_grad()
     n_traj = max(1, len(trajectories))
+    running = 0.0
     for t1_msgs, t1_ids, t2_msgs, t2_ids, adv in trajectories:
-        adv_t = torch.tensor(float(adv), device=device)
         for turn, msgs, ids in (("t1", t1_msgs, t1_ids), ("t2", t2_msgs, t2_ids)):
             if ids.numel() == 0:
                 continue
@@ -235,16 +242,15 @@ def train_step(model, tok, batch, cfg, adapter_names, optimizer, device, stats):
             lp = _token_logprobs(model, tok, msgs, ids, adapter, device, with_grad=True)
             ref_lp = _token_logprobs(model, tok, msgs, ids, None, device, with_grad=False)
             kl = torch.exp(ref_lp - lp) - (ref_lp - lp) - 1.0  # k3, per token
-            total = total + (-adv_t * lp.sum() + beta * kl.sum()) / norm
-    loss = total / n_traj
-
-    optimizer.zero_grad()
-    loss.backward()
+            loss_i = (-float(adv) * lp.sum() + beta * kl.sum()) / (norm * n_traj)
+            loss_i.backward()  # frees this turn's graph before the next forward
+            running += float(loss_i.detach())
+            del lp, ref_lp, kl, loss_i
     torch.nn.utils.clip_grad_norm_(
         [p for p in model.parameters() if p.requires_grad], float(cfg.grpo.max_grad_norm)
     )
     optimizer.step()
-    return float(loss.detach())
+    return running
 
 
 # -----------------------------------------------------------------------------

@@ -28,7 +28,7 @@
 #SBATCH --qos=lion
 #SBATCH --gres=gpu:40gb:1
 #SBATCH --mem=64G
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=outputs/grpo/%x_%j.log
 
 set -euo pipefail
@@ -54,6 +54,9 @@ ARM="${ARM:-grpo_pair_dec}"
 VARIANT="${VARIANT:-weighted}"
 WEIGHTING="${WEIGHTING:-on}"
 INIT="${INIT:-warm}"
+# Pair-regime decoupled runs its two independent stages as separate jobs; TIER
+# picks which (t1|t2). Empty runs both in one process (mix/joint ignore it).
+TIER="${TIER:-}"
 
 echo "=== stage=$STAGE ctx=$CTX seed=$SEED regime=$REGIME credit=$CREDIT arm=$ARM"
 echo "=== variant=$VARIANT weighting=$WEIGHTING init=$INIT master_port=$MASTER_PORT"
@@ -72,8 +75,10 @@ case "$STAGE" in
       --limit 64 --steps 5 "${COLD[@]}"
     ;;
   train)
+    STAGE_ARG=()
+    [[ -n "$TIER" ]] && STAGE_ARG+=(--stage "$TIER")
     python -m baseline.grpo_tc train --regime "$REGIME" --credit "$CREDIT" \
-      --seed "$SEED" --ctx "$CTX" "${FLAGS[@]}"
+      --seed "$SEED" --ctx "$CTX" "${STAGE_ARG[@]}" "${FLAGS[@]}"
     ;;
   predict)
     python -m baseline.grpo_tc predict --arm "$ARM" --seed "$SEED" \
