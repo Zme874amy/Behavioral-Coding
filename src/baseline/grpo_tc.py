@@ -485,7 +485,13 @@ def _grpo_config(cfg, out_dir, seed):
         vllm_enable_sleep_mode=bool(cfg.vllm.get("enable_sleep_mode", False)),
         log_completions=bool(g.log_completions),
         num_completions_to_print=int(g.num_completions_to_print),
-        logging_steps=int(g.logging_steps), save_strategy="no", report_to=[],
+        logging_steps=int(g.logging_steps),
+        # Periodic full-trainer checkpoints (model + optimizer + scheduler + RNG)
+        # so a run that exceeds the wall can be split across jobs and RESUMED
+        # exactly where it stopped. The ValidationSelector still owns the "best"
+        # adapter at out_dir root; these live under out_dir/trainer/checkpoint-*.
+        save_strategy="steps", save_steps=int(g.save_steps), save_total_limit=2,
+        report_to=[],
     )
 
 
@@ -506,8 +512,18 @@ def _run_stage(cfg, train_records, val_records, warmstart, out_dir, seed,
         train_dataset=Dataset.from_list(train_records), peft_config=peft_config,
         processing_class=tokenizer, callbacks=[guard, selector],
     )
+    # Resume from the last checkpoint if a previous (e.g. wall-truncated) job of
+    # this exact stage left one. A finished run resumes as a no-op and exits.
+    from transformers.trainer_utils import get_last_checkpoint
+
+    resume = None
+    trainer_dir = out_dir / "trainer"
+    if trainer_dir.exists():
+        resume = get_last_checkpoint(str(trainer_dir))
+    if resume:
+        print(f"Resuming from {resume}")
     started = time.time()
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume)
     elapsed = time.time() - started
     if not (out_dir / "adapter_config.json").exists():
         print("No validation improvement recorded; saving the final policy.")

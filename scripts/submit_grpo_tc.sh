@@ -59,6 +59,20 @@ submit() {  # submit <label> <place> <dep-or-empty> <VAR=val ...>
   echo "$id"
 }
 
+submit_after_any() {  # like submit(), but the dependency is afterany (runs even
+  local label="$1" place="$2" dep="$3"; shift 3   # if the predecessor timed out)
+  local id
+  if [ -n "$DRYRUN" ]; then
+    id="dry.$label"
+  else
+    # shellcheck disable=SC2086
+    id=$(env "$@" sbatch --parsable --job-name="$label" $place \
+         --dependency=afterany:"$dep" "$SLURM")
+  fi
+  printf '  %-32s %-12s %s\n' "$label" "$id" "afterany $dep" >&2
+  echo "$id"
+}
+
 echo "=== two-call GRPO campaign, ctx=${CTX}, seeds='${SEEDS}' ===" >&2
 
 if [ -n "$CALIBRATE" ]; then
@@ -79,10 +93,26 @@ ARMS_FILTER="${ARMS_FILTER:-}"
 submit_train() {  # <lab> <regime> <credit> <seed> <extra VAR=val ...>
   local lab="$1" regime="$2" credit="$3" seed="$4"; shift 4
   if [ "$regime" = "pair" ] && [ "$credit" = "dec" ]; then
+    # Two INDEPENDENT stage jobs (the stages don't depend on each other).
     local a b
     a=$(submit "tr_${lab}_t1" "$full" "" STAGE=train REGIME=pair CREDIT=dec SEED="$seed" TIER=t1 CTX="$CTX" "$@")
     b=$(submit "tr_${lab}_t2" "$full" "" STAGE=train REGIME=pair CREDIT=dec SEED="$seed" TIER=t2 CTX="$CTX" "$@")
     echo "${a}:${b}"
+  elif [ "$regime" = "mix" ] && [ "$credit" = "dec" ]; then
+    # One shared adapter can't be tier-split, so split it in TIME: MIX_CHAIN
+    # chained jobs, each resuming from the last checkpoint after the previous
+    # ends (afterany, so a wall-truncated job still hands off). Predict deps the
+    # last. A run that finishes early makes the remaining links quick no-ops.
+    local prev="" id
+    for lnk in $(seq 1 "${MIX_CHAIN:-2}"); do
+      if [ -z "$prev" ]; then
+        id=$(submit "tr_${lab}_p${lnk}" "$full" "" STAGE=train REGIME=mix CREDIT=dec SEED="$seed" CTX="$CTX" "$@")
+      else
+        id=$(submit_after_any "tr_${lab}_p${lnk}" "$full" "$prev" STAGE=train REGIME=mix CREDIT=dec SEED="$seed" CTX="$CTX" "$@")
+      fi
+      prev="$id"
+    done
+    echo "$prev"
   else
     submit "tr_${lab}" "$full" "" STAGE=train REGIME="$regime" CREDIT="$credit" SEED="$seed" CTX="$CTX" "$@"
   fi
