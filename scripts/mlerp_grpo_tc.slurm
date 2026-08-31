@@ -78,8 +78,11 @@ case "$STAGE" in
     STAGE_ARG=()
     [[ -n "$TIER" ]] && STAGE_ARG+=(--stage "$TIER")
     [[ -n "${LIMIT:-}" ]] && STAGE_ARG+=(--limit "$LIMIT")   # short throughput shake-out
+    # OVERRIDES: space-separated OmegaConf dotlist (e.g. grpo.num_generations=6),
+    # used to fit the pure-HF joint loop inside the 24h wall. Unquoted on purpose.
+    # shellcheck disable=SC2086
     python -m baseline.grpo_tc train --regime "$REGIME" --credit "$CREDIT" \
-      --seed "$SEED" --ctx "$CTX" "${STAGE_ARG[@]}" "${FLAGS[@]}"
+      --seed "$SEED" --ctx "$CTX" "${STAGE_ARG[@]}" "${FLAGS[@]}" ${OVERRIDES:-}
     ;;
   predict)
     python -m baseline.grpo_tc predict --arm "$ARM" --seed "$SEED" \

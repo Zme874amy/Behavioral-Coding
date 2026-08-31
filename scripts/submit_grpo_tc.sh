@@ -114,7 +114,14 @@ submit_train() {  # <lab> <regime> <credit> <seed> <extra VAR=val ...>
     done
     echo "$prev"
   else
-    submit "tr_${lab}" "$full" "" STAGE=train REGIME="$regime" CREDIT="$credit" SEED="$seed" CTX="$CTX" "$@"
+    # Joint is a pure-HF loop (~57s/step at G=8 -> ~24.6h, over the wall). Trim to
+    # G=6 and lighter validation so it fits one 24h job; G is exploration breadth,
+    # secondary to the decoupled-vs-joint credit-scheme comparison (documented).
+    local extra=("$@")
+    if [ "$credit" = "joint" ]; then
+      extra+=("OVERRIDES=grpo.num_generations=6 grpo.val_every_steps=200 grpo.val_max_examples=64")
+    fi
+    submit "tr_${lab}" "$full" "" STAGE=train REGIME="$regime" CREDIT="$credit" SEED="$seed" CTX="$CTX" "${extra[@]}"
   fi
 }
 
