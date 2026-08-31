@@ -77,6 +77,7 @@ case "$STAGE" in
   train)
     STAGE_ARG=()
     [[ -n "$TIER" ]] && STAGE_ARG+=(--stage "$TIER")
+    [[ -n "${LIMIT:-}" ]] && STAGE_ARG+=(--limit "$LIMIT")   # short throughput shake-out
     python -m baseline.grpo_tc train --regime "$REGIME" --credit "$CREDIT" \
       --seed "$SEED" --ctx "$CTX" "${STAGE_ARG[@]}" "${FLAGS[@]}"
     ;;

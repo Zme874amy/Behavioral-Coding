@@ -100,7 +100,7 @@ def build_policy(cfg: DictConfig, regime: str, ctx: int, cold_start: bool):
             model = PeftModel.from_pretrained(model, str(warm_t1), adapter_name="t1",
                                               is_trainable=True)
             model.load_adapter(str(warm_t2), adapter_name="t2", is_trainable=True)
-        return model, tok, ("t1", "t2")
+        return _prep_for_training(model), tok, ("t1", "t2")
 
     # mix: single shared adapter
     if cold_start:
@@ -110,7 +110,17 @@ def build_policy(cfg: DictConfig, regime: str, ctx: int, cold_start: bool):
             raise SystemExit(f"Missing warm-start adapter {warm_t1}; train ft1mix_bare first.")
         model = PeftModel.from_pretrained(model, str(warm_t1), adapter_name="shared",
                                           is_trainable=True)
-    return model, tok, ("shared",)
+    return _prep_for_training(model), tok, ("shared",)
+
+
+def _prep_for_training(model):
+    """Gradient checkpointing so the policy forward over a ~2.5k-token T1 prompt
+    fits 40GB (without it the joint loop OOMs mid-step). use_cache is off for the
+    training forwards; generation re-enables it explicitly in `_sample`."""
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+    model.enable_input_require_grads()  # required for grad-ckpt through a PEFT model
+    model.config.use_cache = False
+    return model
 
 
 def _adapter_for_turn(adapter_names: Tuple[str, ...], turn: str) -> str:
@@ -136,13 +146,20 @@ def _sample(model, tok, messages, adapter: str, n: int, cfg, device) -> List["to
     enc = tok(text, return_tensors="pt", truncation=True,
               max_length=int(cfg.vllm.max_model_length), add_special_tokens=False).to(device)
     n_prompt = enc["input_ids"].shape[1]
-    with torch.no_grad():
-        out = model.generate(
-            **enc, do_sample=True, num_return_sequences=n,
-            temperature=float(cfg.grpo.temperature), top_p=float(cfg.grpo.top_p),
-            max_new_tokens=int(cfg.grpo.max_completion_length),
-            pad_token_id=tok.pad_token_id or tok.eos_token_id,
-        )
+    # Generate in eval mode: gradient checkpointing keys off model.training, so in
+    # train mode it would force the KV cache off and make every rollout crawl.
+    was_training = model.training
+    model.eval()
+    try:
+        with torch.no_grad():
+            out = model.generate(
+                **enc, do_sample=True, num_return_sequences=n, use_cache=True,
+                temperature=float(cfg.grpo.temperature), top_p=float(cfg.grpo.top_p),
+                max_new_tokens=int(cfg.grpo.max_completion_length),
+                pad_token_id=tok.pad_token_id or tok.eos_token_id,
+            )
+    finally:
+        model.train(was_training)
     return [out[i, n_prompt:] for i in range(out.shape[0])]
 
 
@@ -241,7 +258,13 @@ def train_step(model, tok, batch, cfg, adapter_names, optimizer, device, stats):
             adapter = _adapter_for_turn(adapter_names, turn)
             lp = _token_logprobs(model, tok, msgs, ids, adapter, device, with_grad=True)
             ref_lp = _token_logprobs(model, tok, msgs, ids, None, device, with_grad=False)
-            kl = torch.exp(ref_lp - lp) - (ref_lp - lp) - 1.0  # k3, per token
+            # k3 KL, per token. The warm-started policy sits far from the
+            # adapter-disabled base on the structured label tokens, so ref_lp - lp
+            # can be large and exp() blows the loss up (seen: loss 374). Clamp the
+            # log-ratio and the resulting KL so the anchor stays a penalty, not a
+            # detonation, while keeping the gradient direction intact.
+            log_ratio = (ref_lp - lp).clamp(-10.0, 10.0)
+            kl = (torch.exp(log_ratio) - log_ratio - 1.0).clamp(max=10.0)
             loss_i = (-float(adv) * lp.sum() + beta * kl.sum()) / (norm * n_traj)
             loss_i.backward()  # frees this turn's graph before the next forward
             running += float(loss_i.detach())
