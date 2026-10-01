@@ -12,6 +12,7 @@ Fine-tuned mode uses TWO adapters loaded onto one base model:
 from __future__ import annotations
 
 import re
+from collections import Counter
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -122,6 +123,10 @@ class TieredAnnotator:
         t1_adapter_dir / t2_adapter_dir: optional LoRA adapter dirs. If both are
             None the annotator is zero-shot (plain base model). If provided, the
             base model is wrapped once and both adapters are attached.
+        shared_adapter_dir: a single LoRA covering both tiers, for the
+            1-adapter / 2-call arms. Mutually exclusive with the pair above. The
+            two-call flow is otherwise untouched, so a cell using this differs
+            from the two-adapter cell in adapter count alone.
         structure_suffix: prompt variant, "" for rationale-first (``inf_cot``)
             or "_bare" for label-only (``inf_bare``).
         fewshot_provider: optional callable ``(speaker, tier, t1_label) -> list``
@@ -134,6 +139,7 @@ class TieredAnnotator:
         base_model: str,
         t1_adapter_dir: Optional[str] = None,
         t2_adapter_dir: Optional[str] = None,
+        shared_adapter_dir: Optional[str] = None,
         force_cpu: bool = False,
         trust_remote_code: bool = False,
         max_new_tokens: int = 8,
@@ -141,10 +147,15 @@ class TieredAnnotator:
         structure_suffix: str = "",
         fewshot_provider: Optional[Callable[[str, str, Optional[str]], List[Dict[str, str]]]] = None,
     ):
+        if shared_adapter_dir and (t1_adapter_dir or t2_adapter_dir):
+            raise ValueError(
+                "shared_adapter_dir is mutually exclusive with t1/t2_adapter_dir"
+            )
         self.max_new_tokens = int(max_new_tokens)
         self.max_input_len = int(max_input_len)
         self.structure_suffix = structure_suffix
         self.fewshot_provider = fewshot_provider
+        self.is_shared = bool(shared_adapter_dir)
         self.is_finetuned = bool(t1_adapter_dir and t2_adapter_dir)
 
         model, tokenizer, device = load_model_and_tokenizer(
@@ -155,7 +166,12 @@ class TieredAnnotator:
             trust_remote_code=trust_remote_code,
         )
 
-        if self.is_finetuned:
+        if self.is_shared:
+            from peft import PeftModel
+
+            model = PeftModel.from_pretrained(model, str(shared_adapter_dir))
+            model.eval()
+        elif self.is_finetuned:
             from peft import PeftModel
 
             model = PeftModel.from_pretrained(model, str(t1_adapter_dir), adapter_name="t1")
@@ -168,15 +184,27 @@ class TieredAnnotator:
 
     # -- internals ---------------------------------------------------------
     def _set_adapter(self, name: str) -> None:
+        # The shared-adapter arms have one LoRA active for both calls, so there
+        # is nothing to switch.
         if self.is_finetuned:
             self.model.set_adapter(name)
 
-    def _generate(self, messages: List[Dict[str, str]]) -> Tuple[str, int, int]:
-        """Greedy-decode a reply.
+    def _generate(
+        self,
+        messages: List[Dict[str, str]],
+        do_sample: bool = False,
+        temperature: Optional[float] = None,
+    ) -> Tuple[str, int, int]:
+        """Decode a reply, greedy by default or sampled when ``do_sample``.
 
         Returns ``(text, n_prompt_tokens, n_generated_tokens)``. The token counts
         let the caller tell a genuinely short reply from one clipped by
         `max_new_tokens`, and spot prompts truncated by `max_input_len`.
+
+        ``do_sample=True`` (with ``temperature``) is used by
+        `predict_row_selfconsistent` to draw independent decodes whose agreement
+        is a confidence signal; every other caller keeps the greedy default so
+        normal inference is byte-for-byte unchanged.
         """
         import torch
 
@@ -192,16 +220,121 @@ class TieredAnnotator:
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         n_prompt = int(inputs["input_ids"].shape[1])
+        gen_kwargs = dict(
+            max_new_tokens=self.max_new_tokens,
+            do_sample=bool(do_sample),
+            pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
+        )
+        if do_sample and temperature is not None:
+            gen_kwargs["temperature"] = float(temperature)
         with torch.no_grad():
-            out = self.model.generate(
-                **inputs,
-                max_new_tokens=self.max_new_tokens,
-                do_sample=False,
-                pad_token_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
-            )
+            out = self.model.generate(**inputs, **gen_kwargs)
         new_ids = out[0, n_prompt:]
         gen = self.tokenizer.decode(new_ids, skip_special_tokens=True)
         return gen, n_prompt, int(new_ids.shape[0])
+
+    def score_codes(
+        self, messages: List[Dict[str, str]], codes: List[str]
+    ) -> Tuple[Dict[str, float], int]:
+        """Probability of each code as the answer, normalised over ``codes``.
+
+        Each code is scored by the log-likelihood of exactly the completion the
+        model was trained to emit, ``" {code}\\n"`` (`sft.data.build_completion`),
+        after the same prompt `_generate` builds. Scoring the terminator too
+        stops a code from winning just by being the prefix of another
+        (``C`` vs ``CR``). The log-likelihoods are softmaxed over the candidate
+        set, turning the generative labeller into a classifier with a full
+        distribution -- the calibrated confidence self-training selection needs,
+        which a vote over sampled decodes cannot give (every accepted v1 label
+        had vote confidence 1.0).
+
+        The prompt is encoded once; each candidate's few tokens are then scored
+        against its cached keys/values, and the cache is cropped back to the
+        prompt before the next candidate. Returns ``(probs, n_prompt_tokens)``.
+        """
+        import math
+
+        import torch
+
+        from sft.data import build_completion
+
+        prompt = self.tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        enc = self.tokenizer(
+            prompt, return_tensors="pt", truncation=True,
+            max_length=self.max_input_len, add_special_tokens=False,
+        )
+        ids = enc["input_ids"].to(self.device)
+        n_prompt = int(ids.shape[1])
+        cand_ids = [
+            self.tokenizer(build_completion(c), add_special_tokens=False)["input_ids"]
+            for c in codes
+        ]
+        loglik: Dict[str, float] = {}
+        with torch.no_grad():
+            out = self.model(input_ids=ids, use_cache=True)
+            cache = out.past_key_values
+            first = torch.log_softmax(out.logits[0, -1].float(), dim=-1)
+            can_crop = hasattr(cache, "crop")
+            for code, toks in zip(codes, cand_ids):
+                lp = float(first[toks[0]])
+                if len(toks) > 1:
+                    step = torch.tensor([toks[:-1]], device=self.device)
+                    if can_crop:
+                        o = self.model(input_ids=step, past_key_values=cache, use_cache=True)
+                        cache.crop(n_prompt)
+                    else:  # older transformers: recompute from scratch
+                        o = self.model(input_ids=torch.cat([ids, step], dim=1))
+                        o.logits = o.logits[:, n_prompt:]
+                    lps = torch.log_softmax(o.logits[0].float(), dim=-1)
+                    lp += float(sum(lps[i, t] for i, t in enumerate(toks[1:])))
+                loglik[code] = lp
+        m = max(loglik.values())
+        z = sum(math.exp(v - m) for v in loglik.values())
+        return {c: math.exp(v - m) / z for c, v in loglik.items()}, n_prompt
+
+    def predict_row_scored(
+        self,
+        df: pd.DataFrame,
+        row_pos: int,
+        context_mode: str,
+        num_context_turns: int,
+    ) -> Dict[str, object]:
+        """Two-call T1 -> T2 labelling with a full distribution at each tier.
+
+        Mirrors `predict_row`: T1 over the speaker's T1 codes, then T2 prompted
+        with the predicted (argmax) T1 group and scored over the speaker's full
+        T2 vocabulary (unconstrained decoding allows any of them). Confidence is
+        the joint ``p(T1) * p(T2 | T1)``.
+        """
+        speaker = df.iloc[row_pos]["speaker"]
+        self._set_adapter("t1")
+        t1_messages = build_messages_t1(
+            df, row_pos, context_mode, num_context_turns,
+            self.structure_suffix, self._fewshot(speaker, "t1", None),
+        )
+        t1_probs, t1_n = self.score_codes(t1_messages, t1_codes_for_speaker(speaker))
+        t1_pred = max(t1_probs, key=t1_probs.get)
+
+        self._set_adapter("t2")
+        t2_messages = build_messages_t2(
+            df, row_pos, t1_pred, context_mode, num_context_turns,
+            self.structure_suffix, self._fewshot(speaker, "t2", t1_pred),
+        )
+        t2_probs, t2_n = self.score_codes(t2_messages, t2_codes_for_speaker(speaker))
+        t2_pred = max(t2_probs, key=t2_probs.get)
+        return {
+            "t1_pred": t1_pred,
+            "t2_pred": t2_pred,
+            "t1_probs": t1_probs,
+            "t2_probs": t2_probs,
+            "t1_conf": t1_probs[t1_pred],
+            "t2_conf": t2_probs[t2_pred],
+            "confidence": t1_probs[t1_pred] * t2_probs[t2_pred],
+            "t1_n_prompt_tokens": t1_n,
+            "t2_n_prompt_tokens": t2_n,
+        }
 
     # -- public ------------------------------------------------------------
     def _fewshot(self, speaker: str, tier: str, t1_label: Optional[str]) -> Optional[List[Dict[str, str]]]:
@@ -261,6 +394,77 @@ class TieredAnnotator:
             "t2_n_gen_tokens": t2_n_gen,
             "t1_emitted_rationale": emitted_rationale(t1_raw),
             "t2_emitted_rationale": emitted_rationale(t2_raw),
+        }
+
+    def predict_row_selfconsistent(
+        self,
+        df: pd.DataFrame,
+        row_pos: int,
+        context_mode: str,
+        num_context_turns: int,
+        restrict_t2_to_group: bool = False,
+        k: int = 5,
+        temperature: float = 0.7,
+    ) -> Dict[str, object]:
+        """Self-consistency pseudo-label with a confidence signal.
+
+        Draws ``k`` sampled decodes for the Tier-1 call, takes the majority code,
+        then conditions the Tier-2 call on that majority T1 and draws ``k`` more.
+        The per-tier agreement fraction (majority count / k) is the confidence;
+        ``confidence`` is the product, i.e. the model must be consistent on BOTH
+        tiers for a pseudo-label to be trusted. Used by
+        `selftrain.label_pool` to gate which pseudo-labels enter training.
+
+        Returns the same keys as `predict_row` plus ``t1_agreement``,
+        ``t2_agreement`` and ``confidence``.
+        """
+        speaker = df.iloc[row_pos]["speaker"]
+
+        # Tier 1: k independent samples -> majority
+        self._set_adapter("t1")
+        t1_messages = build_messages_t1(
+            df, row_pos, context_mode, num_context_turns,
+            self.structure_suffix, self._fewshot(speaker, "t1", None),
+        )
+        t1_allowed = t1_codes_for_speaker(speaker)
+        t1_votes: List[str] = []
+        t1_raw_last = ""
+        for _ in range(k):
+            raw, _, _ = self._generate(t1_messages, do_sample=True, temperature=temperature)
+            t1_raw_last = raw
+            t1_votes.append(parse_label(raw, t1_allowed))
+        t1_pred, t1_count = Counter(t1_votes).most_common(1)[0]
+        t1_agreement = t1_count / float(k)
+
+        # Tier 2 conditioned on the majority T1 group.
+        t1_for_prompt = t1_pred if t1_pred != "UNKNOWN" else t1_allowed[0]
+        if restrict_t2_to_group and t1_pred != "UNKNOWN":
+            t2_allowed = t2_codes_for_group(speaker, t1_pred)
+        else:
+            t2_allowed = t2_codes_for_speaker(speaker)
+
+        self._set_adapter("t2")
+        t2_messages = build_messages_t2(
+            df, row_pos, t1_for_prompt, context_mode, num_context_turns,
+            self.structure_suffix, self._fewshot(speaker, "t2", t1_for_prompt),
+        )
+        t2_votes: List[str] = []
+        t2_raw_last = ""
+        for _ in range(k):
+            raw, _, _ = self._generate(t2_messages, do_sample=True, temperature=temperature)
+            t2_raw_last = raw
+            t2_votes.append(parse_label(raw, t2_allowed))
+        t2_pred, t2_count = Counter(t2_votes).most_common(1)[0]
+        t2_agreement = t2_count / float(k)
+
+        return {
+            "t1_pred": t1_pred,
+            "t2_pred": t2_pred,
+            "t1_raw": t1_raw_last,
+            "t2_raw": t2_raw_last,
+            "t1_agreement": t1_agreement,
+            "t2_agreement": t2_agreement,
+            "confidence": t1_agreement * t2_agreement,
         }
 
     def predict_rows(

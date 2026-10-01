@@ -12,6 +12,27 @@ import openai
 from hydra.utils import log
 
 _azure_client = None
+_vllm_clients: dict = {}
+
+def get_vllm_client(base_url: Optional[str] = None):
+    """Lazily build an OpenAI-compatible client for a self-hosted server.
+
+    Used by the ``vllm_server`` provider to reach a vLLM OpenAI-compatible
+    endpoint (e.g. a large open teacher/generator model served on an MLeRP
+    node). ``base_url`` defaults to ``$VLLM_BASE_URL``; the API key defaults to
+    ``$VLLM_API_KEY`` or the literal ``"EMPTY"`` that vLLM accepts. Clients are
+    cached per base_url so repeated calls reuse one connection pool.
+    """
+    url = (base_url or os.environ.get("VLLM_BASE_URL", "")).strip()
+    if not url:
+        raise EnvironmentError(
+            "VLLM_BASE_URL must be set (or base_url passed) to use the "
+            "'vllm_server' provider, e.g. http://localhost:8000/v1"
+        )
+    if url not in _vllm_clients:
+        api_key = os.environ.get("VLLM_API_KEY", "EMPTY").strip() or "EMPTY"
+        _vllm_clients[url] = openai.OpenAI(base_url=url, api_key=api_key)
+    return _vllm_clients[url]
 
 def get_azure_client():
     """Lazily build an AzureOpenAI client from .env / environment variables."""
@@ -63,13 +84,34 @@ def get_provider(model: str) -> Literal['openai', 'lmstudio']:
 def call_chat_model(
     messages: list[dict],
     model: str,
-    provider: Literal['openai', 'lmstudio', 'azure'] = 'openai',
+    provider: Literal['openai', 'lmstudio', 'azure', 'vllm_server'] = 'openai',
     temperature: float = 0.0,
     response_format: Optional[Type[BaseModel]] = None,
     **kwargs,
 ) -> BaseModel | str:
     """
     """
+    if provider == 'vllm_server':
+        # Self-hosted OpenAI-compatible endpoint (e.g. a large open teacher model
+        # served with vLLM). ``base_url`` may be passed explicitly or via
+        # $VLLM_BASE_URL; it is consumed here and never forwarded to the API.
+        client = get_vllm_client(kwargs.pop("base_url", None))
+        if response_format is not None:
+            response = client.chat.completions.parse(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                response_format=response_format,
+                **kwargs,
+            )
+            return response.choices[0].message.parsed.model_dump()
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            **kwargs,
+        )
+        return response.choices[0].message.content
     if provider == 'azure':
         client = get_azure_client()
         if response_format is not None:
@@ -121,4 +163,7 @@ def call_chat_model(
             return str(completion).strip()
         return completion.parsed
     else:
-        raise ValueError(f"Provider '{provider}' not recognized. Use 'openai' or 'lmstudio'.")
+        raise ValueError(
+            f"Provider '{provider}' not recognized. "
+            "Use 'openai', 'lmstudio', 'azure', or 'vllm_server'."
+        )

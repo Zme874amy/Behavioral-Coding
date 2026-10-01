@@ -1,16 +1,27 @@
 """Qwen tier of the Model Scale x Adaptation x Rationale Alignment grid.
 
-Eight conditions, from crossing four adaptation arms with two inference styles:
+Every arm here runs the same two-call flow: a Tier-1 call, then a Tier-2 call
+conditioned on the predicted T1. Arms differ in how the model is adapted, and
+in particular in HOW MANY adapters carry that adaptation:
 
-    arm      how the model is adapted
-      zs       none (plain base model)
-      fs       none; stratified HLQC exemplars in context
-      ft_bare  LoRA trained on HLQC with bare-label targets
-      ft_rat   LoRA trained on HLQC with distilled rationale + label targets
+    arm           adapters  how the model is adapted
+      zs             0      none (plain base model)
+      fs             0      none; stratified HLQC exemplars in context
+      ft_bare        2      a T1 adapter and a T2 adapter, bare-label targets
+      ft_rat         2      same, distilled rationale + label targets
+      ft1mix_bare    1      one adapter on the shuffled union of both tiers
+      ft1mix_rat     1      same, rationale + label targets
+      ft1seq_bare    1      one adapter trained on T1, then continued on T2
+      ft1seq_rat     1      same, rationale + label targets
 
     inf      how it is prompted at evaluation time
       bare     label-only prompt (t1_bare / t2_bare)
       cot      rationale-first prompt (t1 / t2)
+
+The single-adapter arms exist to make the format comparison identifiable. Against
+`ft_*` they hold the call count fixed and vary adapter count; against the `sc_*`
+single-call ladder in `baseline.sc_arm` they hold adapter count fixed and vary
+call count. Without them, single-call and two-call differ on two axes at once.
 
 The four fine-tuning cells are the point of the design: `ft_bare` under `inf_cot`
 tests whether label-only training overrides an inference-time CoT instruction,
@@ -25,8 +36,11 @@ layout src/baseline/eval.py reads, so the Qwen rows are scored alongside gpt-4o.
 Usage:
     PYTHONPATH=src python -m baseline.local_arm train   --target bare --ctx 5
     PYTHONPATH=src python -m baseline.local_arm train   --target rat  --ctx 5
-    PYTHONPATH=src python -m baseline.local_arm predict --arm zs      --inf cot --ctx 5
-    PYTHONPATH=src python -m baseline.local_arm predict --arm ft_rat  --inf bare --ctx 5
+    PYTHONPATH=src python -m baseline.local_arm train   --target bare --regime mixed --ctx 5
+    PYTHONPATH=src python -m baseline.local_arm train   --target bare --regime sequential --ctx 5
+    PYTHONPATH=src python -m baseline.local_arm predict --arm zs          --inf cot  --ctx 5
+    PYTHONPATH=src python -m baseline.local_arm predict --arm ft_rat      --inf bare --ctx 5
+    PYTHONPATH=src python -m baseline.local_arm predict --arm ft1mix_bare --inf bare --ctx 5
 
 Smoke test on CPU with a tiny model:
     PYTHONPATH=src python -m baseline.local_arm predict --arm zs --inf bare --ctx 3 \
@@ -46,11 +60,54 @@ from tqdm import tqdm
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = REPO_ROOT / "conf" / "baseline_ft_local_config.yaml"
 
-ARMS = ("zs", "fs", "ft_bare", "ft_rat")
 STYLES = ("bare", "cot")
-# Which frozen adapter pair each arm loads; None means no adapters.
-ARM_TARGET = {"zs": None, "fs": None, "ft_bare": "bare", "ft_rat": "rat"}
 TRAIN_TARGETS = ("bare", "rat")
+
+# Adapter layout. `pair` is the original two-adapter arm (a T1 adapter and a T2
+# adapter, switched per call); `mixed` and `sequential` are the two single-adapter
+# regimes, where ONE LoRA serves both calls. All three run the same two-call
+# inference flow, so `pair` vs the others isolates adapter count, and the
+# single-adapter arms against the `sc_*` ladder isolates call count.
+REGIMES = ("pair", "mixed", "sequential")
+
+# Which frozen adapters each arm loads: None for the in-context arms, otherwise
+# (regime, target).
+ARM_ADAPTER = {
+    "zs": None,
+    "fs": None,
+    "ft_bare": ("pair", "bare"),
+    "ft_rat": ("pair", "rat"),
+    "ft1mix_bare": ("mixed", "bare"),
+    "ft1mix_rat": ("mixed", "rat"),
+    "ft1seq_bare": ("sequential", "bare"),
+    "ft1seq_rat": ("sequential", "rat"),
+    # Teacher-forcing variants of ft_bare: same two-adapter, two-call structure,
+    # differing only in which T1 label conditioned T2 during training.
+    "ft_bare_tffull": ("pair", "bare"),
+    "ft_bare_tfdyn": ("pair", "bare"),
+    "ft_bare_tfzero": ("pair", "bare"),
+    # The same axis on cell B (1 adapter, 2 calls). Inference is the identical
+    # two-call flow, so the exposure is identical; what differs is that ONE
+    # adapter carries both tiers, so re-conditioning T2 also retrains T1.
+    "ft1mix_bare_tffull": ("mixed", "bare"),
+    "ft1mix_bare_tfdyn": ("mixed", "bare"),
+    "ft1mix_bare_tfzero": ("mixed", "bare"),
+}
+ARMS = tuple(ARM_ADAPTER)
+
+# How much of the T1 conditioning was gold while T2 trained. `full` is the
+# control: it runs the identical staged procedure at p_gold=1, so the three
+# differ on the axis and nothing else. The published `ft_bare` numbers are
+# untouched; `ft_bare` vs `ft_bare_tffull` prices the staging itself.
+TF_MODES = ("full", "dyn", "zero")
+# The axis is hosted on ft_bare (cell A, 2 adapters) and ft1mix_bare (cell B,
+# 1 adapter). Not on ft1seq_bare: its T2 stage overwrites the T1 stage badly
+# enough that 39.8% of its T1 predictions are wrong and half of those are
+# unparseable, which would confound the axis with catastrophic forgetting.
+TF_HOSTS = ("ft_bare", "ft1mix_bare")
+ARM_TF = {
+    f"{host}_tf{mode}": mode for host in TF_HOSTS for mode in TF_MODES
+}
 
 
 def load_config(overrides: Optional[List[str]] = None) -> DictConfig:
@@ -64,13 +121,43 @@ def condition_name(tier: str, arm: str, style: str) -> str:
     return f"{tier}_{arm}_inf_{style}"
 
 
-def result_path(cfg: DictConfig, arm: str, style: str, ctx: int) -> Path:
+DEFAULT_EVAL_NAME = "miv63a"
+
+
+def eval_name(cfg: DictConfig) -> str:
+    """Short slug for the evaluation corpus, from `cfg.dataset.eval_name`.
+
+    Defaults to `miv63a`, the primary human-consensus set, for which the result
+    filename carries NO dataset token — so every result produced before
+    cross-dataset evaluation existed keeps its name and `baseline.eval` scores it
+    unchanged. Any other corpus (annomi, welivita, ...) gets a `_ds{slug}` token
+    so its results live beside the MIV6.3A ones without colliding.
+    """
+    return str(cfg.dataset.get("eval_name", DEFAULT_EVAL_NAME))
+
+
+def result_path(
+    cfg: DictConfig, arm: str, style: str, ctx: int, seed: Optional[int] = None
+) -> Path:
+    """Result CSV for one cell. `_seed{N}` mirrors the single-call convention in
+    `sc_arm.result_path`, and `baseline.eval` already parses and aggregates it.
+    `_ds{slug}` namespaces a non-default evaluation corpus (see `eval_name`)."""
     name = condition_name(cfg.tier, arm, style)
-    return REPO_ROOT / cfg.paths.output_dir / f"{name}_ctx{ctx}.csv"
+    ds = eval_name(cfg)
+    ds_suffix = f"_ds{ds}" if ds != DEFAULT_EVAL_NAME else ""
+    suffix = f"_seed{seed}" if seed is not None else ""
+    return REPO_ROOT / cfg.paths.output_dir / f"{name}_ctx{ctx}{ds_suffix}{suffix}.csv"
 
 
-def adapter_root(cfg: DictConfig, target: str, ctx: int) -> Path:
-    return REPO_ROOT / cfg.paths.adapter_dir / f"ctx{ctx}" / target
+def adapter_root(cfg: DictConfig, target: str, ctx: int, regime: str = "pair") -> Path:
+    """Where one trained arm's adapters live.
+
+    The two layouts are kept apart so a single-adapter run can never overwrite
+    the two-adapter arm it is being compared against.
+    """
+    if regime == "pair":
+        return REPO_ROOT / cfg.paths.adapter_dir / f"ctx{ctx}" / target
+    return REPO_ROOT / cfg.paths.adapter1_dir / f"ctx{ctx}" / regime / target
 
 
 def adapter_dirs(cfg: DictConfig, target: str, ctx: int) -> tuple[Path, Path]:
@@ -83,6 +170,108 @@ def adapter_dirs(cfg: DictConfig, target: str, ctx: int) -> tuple[Path, Path]:
     return root / "t1" / "local_finetuned_model", root / "t2" / "local_finetuned_model"
 
 
+def shared_adapter_dir(cfg: DictConfig, target: str, ctx: int, regime: str) -> Path:
+    """The single adapter covering both tiers, for the 1-adapter arms."""
+    return adapter_root(cfg, target, ctx, regime) / "local_finetuned_model"
+
+
+def tf_adapter_root(
+    cfg: DictConfig, target: str, ctx: int, tf_mode: str, regime: str = "pair",
+    seed: Optional[int] = None,
+) -> Path:
+    """Where one teacher-forcing variant's adapter(s) live.
+
+    A sibling of the base tree in both layouts, so a variant can never overwrite
+    the adapter of the arm it is being compared against.
+    """
+    # A seeded replicate gets its own tree so it cannot overwrite the original.
+    leaf = f"{target}_tf{tf_mode}" + (f"_seed{seed}" if seed is not None else "")
+    if regime == "pair":
+        return REPO_ROOT / cfg.paths.adapter_dir / f"ctx{ctx}" / leaf
+    return REPO_ROOT / cfg.paths.adapter1_dir / f"ctx{ctx}" / regime / leaf
+
+
+def resolve_adapters(
+    cfg: DictConfig, arm: str, ctx: int, seed: Optional[int] = None
+) -> tuple[Optional[Path], Optional[Path], Optional[Path], Optional[str]]:
+    """Return ``(t1_dir, t2_dir, shared_dir, retrain_command)`` for one arm.
+
+    The teacher-forcing arms resolve their T1 from the BASE tree and only their
+    T2 from the per-mode tree. That makes "all three share one T1 adapter" a
+    property of the paths rather than a claim in a document.
+    """
+    spec = ARM_ADAPTER[arm]
+    if spec is None:
+        return None, None, None, None
+    regime, target = spec
+    base = "PYTHONPATH=src python -m baseline.local_arm train"
+
+    if arm in ARM_TF:
+        mode = ARM_TF[arm]
+        cmd = (f"{base} --target {target} --regime {regime} --tf {mode} "
+               f"--ctx {ctx}" + (f" --seed {seed}" if seed is not None else ""))
+        if regime == "pair":
+            # Cell A: T1 resolves from the BASE tree and only T2 from the
+            # per-mode tree, so "all variants share one T1 adapter" is a
+            # property of the paths rather than a claim in a document.
+            return (
+                adapter_root(cfg, target, ctx) / "t1" / "local_finetuned_model",
+                tf_adapter_root(cfg, target, ctx, mode, seed=seed)
+                / "t2" / "local_finetuned_model",
+                None,
+                cmd,
+            )
+        # Cell B: one adapter serves both calls, so there is no T1 to hold
+        # fixed -- the whole adapter is retrained under the schedule.
+        return (
+            None, None,
+            tf_adapter_root(cfg, target, ctx, mode, regime, seed)
+            / "local_finetuned_model",
+            cmd,
+        )
+
+    cmd = f"{base} --target {target} --regime {regime} --ctx {ctx}"
+    if regime == "pair":
+        t1, t2 = adapter_dirs(cfg, target, ctx)
+        return t1, t2, None, cmd
+    return None, None, shared_adapter_dir(cfg, target, ctx, regime), cmd
+
+
+# -----------------------------------------------------------------------------
+# Provenance. Nothing in this repo recorded WHEN a result was produced, so every
+# finished train or predict now stamps itself. Dates are only ever recorded, not
+# inferred: a cell with no stamp reads as unknown rather than guessing a mtime.
+# -----------------------------------------------------------------------------
+def _utc_now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _git_sha() -> Optional[str]:
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+        )
+        return out.stdout.strip() or None
+    except Exception:
+        return None
+
+
+def _provenance(started_utc: str) -> Dict[str, Optional[str]]:
+    import os
+
+    return {
+        "started_utc": started_utc,
+        "finished_utc": _utc_now(),
+        "git_sha": _git_sha(),
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+    }
+
+
 def structure_suffix_for(style: str) -> str:
     """`inf_bare` uses the label-only templates, `inf_cot` the originals."""
     return "_bare" if style == "bare" else ""
@@ -91,14 +280,130 @@ def structure_suffix_for(style: str) -> str:
 # -----------------------------------------------------------------------------
 # train
 # -----------------------------------------------------------------------------
+def _train_tf_variant(cfg, df, positions, target, ctx, tf_mode, regime,
+                      structure_suffix, rationales, seed=None):
+    """Train one teacher-forcing variant. Returns ``(adapter_meta, schedule)``.
+
+    The two structures need different things:
+
+    * **pair (cell A)** -- two adapters, so only T2 is retrained and the base
+      arm's T1 adapter is loaded unchanged. The axis moves exactly one thing,
+      and a T1 regression is impossible by construction.
+    * **mixed (cell B)** -- one adapter serves both calls, so there is nothing
+      to hold fixed: the whole adapter is retrained with the T2 half
+      re-conditioned. Whether that damages T1 is the question this arm adds.
+    """
+    from automisc_ft.train import (
+        gold_prob_schedule, train_single_staged, train_t2_staged,
+    )
+    from baseline.oof_t1 import load_oof_t1, oof_t1_path
+
+    t1_dir = None
+    if regime == "pair":
+        t1_dir = adapter_root(cfg, target, ctx) / "t1" / "local_finetuned_model"
+        if not t1_dir.exists():
+            raise SystemExit(
+                f"The cell-A teacher-forcing variants share the base T1 adapter, "
+                f"which is missing at {t1_dir}. Train the base arm first:\n"
+                f"  PYTHONPATH=src python -m baseline.local_arm train "
+                f"--target {target} --regime pair --ctx {ctx}"
+            )
+
+    schedule = gold_prob_schedule(
+        cfg.training.tf_modes[tf_mode], int(cfg.training.num_train_epochs)
+    )
+
+    predicted_t1 = None
+    if any(p < 1.0 for p in schedule):
+        predicted_t1 = load_oof_t1(ctx)
+        if not predicted_t1:
+            raise SystemExit(
+                f"No out-of-fold predicted T1 for ctx={ctx} at {oof_t1_path(ctx)}. "
+                f"Generate it first (one job per fold):\n"
+                f"  PYTHONPATH=src python -m baseline.oof_t1 train-fold   --ctx {ctx} --fold K\n"
+                f"  PYTHONPATH=src python -m baseline.oof_t1 predict-fold --ctx {ctx} --fold K"
+            )
+        # Same reasoning as the rationale gate: an incomplete store would let the
+        # uncovered rows fall back to gold, which is an adapter quietly trained
+        # at a higher p_gold than the schedule claims.
+        covered = sum(
+            1 for p in positions
+            if str(df.iloc[p].get("corp_utt_idx")) in predicted_t1
+        )
+        if covered < len(positions):
+            raise SystemExit(
+                f"Out-of-fold predictions for ctx={ctx} cover only {covered}/"
+                f"{len(positions)} training rows, so the rest would silently fall "
+                f"back to gold conditioning. Finish every fold, then check:\n"
+                f"  PYTHONPATH=src python -m baseline.oof_t1 report --ctx {ctx}"
+            )
+        print(f"Loaded {len(predicted_t1)} out-of-fold T1 predictions for ctx={ctx}")
+
+    root = tf_adapter_root(cfg, target, ctx, tf_mode, regime, seed)
+    if regime == "pair":
+        out_dir = root / "t2"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        print(f"tf={tf_mode} (cell A): p_gold {schedule}, T1 shared from {t1_dir}")
+        t2_dir = train_t2_staged(
+            cfg, df, positions, out_dir, schedule,
+            predicted_t1=predicted_t1,
+            structure_suffix=structure_suffix,
+            rationales=rationales,
+        )
+        meta = {
+            "t1_adapter": str(t1_dir),
+            "t2_adapter": str(t2_dir),
+            "tf_t1_shared_from": str(adapter_root(cfg, target, ctx)),
+        }
+    else:
+        root.mkdir(parents=True, exist_ok=True)
+        print(
+            f"tf={tf_mode} (cell B): p_gold {schedule}, ONE adapter for both "
+            f"tiers -- T1 is retrained too, not held fixed"
+        )
+        shared = train_single_staged(
+            cfg, df, positions, root, schedule,
+            predicted_t1=predicted_t1,
+            structure_suffix=structure_suffix,
+            rationales=rationales,
+        )
+        meta = {"shared_adapter": str(shared), "tf_t1_shared_from": None}
+
+    meta.update({
+        "tf_mode": tf_mode,
+        "tf_p_gold_schedule": schedule,
+        "tf_staged": True,
+        "tf_regime": regime,
+    })
+    return meta, schedule
+
+
 def cmd_train(args) -> None:
     from automisc_ft.data import load_manual
-    from automisc_ft.train import train_adapter_pair
+    from automisc_ft.train import train_adapter_pair, train_single_adapter
     from baseline.rationalize import load_rationales
 
+    started = _utc_now()
     cfg = load_config(args.overrides)
     ctx = args.ctx
     target = args.target
+    regime = args.regime
+    tf_mode = getattr(args, "tf", None)
+    seed = getattr(args, "seed", None)
+    if seed is not None and not tf_mode:
+        raise SystemExit(
+            "--seed is only wired for the teacher-forcing arms (--tf). Other arms "
+            "write to unseeded adapter paths, so a replicate would overwrite the "
+            "original rather than sit beside it."
+        )
+    if tf_mode and (regime not in ("pair", "mixed") or target != "bare"):
+        raise SystemExit(
+            "--tf is defined for `--regime pair` (cell A) and `--regime mixed` "
+            "(cell B), with `--target bare`. Both run the two-call flow, so both "
+            "condition T2 on a PREDICTED T1. `sequential` is excluded: its T2 "
+            "stage overwrites the T1 stage badly enough that the axis would be "
+            "confounded with catastrophic forgetting."
+        )
 
     df = load_manual(REPO_ROOT / cfg.dataset.train_csv)
     positions = list(range(len(df)))
@@ -116,22 +421,56 @@ def cmd_train(args) -> None:
                 f"No frozen rationales for ctx={ctx}. Generate them first:\n"
                 f"  PYTHONPATH=src python -m baseline.rationalize --ctx {ctx}"
             )
+        # An interrupted generation run leaves a valid but partial file, and
+        # rows without a rationale are silently dropped when the examples are
+        # built. Without this check that becomes an adapter quietly trained on a
+        # fraction of the corpus, which is far worse than a failed job.
+        covered = sum(
+            1 for p in positions
+            if str(df.iloc[p].get("corp_utt_idx")) in rationales
+        )
+        if covered < len(positions):
+            raise SystemExit(
+                f"Frozen rationales for ctx={ctx} cover only {covered}/"
+                f"{len(positions)} training rows, so the rest would be dropped. "
+                f"Finish the generation (it resumes from the checkpoint):\n"
+                f"  PYTHONPATH=src python -m baseline.rationalize --ctx {ctx}"
+            )
         print(f"Loaded {len(rationales)} frozen rationale pairs for ctx={ctx}")
 
-    out_dir = adapter_root(cfg, target, ctx)
+    out_dir = (
+        tf_adapter_root(cfg, target, ctx, tf_mode, regime, seed) if tf_mode
+        else adapter_root(cfg, target, ctx, regime)
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
     print(
-        f"Training target={target} ctx={ctx} on {len(positions)} rows of "
-        f"{cfg.dataset.train_csv} -> {out_dir}"
+        f"Training target={target} regime={regime}"
+        f"{f' tf={tf_mode}' if tf_mode else ''} ctx={ctx} on "
+        f"{len(positions)} rows of {cfg.dataset.train_csv} -> {out_dir}"
     )
 
-    t1_dir, t2_dir = train_adapter_pair(
-        cfg, df, positions, out_dir, structure_suffix, rationales
-    )
+    if tf_mode:
+        adapter_meta, _schedule = _train_tf_variant(
+            cfg, df, positions, target, ctx, tf_mode, regime,
+            structure_suffix, rationales, seed,
+        )
+        adapter_meta["seed"] = seed if seed is not None else int(cfg.training.seed)
+    elif regime == "pair":
+        t1_dir, t2_dir = train_adapter_pair(
+            cfg, df, positions, out_dir, structure_suffix, rationales
+        )
+        adapter_meta = {"t1_adapter": str(t1_dir), "t2_adapter": str(t2_dir)}
+    else:
+        shared_dir = train_single_adapter(
+            cfg, df, positions, out_dir, structure_suffix, rationales, regime
+        )
+        adapter_meta = {"shared_adapter": str(shared_dir)}
 
     meta = {
         "tier": cfg.tier,
         "target": target,
+        "regime": regime,
+        "n_adapters": 2 if regime == "pair" else 1,
         "num_context_turns": ctx,
         "context_mode": cfg.annotator.context_mode,
         "structure_suffix": structure_suffix,
@@ -148,8 +487,8 @@ def cmd_train(args) -> None:
             "dropout": cfg.model.peft_dropout,
             "target_modules": list(cfg.model.target_modules),
         },
-        "t1_adapter": str(t1_dir),
-        "t2_adapter": str(t2_dir),
+        **adapter_meta,
+        **_provenance(started),
     }
     meta_path = out_dir / "train_metadata.json"
     meta_path.write_text(json.dumps(meta, indent=2, default=str))
@@ -179,6 +518,7 @@ def cmd_predict(args) -> None:
     from automisc_ft.infer import TieredAnnotator
     from baseline.fewshot import exemplars_path, load_exemplars
 
+    started = _utc_now()
     cfg = load_config(args.overrides)
     ctx = args.ctx
     arm, style = args.arm, args.inf
@@ -191,7 +531,8 @@ def cmd_predict(args) -> None:
     limit = args.limit if args.limit is not None else cfg.limit
     n_total = len(df) if limit in (None, "null") else min(int(limit), len(df))
 
-    save_path = result_path(cfg, arm, style, ctx)
+    seed = getattr(args, "seed", None)
+    save_path = result_path(cfg, arm, style, ctx, seed)
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     utt_checkpoint = -1
@@ -212,18 +553,13 @@ def cmd_predict(args) -> None:
         print(f"Nothing to do; {save_path} is already complete.")
         return
 
-    # Adapters, only for the two fine-tuning arms.
-    target = ARM_TARGET[arm]
-    t1_adapter = t2_adapter = None
-    if target is not None:
-        t1_adapter, t2_adapter = adapter_dirs(cfg, target, ctx)
-        for p in (t1_adapter, t2_adapter):
-            if not p.exists():
-                raise SystemExit(
-                    f"Missing adapter {p}. Train it first:\n"
-                    f"  PYTHONPATH=src python -m baseline.local_arm train "
-                    f"--target {target} --ctx {ctx}"
-                )
+    # Adapters, only for the fine-tuning arms.
+    t1_adapter, t2_adapter, shared_adapter, retrain_cmd = resolve_adapters(
+        cfg, arm, ctx, seed
+    )
+    for path in (t1_adapter, t2_adapter, shared_adapter):
+        if path is not None and not path.exists():
+            raise SystemExit(f"Missing adapter {path}. Train it first:\n  {retrain_cmd}")
 
     # Few-shot exemplars, only for the fs arm. `inf_cot` uses the exemplars'
     # frozen rationales; `inf_bare` shows label-only replies.
@@ -252,6 +588,7 @@ def cmd_predict(args) -> None:
         base_model=cfg.model.base_model,
         t1_adapter_dir=str(t1_adapter) if t1_adapter else None,
         t2_adapter_dir=str(t2_adapter) if t2_adapter else None,
+        shared_adapter_dir=str(shared_adapter) if shared_adapter else None,
         force_cpu=bool(cfg.inference.force_cpu),
         trust_remote_code=bool(cfg.model.get("trust_remote_code", False)),
         max_new_tokens=int(cfg.inference.max_new_tokens),
@@ -299,6 +636,33 @@ def cmd_predict(args) -> None:
         annotator.close()
 
     _report(existing_df, cond, save_path, int(cfg.inference.max_new_tokens), max_input_len)
+    _write_run_meta(save_path, arm, style, ctx, existing_df, started, seed,
+                    dataset=eval_name(cfg))
+
+
+def _write_run_meta(save_path: Path, arm: str, style: str, ctx: int,
+                    df: Optional[pd.DataFrame], started: str,
+                    seed: Optional[int] = None,
+                    dataset: str = DEFAULT_EVAL_NAME) -> None:
+    """Stamp the finished cell with when it ran, beside the CSV it describes.
+
+    A sidecar rather than a shared ledger: colocated so it cannot drift from its
+    artifact, and one writer per file so concurrent SLURM jobs cannot race. The
+    `.json` extension is not gitignored here, so it is tracked automatically.
+    """
+    meta = {
+        "arm": arm,
+        "style": style,
+        "ctx": int(ctx),
+        "seed": seed,
+        "dataset": dataset,
+        "n_rows": int(len(df)) if df is not None else 0,
+        "artifact": save_path.name,
+        **_provenance(started),
+    }
+    meta_path = save_path.with_suffix(".meta.json")
+    meta_path.write_text(json.dumps(meta, indent=2, default=str))
+    print(f"Run metadata -> {meta_path}")
 
 
 def _report(df: Optional[pd.DataFrame], cond: str, save_path: Path,
@@ -333,9 +697,21 @@ def main() -> None:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_train = sub.add_parser("train", help="train one LoRA adapter pair")
+    p_train = sub.add_parser("train", help="train the LoRA adapter(s) for one arm")
     p_train.add_argument("--target", choices=TRAIN_TARGETS, required=True,
                          help="bare = label-only targets; rat = rationale + label targets")
+    p_train.add_argument("--regime", choices=REGIMES, default="pair",
+                         help="pair = one adapter per tier (2 adapters); "
+                              "mixed = one adapter on the shuffled union of both "
+                              "tiers; sequential = one adapter trained on T1 then "
+                              "continued on T2")
+    p_train.add_argument("--tf", choices=TF_MODES, default=None,
+                         help="teacher forcing for the T2 stage: which T1 label "
+                              "conditions it. full = always gold (the control), "
+                              "zero = always the out-of-fold prediction, dyn = "
+                              "decayed across epochs. Trains T2 only; T1 is "
+                              "shared from the base arm. Requires --regime pair "
+                              "--target bare.")
 
     p_pred = sub.add_parser("predict", help="annotate the evaluation set")
     p_pred.add_argument("--arm", choices=ARMS, required=True)
@@ -343,6 +719,11 @@ def main() -> None:
                         help="inference prompt style")
 
     for p in (p_train, p_pred):
+        p.add_argument("--seed", type=int, default=None,
+                       help="replicate index for the teacher-forcing arms. Gives "
+                            "the run its own adapter tree and a _seed{N} result "
+                            "file, so replicates sit beside the original instead "
+                            "of overwriting it.")
         p.add_argument("--ctx", type=int, default=None,
                        help="prior context volleys (default: config)")
         p.add_argument("--limit", type=int, default=None,
@@ -356,6 +737,9 @@ def main() -> None:
         args.ctx = int(load_config(args.overrides).annotator.num_context_turns)
     else:
         args.overrides = list(args.overrides) + [f"annotator.num_context_turns={args.ctx}"]
+
+    if getattr(args, "seed", None) is not None:
+        args.overrides = list(args.overrides) + [f"training.seed={args.seed}"]
 
     {"train": cmd_train, "predict": cmd_predict}[args.cmd](args)
 

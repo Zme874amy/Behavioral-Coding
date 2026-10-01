@@ -51,10 +51,44 @@ Coverage matrix; recovery JSONs in `outputs/grpo/recovery_*.json`.
 
 ## Results
 
-Pending — not yet run. Numbers are left to `baseline.eval`; this doc will quote
-the comparisons it argues from (A vs B, B vs `sc_grpo`, dec vs joint, each vs its
-SFT warm-start, and the recovery probe) once cells land.
+All four arms completed at ctx5, 3 seeds each (weighted Phase-1 only; the
+`_unw`/`_cold` ablations and ctx3 were not run and show as missing in Coverage).
+Full numbers in [BASELINE_RESULTS.md](../BASELINE_RESULTS.md); the T2 (all, mean
+over seeds) accuracy / macro-F1 (learnable) the argument rests on:
+
+| Cell | Arm | T2 acc | T2 F1(learn) |
+|---|---|---|---|
+| F (1-call, 1-ad) | `sc_ft_bare` / `sc_grpo` | 0.660 / 0.660 | 0.485 / 0.481 |
+| A (2-call, 2-ad) | `ft_bare` | 0.642 | 0.446 |
+| | `grpo_pair_dec` / `grpo_pair_joint` | 0.647 / 0.648 | 0.429 / 0.431 |
+| B (2-call, 1-ad) | `ft1mix_bare` | 0.678 | 0.502 |
+| | `grpo_mix_dec` / `grpo_mix_joint` | 0.667 / 0.661 | 0.489 / 0.486 |
+
+Seed spreads on the generated table are small (±0.001–0.006), so the ~0.01 gaps
+below sit at or inside the noise band.
+
+- **Decoupled ≈ joint.** pair 0.647 vs 0.648; mix 0.667 vs 0.661 — the credit
+  scheme does not move T2, so the coupled non-stationarity single-call was built
+  to avoid costs ~nothing. (Caveat: joint ran G=6 vs decoupled G=8 to fit the 24h
+  wall; the wash is far larger than that knob would plausibly move.)
+- **1 adapter (B) ≥ 2 (A)**, under RL as under SFT: `mix` beats `pair` in every
+  pairing, and `ft1mix_bare` is the single best T2 cell.
+- **RL draws level with SFT, never surpasses it**, in every structural cell —
+  replicating the single-call headline across call- and adapter-count, so the
+  null is not a single-call artifact.
+
+The recovery probe explains the lack of T2 headroom: fed a wrong T1, T2 recovers
+on only ~0.07 of rows and emits a code inside the wrong group ~0.84 of the time
+(`mix_dec` seed0) — it conditions on the injected group label, not the utterance.
 
 ## Verdict
 
-Pending.
+The assumption that motivated single-call — that two-call RL's coupling is
+*harmful* — does not hold: joint and decoupled are a wash, so single-call was
+free rather than a compromise. The headline "self-discovered reasoning helps"
+assumption is confirmed **negative** with higher confidence: RL only repairs to
+the SFT level in every cell, never beating it. The ceiling here is therefore not
+in the training signal (RL vs SFT) or the pipeline structure (call/adapter count)
+— those are interchangeable within noise — which points the lever at **data (tail
+coverage under the HLQC→MIV6.3A shift) and scale**, not more RL or structural
+tuning. This campaign's contribution is ruling those knobs out.

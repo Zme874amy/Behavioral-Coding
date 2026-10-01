@@ -8,13 +8,22 @@ The grid grew out of the AutoMISC gpt-4o baseline reproduction (a 2x2 prompting
 matrix plus a fine-tuned condition). Everything from that round is still here,
 just renamed into the tier/arm/style scheme.
 
+> **Looking for the arm list, the frozen artifacts, or the hyperparameters?**
+> Those live in [EXPERIMENTS.md](EXPERIMENTS.md), which is the registry for every
+> arm across both pipelines. This file is the design rationale for the two-call
+> grid specifically.
+
 > **This grid is the two-call pipeline** (a Tier-1 call, then a Tier-2 call
 > conditioned on its answer). The GRPO experiment that follows from these
 > results uses a single-call format instead and is documented separately in
-> [GRPO.md](GRPO.md). Its arms are prefixed `sc_` and appear as their own block
-> in [BASELINE_RESULTS.md](BASELINE_RESULTS.md); the two formats are each
-> internally comparable but not comparable to each other. Nothing below is
-> affected by it.
+> [GRPO.md](GRPO.md); its arms are prefixed `sc_`.
+>
+> The two formats were originally treated as incomparable, because the two-call
+> arms used two adapters and the single-call arms one, so any difference confused
+> call count with adapter count. The `ft1mix_*` and `ft1seq_*` arms close that
+> gap: they run this same two-call flow from a **single** adapter, so they can be
+> compared against the `sc_` arms with adapter count held fixed. See the
+> structural matrix in [EXPERIMENTS.md](EXPERIMENTS.md).
 
 ## The grid
 
@@ -27,12 +36,20 @@ just renamed into the tier/arm/style scheme.
 
 **Arms** — how the model is adapted.
 
-| Arm | Adaptation | Training target |
-|---|---|---|
-| `zs` | none | — |
-| `fs` | stratified HLQC exemplars in context | — |
-| `ft_bare` | LoRA / Azure fine-tune | label only |
-| `ft_rat` | LoRA / Azure fine-tune | distilled rationale + label |
+| Arm | Adapters | Adaptation | Training target |
+|---|---:|---|---|
+| `zs` | 0 | none | — |
+| `fs` | 0 | stratified HLQC exemplars in context | — |
+| `ft_bare` | 2 | LoRA / Azure fine-tune, one per tier | label only |
+| `ft_rat` | 2 | LoRA / Azure fine-tune, one per tier | distilled rationale + label |
+| `ft1mix_bare` | 1 | LoRA on the shuffled union of both tiers | label only |
+| `ft1mix_rat` | 1 | LoRA on the shuffled union of both tiers | distilled rationale + label |
+| `ft1seq_bare` | 1 | LoRA on T1, then continued on T2 | label only |
+| `ft1seq_rat` | 1 | LoRA on T1, then continued on T2 | distilled rationale + label |
+
+The four `ft1*` arms were added later and are the bridge to the single-call
+ladder; they run exactly the same two-call inference as `ft_*`, from one adapter
+instead of two.
 
 **Inference styles** — how it is prompted at evaluation time.
 
@@ -66,20 +83,23 @@ volleys can reference material that is invisible at 3:
 | Distilled rationales | `data/fine_tuning/rationales/hlqc_rationales_ctx<N>.json` | `baseline.rationalize` |
 | Azure FT JSONL | `data/fine_tuning/baseline/hlqc_{train,valid}[_rat]_ctx<N>.jsonl` | `baseline.finetune build` |
 
-## Status of the 16 cells
+## Status
 
-At **ctx=5**. Nothing is run at ctx=3 yet beyond the gpt-4o in-context cells.
+Which cells exist is **generated, not maintained here**: see the Coverage section
+of [BASELINE_RESULTS.md](BASELINE_RESULTS.md), or `outputs/baseline_eval/coverage.csv`
+for the machine-readable form. A hand-kept table beside a generated one only ever
+drifts — this one did, claiming the Qwen tier was "ready to run" long after all of
+it had been scored at both context lengths.
 
-| Cell | State |
+The one thing not visible from coverage alone is *why* a cell is missing rather
+than merely absent:
+
+| Missing cells | Why |
 |---|---|
-| `gpt4o_zs_inf_bare` / `inf_cot` | **done** — see `docs/BASELINE_RESULTS.md` |
-| `gpt4o_fs_inf_bare` / `inf_cot` | **done** |
-| `qwen_*` (all 8) | **ready to run** — every input exists; needs an MLeRP GPU |
-| `gpt4o_ft_bare_inf_bare` / `inf_cot` | **blocked** — model trained, no deployment |
-| `gpt4o_ft_rat_inf_bare` / `inf_cot` | **blocked** — training data built, job unsubmitted pending deployment access |
+| `gpt4o_ft_bare_*`, `gpt4o_ft_rat_*` | Azure: the model is trained and the data built, but there is no deployment to serve it |
+| `qwen_*_rat_*` at ctx3 | needs distilled rationales for ctx3, which need a working Azure gpt-4o key |
 
-The whole Qwen tier is unblocked: the distilled rationales are generated and the
-pipeline is smoke-tested end to end. It only needs GPU time.
+For when each campaign ran, see [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
 The four completed gpt-4o cells were written before this naming existed, as
 `zeroshot_rationales`, `zeroshot_bare`, `fewshot_rationales`, `fewshot_bare`.

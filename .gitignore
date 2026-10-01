@@ -42,6 +42,8 @@ outputs/*
 !outputs/baseline_eval/
 outputs/baseline_eval/*
 !outputs/baseline_eval/comparison.csv
+!outputs/baseline_eval/compliance.csv
+!outputs/baseline_eval/coverage.csv
 !outputs/grpo/
 outputs/grpo/*
 !outputs/grpo/faithfulness_*.json

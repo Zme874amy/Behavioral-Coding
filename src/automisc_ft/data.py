@@ -14,6 +14,7 @@ Schema of the manual CSV (e.g. data/manual/MIV6.3A_manual.csv):
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -181,12 +182,31 @@ def build_tier_examples(
     num_context_turns: int,
     structure_suffix: str = "",
     rationales: Optional[Dict[str, dict]] = None,
+    predicted_t1: Optional[Dict[str, dict]] = None,
+    gold_prob: float = 1.0,
+    rng: Optional[random.Random] = None,
 ) -> List[TierExample]:
     """Build training examples for a single tier over the given rows.
 
-    For T2, the spec is injected for the GOLD T1 group (`t1_label_GT`) so the
-    model is trained on the same conditional structure the pipeline uses at
-    inference (where it injects the PREDICTED T1 group).
+    For T2, the spec is injected for the GOLD T1 group (`t1_label_GT`) by
+    default, so the model is trained on the same conditional structure the
+    pipeline uses at inference (where it injects the PREDICTED T1 group).
+
+    `gold_prob` opens that up. It is the per-row probability of conditioning on
+    the gold T1; with `predicted_t1` (the frozen out-of-fold store, keyed by
+    `corp_utt_idx` as a string) and `gold_prob < 1` the remaining rows condition
+    on the PREDICTED T1 instead, which is what the model actually meets at
+    inference. `gold_prob=1` reproduces the original behaviour exactly, so every
+    existing arm is unaffected.
+
+    Two consequences that look like bugs and are not:
+
+    * The completion target is always the gold `t2_label_GT`. Only the prompt's
+      conditioning changes -- this is not label noise.
+    * When the predicted T1 names a different group, the injected spec lists a
+      code set that does NOT contain the gold T2 label, so the model is trained
+      to emit a label outside the listed group. That is precisely the exposure
+      condition being studied, and the count is reported below.
 
     When `rationales` is given (the frozen distilled-rationale store, keyed by
     `corp_utt_idx` as a string), each example carries the matching explanation
@@ -198,6 +218,8 @@ def build_tier_examples(
 
     examples: List[TierExample] = []
     n_missing_rationale = 0
+    n_missing_pred = 0
+    n_wrong_group = 0
     for pos in row_positions:
         row = df.iloc[pos]
         speaker = row["speaker"]
@@ -216,8 +238,22 @@ def build_tier_examples(
             label = _valid_label(row.get("t2_label_GT"), t2_codes_for_speaker(speaker))
             if t1_gold is None or label is None:
                 continue
+            t1_for_prompt = t1_gold
+            if predicted_t1 is not None and gold_prob < 1.0:
+                entry = predicted_t1.get(str(row.get("corp_utt_idx")))
+                pred = _valid_label(
+                    (entry or {}).get("t1_pred"), t1_codes_for_speaker(speaker)
+                )
+                if pred is None:
+                    # No usable prediction on file: fall back to gold rather
+                    # than drop the row, and report the count.
+                    n_missing_pred += 1
+                elif (rng or random).random() >= gold_prob:
+                    t1_for_prompt = pred
+                    if pred != t1_gold:
+                        n_wrong_group += 1
             messages = build_messages_t2(
-                df, pos, t1_gold, context_mode, num_context_turns, structure_suffix
+                df, pos, t1_for_prompt, context_mode, num_context_turns, structure_suffix
             )
 
         explanation = None
@@ -243,6 +279,18 @@ def build_tier_examples(
         print(
             f"WARNING: skipped {n_missing_rationale} {tier} rows with no frozen "
             "rationale; run `python -m baseline.rationalize` for this context length"
+        )
+    if n_missing_pred:
+        print(
+            f"WARNING: {n_missing_pred} {tier} rows had no usable predicted T1 and "
+            "fell back to gold conditioning; run `python -m baseline.oof_t1` for "
+            "this context length"
+        )
+    if predicted_t1 is not None and gold_prob < 1.0:
+        print(
+            f"  T2 conditioning: gold_prob={gold_prob:g}, {n_wrong_group}/"
+            f"{len(examples)} examples conditioned on a T1 group that does not "
+            "contain the gold T2 label"
         )
     return examples
 

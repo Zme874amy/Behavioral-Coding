@@ -30,6 +30,12 @@ class LocalTrainerConfig:
     logging_steps: int = 20
     save_steps: int = 200
     save_total_limit: int = 2
+    # "steps" keeps HF's behaviour, which also writes a final checkpoint-<N>/ (a
+    # second copy of the adapter plus ~0.3 GB of optimizer state) at the end of
+    # training. "no" skips that: the adapter is still saved by save_model(), but
+    # the run cannot be resumed mid-training. Use "no" for short retrains that
+    # would simply restart; on MLeRP those checkpoints filled the user quota.
+    save_strategy: str = "steps"
     output_dir: str = "data/fine_tuning"
     show_tqdm: bool = True
     max_grad_norm: float = 1.0
@@ -37,6 +43,13 @@ class LocalTrainerConfig:
     weight_decay: float = 0.0
     lr_scheduler_type: str = "cosine"
     gradient_checkpointing: bool = False
+    # Continue training an existing LoRA instead of starting a fresh one. Used by
+    # the sequential single-adapter regime, where the T2 stage resumes from the
+    # adapter the T1 stage produced. Ignored when use_peft is False.
+    init_adapter_dir: Optional[str] = None
+    # Governs LoRA init and the data sampler. HF's own default is 42, so leaving
+    # this at 42 reproduces every run made before it was threaded through.
+    seed: int = 42
 
 
 def tokenize_prompt_completion(
@@ -100,15 +113,21 @@ def run_local_fine_tuning(
         ) from exc
 
     use_peft = bool(cfg_ft.use_peft)
+    init_adapter_dir = getattr(cfg_ft, "init_adapter_dir", None)
     if use_peft:
         try:
-            from peft import LoraConfig, get_peft_model
+            from peft import LoraConfig, PeftModel, get_peft_model
         except ImportError as exc:
             raise ImportError(
                 "LoRA fine-tuning requires: peft. Install with: pip install peft"
             ) from exc
-        log.info("Using LoRA (parameter-efficient fine-tuning)")
+        if init_adapter_dir:
+            log.info("Using LoRA, continuing from adapter %s", init_adapter_dir)
+        else:
+            log.info("Using LoRA (parameter-efficient fine-tuning)")
     else:
+        if init_adapter_dir:
+            raise ValueError("init_adapter_dir requires use_peft=True")
         log.info("Using full fine-tuning (all parameters will be updated)")
 
     from components.hf_load import load_model_and_tokenizer
@@ -125,18 +144,31 @@ def run_local_fine_tuning(
 
     # Apply LoRA if requested
     if use_peft:
-        if cfg_ft.target_modules is None:
-            cfg_ft.target_modules = ['q_proj', 'v_proj']
-        
-        peft_config = LoraConfig(
-            r=cfg_ft.peft_r,
-            lora_alpha=cfg_ft.peft_alpha,
-            target_modules=cfg_ft.target_modules,
-            lora_dropout=cfg_ft.peft_dropout,
-            bias='none',
-            task_type='CAUSAL_LM',
-        )
-        model = get_peft_model(model, peft_config)
+        if init_adapter_dir:
+            # The saved adapter_config.json carries the LoRA geometry, so the
+            # r/alpha/target_modules above are deliberately not reapplied here.
+            # `is_trainable=True` matters: without it the adapter loads frozen
+            # and the second stage would train nothing.
+            if not (Path(init_adapter_dir) / "adapter_config.json").exists():
+                raise FileNotFoundError(
+                    f"No adapter to continue from at {init_adapter_dir}"
+                )
+            model = PeftModel.from_pretrained(
+                model, str(init_adapter_dir), is_trainable=True
+            )
+        else:
+            if cfg_ft.target_modules is None:
+                cfg_ft.target_modules = ['q_proj', 'v_proj']
+
+            peft_config = LoraConfig(
+                r=cfg_ft.peft_r,
+                lora_alpha=cfg_ft.peft_alpha,
+                target_modules=cfg_ft.target_modules,
+                lora_dropout=cfg_ft.peft_dropout,
+                bias='none',
+                task_type='CAUSAL_LM',
+            )
+            model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
 
     if getattr(cfg_ft, "gradient_checkpointing", False):
@@ -200,6 +232,7 @@ def run_local_fine_tuning(
         bf16=getattr(cfg_ft, "bf16", False) and torch.cuda.is_available(),
         eval_steps=eval_steps,
         save_steps=cfg_ft.save_steps,
+        save_strategy=getattr(cfg_ft, "save_strategy", "steps"),
         logging_steps=cfg_ft.logging_steps,
         save_total_limit=cfg_ft.save_total_limit,
         load_best_model_at_end=eval_dataset is not None,
@@ -209,6 +242,7 @@ def run_local_fine_tuning(
         report_to=[],
         max_grad_norm=getattr(cfg_ft, "max_grad_norm", 1.0),
         warmup_ratio=getattr(cfg_ft, "warmup_ratio", 0.1),
+        seed=int(getattr(cfg_ft, "seed", 42)),
         weight_decay=getattr(cfg_ft, "weight_decay", 0.0),
         lr_scheduler_type=getattr(cfg_ft, "lr_scheduler_type", "cosine"),
         dataloader_pin_memory=False,

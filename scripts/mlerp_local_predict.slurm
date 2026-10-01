@@ -16,10 +16,14 @@
 #   ARM=ft_rat  INF=bare sbatch scripts/mlerp_local_predict.slurm
 #   ARM=ft_rat  INF=cot  sbatch scripts/mlerp_local_predict.slurm
 #
-# All eight at once (see also scripts/submit_local_grid.sh):
+# The 1-adapter arms take the same flags; only the adapter behind them differs:
+#   ARM=ft1mix_bare INF=bare sbatch scripts/mlerp_local_predict.slurm
+#   ARM=ft1seq_rat  INF=cot  sbatch scripts/mlerp_local_predict.slurm
+#
+# The whole grid at once (see also scripts/submit_local_grid.sh):
 #   CTX=5 bash scripts/submit_local_grid.sh
 #
-# The ft_* arms need their adapters trained first via
+# The ft_* and ft1* arms need their adapters trained first via
 # scripts/mlerp_local_train.slurm.
 
 #SBATCH --job-name=qwen_predict
@@ -36,15 +40,33 @@ cd "$SLURM_SUBMIT_DIR"
 source "${SLURM_SUBMIT_DIR}/scripts/env.sh"
 export TOKENIZERS_PARALLELISM=false
 
-ARM="${ARM:?set ARM to one of zs, fs, ft_bare, ft_rat}"
+ARM="${ARM:?set ARM to one of zs, fs, ft_bare, ft_rat, ft1mix_bare, ft1mix_rat, ft1seq_bare, ft1seq_rat, ft_bare_tffull, ft_bare_tfdyn, ft_bare_tfzero}"
 INF="${INF:?set INF to bare or cot}"
 CTX="${CTX:-5}"
+# Replicate index for the teacher-forcing arms; blank = the original run.
+SEED="${SEED:-}"
+# Cross-dataset evaluation: point at another corpus WITHOUT clobbering the
+# MIV6.3A results. Set both together (EVAL_NAME namespaces the output file):
+#   EVAL_CSV=data/manual/AnnoMI_eval.csv   EVAL_NAME=annomi   ARM=ft_bare INF=bare ...
+#   EVAL_CSV=data/manual/Welivita_eval.csv EVAL_NAME=welivita ARM=ft_bare INF=bare ...
+# Build those CSVs first: python3 -m baseline.prep_crossscheme all
+EVAL_CSV="${EVAL_CSV:-}"
+EVAL_NAME="${EVAL_NAME:-}"
 
 bash "${SLURM_SUBMIT_DIR}/scripts/check_data.sh"
 mkdir -p outputs/local_arm data/annotated/baseline
 
-echo "Predicting arm=${ARM} inf=${INF} ctx=${CTX}"
-python3 -m baseline.local_arm predict --arm "$ARM" --inf "$INF" --ctx "$CTX"
+# Forward the eval-corpus overrides only when set, so the default run is
+# byte-for-byte unchanged.
+OVERRIDES=()
+[ -n "$EVAL_CSV" ]  && OVERRIDES+=("dataset.eval_csv=${EVAL_CSV}")
+[ -n "$EVAL_NAME" ] && OVERRIDES+=("dataset.eval_name=${EVAL_NAME}")
+
+echo "Predicting arm=${ARM} inf=${INF} ctx=${CTX} ${EVAL_NAME:+ds=${EVAL_NAME}}"
+python3 -m baseline.local_arm predict --arm "$ARM" --inf "$INF" --ctx "$CTX" \
+  ${SEED:+--seed "$SEED"} "${OVERRIDES[@]}"
 
 # Rescore everything present so the comparison stays current as cells land.
+# `baseline.eval` scans all result files and reports each corpus in its own
+# section, so one rescore keeps MIV6.3A and the cross-scheme corpora in sync.
 python3 -m baseline.eval

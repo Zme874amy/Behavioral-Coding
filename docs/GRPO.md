@@ -263,13 +263,16 @@ reported effect is the difference.
   random third code shows the swap confused the model, landing on the donor's
   own code shows it actually followed the substituted reasoning.
 
-### Results so far (ctx5, 821 rows, T2)
+### Results (ctx5, 821 rows, T2)
+
+Reproduced from `outputs/grpo/faithfulness_*.json`; the generated table, with T1
+as well, is in [BASELINE_RESULTS.md](BASELINE_RESULTS.md).
 
 | Arm | control flip | swap flip | **net flip** | donor-match |
 |---|---:|---:|---:|---:|
 | `sc_zs` (untrained) | 0.066 | 0.868 | **+0.803** | 0.757 |
 | `sc_ft_rat` | 0.041 | 0.739 | **+0.698** | 0.668 |
-| `sc_grpo` | — | — | — | — |
+| `sc_grpo` (seed 0) | 0.010 | 0.808 | **+0.798** | 0.721 |
 
 **Run `sc_zs` before reading any of this.** Taken alone, FT-Rat's +0.698 looks
 like a finding: swap the rationale and the label follows it two thirds of the
@@ -295,10 +298,31 @@ This is what GRPO is for, and it is also what makes the GRPO arm falsifiable.
 The channel from reasoning to label is open in every arm, at roughly the same
 strength, without anyone training for it; what no arm has is pressure on the
 model's *own* rationale to be correct. A reward on the resulting label is that
-pressure. So the GRPO row has to show accuracy above FT-Rat while its net flip
-stays in this same 0.7–0.8 band. Net flip far below the band would mean GRPO
-solved the problem by learning to ignore its own rationale, which would raise
-accuracy while abandoning the claim the experiment is meant to support.
+pressure. So the GRPO row had to show accuracy above FT-Rat while its net flip
+stayed in this same 0.7–0.8 band. Net flip far below the band would have meant
+GRPO solved the problem by learning to ignore its own rationale, which would
+raise accuracy while abandoning the claim the experiment is meant to support.
+
+### Outcome: the prediction held, with a caveat
+
+Both conditions were met. GRPO reaches T2 accuracy 0.658 against FT-Rat's 0.564,
+and its net flip is +0.798 — inside the band, not below it. So the accuracy was
+not bought by learning to ignore the rationale: GRPO's rationale is *more*
+load-bearing than FT-Rat's (+0.798 against +0.698, donor-match 0.721 against
+0.668), which is the result the reward was supposed to produce. Supervised
+training on gpt-4o rationales moved weight off the rationale; the label reward
+put it back.
+
+The caveat is the comparison GRPO does not win. FT-Bare, which has no rationale
+at all, scores T2 accuracy 0.653 and macro-F1 (gold) 0.484 against GRPO's 0.658
+and 0.466. GRPO recovers the ground FT-Rat lost and then draws level with the
+arm that never reasoned. On this task, at this scale, rationale-conditioned
+prediction has not yet paid for itself — the honest claim is that GRPO repairs
+the damage rationale supervision does, not that reasoning beats not reasoning.
+
+Two limits on how hard to lean on this. The probe is a single seed (seed 0) while
+the accuracy figures are means over three, and `sc_grpo_unw` is within noise of
+`sc_grpo` on every column, so rare-class weighting is not carrying the result.
 
 ## Code map
 

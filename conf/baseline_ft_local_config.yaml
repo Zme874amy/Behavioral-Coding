@@ -1,17 +1,25 @@
 # Qwen tier of the Model Scale x Adaptation x Rationale Alignment grid.
 #
-# Eight conditions: 4 adaptation arms (zs, fs, ft_bare, ft_rat) x 2 inference
-# styles (inf_bare, inf_cot). Driven by src/baseline/local_arm.py, which writes
-# results into data/annotated/baseline/ in the layout src/baseline/eval.py reads,
-# so the Qwen rows sit alongside the gpt-4o rows in one comparison.
+# Every arm here runs the same two-call flow (T1, then T2 conditioned on the
+# predicted T1) and is evaluated under both inference styles (inf_bare,
+# inf_cot). They differ in how the adaptation is carried:
+#
+#   zs, fs                    no adapter; nothing or exemplars in the prompt
+#   ft_bare, ft_rat           two adapters, one per tier
+#   ft1mix_*, ft1seq_*        one adapter serving both calls
+#
+# Driven by src/baseline/local_arm.py, which writes results into
+# data/annotated/baseline/ in the layout src/baseline/eval.py reads, so the Qwen
+# rows sit alongside the gpt-4o rows in one comparison.
 #
 # Usage:
 #   PYTHONPATH=src python -m baseline.local_arm train   --target bare --ctx 5
-#   PYTHONPATH=src python -m baseline.local_arm train   --target rat  --ctx 5
+#   PYTHONPATH=src python -m baseline.local_arm train   --target bare --regime mixed --ctx 5
 #   PYTHONPATH=src python -m baseline.local_arm predict --arm ft_rat --inf cot --ctx 5
 #
-# See docs/BASELINE.md for the full grid and docs/HF_SETUP.md for HF auth
-# (Qwen2.5-7B is non-gated, so no token is required).
+# Arm definitions and required artifacts: docs/EXPERIMENTS.md. Design rationale:
+# docs/BASELINE.md. HF auth: docs/HF_SETUP.md (Qwen2.5-7B is non-gated, so no
+# token is required).
 
 defaults:
   - _self_
@@ -22,6 +30,11 @@ dataset:
   # Fine-tuning data: held out from the evaluation set, no leakage.
   train_csv: data/manual/HLQC_balanced_manual.csv
   eval_csv: data/manual/MIV6.3A_manual.csv
+  # Slug for the evaluation corpus. `miv63a` is the primary set and its result
+  # files carry no dataset token (so existing results score unchanged). Override
+  # together with eval_csv to evaluate on another corpus without clobbering, e.g.
+  #   dataset.eval_csv=data/manual/AnnoMI_eval.csv dataset.eval_name=annomi
+  eval_name: miv63a
 
 annotator:
   context_mode: interval      # all | cumulative | interval
@@ -34,6 +47,9 @@ annotator:
 # Frozen artifacts, both resolved per context length.
 paths:
   adapter_dir: data/fine_tuning/baseline_local
+  # The 1-adapter / 2-call arms, kept in their own tree so a single-adapter run
+  # can never overwrite the two-adapter arm it is being compared against.
+  adapter1_dir: data/fine_tuning/baseline_local_1a
   rationale_dir: data/fine_tuning/rationales
   fewshot_dir: data/fewshot
   output_dir: data/annotated/baseline
@@ -84,6 +100,24 @@ training:
   lr_scheduler_type: cosine
   gradient_checkpointing: true
 
+  # Teacher-forcing axis. p_gold is the probability that a T2 training example is
+  # conditioned on the GOLD T1 label rather than the out-of-fold predicted one,
+  # evaluated once per epoch. Every arm in the grid is implicitly `full`; the
+  # other two exist to measure what training on gold-only conditioning costs at
+  # inference, where the T1 label is always predicted.
+  #
+  #   constant   eps(e) = value
+  #   linear     eps(e) = start + (end - start) * e / (E - 1)   -> [1, .5, 0] at E=3
+  #
+  # `full` is trained rather than reused from ft_bare because a decaying rate
+  # forces staged training, which forces a constant LR; the three must share one
+  # procedure for the contrast between them to mean anything. See
+  # `automisc_ft.train.train_t2_staged`.
+  tf_modes:
+    full: {kind: constant, value: 1.0}
+    zero: {kind: constant, value: 0.0}
+    dyn: {kind: linear, start: 1.0, end: 0.0}
+
 inference:
   # Uniform across all eight cells, and deliberately generous. Four of the cells
   # measure instruction compliance (does a label-trained model emit a rationale
@@ -99,6 +133,22 @@ inference:
     fs: 8192
     ft_bare: 4096
     ft_rat: 4096
+    # The 1-adapter arms read the same prompts as ft_bare / ft_rat, so they get
+    # the same window; only the adapter behind them differs.
+    ft1mix_bare: 4096
+    ft1mix_rat: 4096
+    ft1seq_bare: 4096
+    ft1seq_rat: 4096
+    # The teacher-forcing variants read byte-identical prompts to ft_bare; only
+    # which T1 label was injected during TRAINING differs.
+    ft_bare_tffull: 4096
+    ft_bare_tfdyn: 4096
+    ft_bare_tfzero: 4096
+    # Cell B variants read the same prompts again; only the adapter behind them
+    # differs (one shared LoRA instead of a T1/T2 pair).
+    ft1mix_bare_tffull: 4096
+    ft1mix_bare_tfdyn: 4096
+    ft1mix_bare_tfzero: 4096
   force_cpu: false
 
 # Cap the number of evaluation utterances (null = all 821). Smoke testing only.
