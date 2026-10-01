@@ -8,6 +8,14 @@ they produced: `data/synth/raw/Qwen2_5-32B-Instruct-AWQ_proto_seg.csv` retains
 `domain` (14 values), `stage` (5), `affect` (7), `setting` (5), `session` (2),
 `register` (5), `style` (3) and `focus_codes` per window.
 
+AMENDED 2026-10-01. The first reconstruction left two interpolation slots empty:
+`build_window_messages` took `codebook` and `exemplar_block` as caller-supplied
+strings, so the wording of neither was actually recorded. In v2 both were built
+inside `generate.py` by `_codebook()` and an inline `ex_block` expression, which are
+restored verbatim below from the same captured source (2026-09-22, four days before
+the v3 rewrite); the captured rendering of a full proto prompt confirms the output
+format. The function signature now matches the one that ran.
+
 Do not edit: add `prompts_v4.py` instead.
 
 What v2 fixed, and what it did not. It cleared the v1 mode collapse (Self-BLEU
@@ -134,10 +142,86 @@ def build_brief_messages(seed_description: str) -> List[dict]:
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
+# --- the two blocks the window prompt interpolates -------------------------------
+# Neither was a parameter in v2: both were built in generate.py. Verbatim.
+
+HLQC_REL = "data/manual/HLQC_balanced_manual.csv"
+
+
+def _codebook() -> str:
+    """v2's codebook block: the raw two-speaker spec text, group by group.
+
+    This is the PRE-Fix-A renderer. It emitted the spec YAML's own code names, which
+    is how `ADWP`/`CON`/`DIR`/`RCWP` reached the prompt while the valid vocabulary
+    uses `ADW`/`CO`/`DI`/`RCW` -- the defect that made 4.2%/5.4% of v2 proposals
+    unparseable and left `RCW` absent from the data entirely. v3 renders from the
+    valid vocabulary instead (`synth.codes.codebook`).
+    """
+    from components.prompts.loader import load_spec
+    parts = []
+    for spk in ("counsellor", "client"):
+        spec = load_spec(spk, "t2")
+        parts.append(f"### {spk.upper()} codes (Tier-1 group -> Tier-2 codes)")
+        for group, text in spec.items():
+            parts.append(f"[{group}]\n{text}")
+    return "\n".join(parts)
+
+
+def _all_codes() -> Dict[str, str]:
+    """T2 code -> speaker."""
+    from automisc_ft.data import COUNSELLOR_GROUPS, CLIENT_GROUPS
+    out: Dict[str, str] = {}
+    for c in (c for codes in COUNSELLOR_GROUPS.values() for c in codes):
+        out[c] = "counsellor"
+    for c in (c for codes in CLIENT_GROUPS.values() for c in codes):
+        out.setdefault(c, "client")
+    return out
+
+
+def load_real_exemplars(k: int = 3) -> Dict[str, List[str]]:
+    """Real HLQC utterances per T2 code -- style anchors for register matching."""
+    from pathlib import Path
+    import pandas as pd
+    hlqc = Path(__file__).resolve().parents[2] / HLQC_REL
+    try:
+        df = pd.read_csv(hlqc)
+    except Exception:
+        return {}
+    out: Dict[str, List[str]] = {}
+    for code, grp in df.dropna(subset=["t2_label_GT"]).groupby("t2_label_GT"):
+        texts = [str(t).strip() for t in grp["utt_text"].dropna() if str(t).strip()]
+        out[str(code)] = texts[:200]
+    return out
+
+
+def build_exemplar_block(focus: List[str], exemplars: Dict[str, List[str]],
+                         n_ex: int, rng) -> str:
+    """The exemplar block, verbatim. Empty string when no focus code has exemplars.
+
+    Renders as, e.g.:
+        Real examples of how these codes actually sound in transcripts (match this
+        register, do not copy them):
+          AB- (client): "..." | "..." | "..."
+    """
+    speaker_of = _all_codes()
+    ex_lines = []
+    for c in focus:
+        pool = exemplars.get(c, [])
+        if pool:
+            picked = rng.sample(pool, min(n_ex, len(pool)))
+            ex_lines.append(f"  {c} ({speaker_of.get(c,'?')}): " +
+                            " | ".join(f'"{p}"' for p in picked))
+    return ("\nReal examples of how these codes actually sound in transcripts "
+            "(match this register, do not copy them):\n" + "\n".join(ex_lines)
+            ) if ex_lines else ""
+
+
 def build_window_messages(seed_description: str, brief: ScenarioBrief,
-                          focus: List[str], variant: str, codebook: str,
-                          exemplar_block: str, turns: int = TURNS) -> List[dict]:
-    """The v2 window prompt. `codebook` was the raw two-speaker spec text."""
+                          focus: List[str], variant: str,
+                          exemplars: Dict[str, List[str]], n_ex: int,
+                          rng, turns: int = TURNS) -> List[dict]:
+    """The v2 window prompt, with the signature that actually ran."""
+    exemplar_block = build_exemplar_block(focus, exemplars, n_ex, rng)
     if variant == "boundary":
         pairs = ", ".join(f"{c} (easily confused with {CONFUSABLE.get(c, '?')})" for c in focus)
         focus_rule = (
@@ -156,7 +240,7 @@ def build_window_messages(seed_description: str, brief: ScenarioBrief,
     system = (
         "You are an expert Motivational Interviewing coder and dialogue writer. "
         "You write realistic MI counselling excerpts and annotate every utterance "
-        f"with MISC 2.5 codes.\n\n{codebook}\n\n{REGISTER_RULE}"
+        f"with MISC 2.5 codes.\n\n{_codebook()}\n\n{REGISTER_RULE}"
     )
     user = (
         f"SCENARIO\n{seed_description}\n\n"
@@ -174,6 +258,7 @@ def build_window_messages(seed_description: str, brief: ScenarioBrief,
 
 
 __all__ = ["build_brief_messages", "build_window_messages", "describe_seed",
+           "build_exemplar_block", "load_real_exemplars", "_codebook", "_all_codes",
            "ScenarioBrief", "DialogueTurn", "DialogueWindow", "REGISTER_RULE",
            "DOMAINS", "STAGES", "AFFECTS", "SETTINGS", "SESSIONS", "REGISTERS",
            "STYLES", "CONFUSABLE", "RARE_CODES", "TEMPERATURE", "TURNS"]

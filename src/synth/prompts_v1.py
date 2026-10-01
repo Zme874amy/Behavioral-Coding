@@ -39,9 +39,25 @@ class SynthSample(BaseModel):
     utterance: str
 
 
+def spec_text_for(speaker: str, group: str) -> str:
+    """How the caller obtained `spec_text`, recovered from the v1 driver loop:
+
+        spec_dict = load_spec(speaker, "t2")
+        for group, codes in _groups_for(speaker).items():
+            spec_text = spec_dict.get(group, "")
+
+    So v1 showed the model ONE Tier-1 group's block per call -- the target code's
+    siblings only -- not the whole codebook. v2 switched to the full two-speaker
+    codebook (`prompts_v2._codebook`).
+    """
+    from components.prompts.loader import load_spec
+    return load_spec(speaker, "t2").get(group, "")
+
+
 def build_gen_messages(speaker: str, group: str, code: str, spec_text: str) -> List[dict]:
     """The v1 prompt. `spec_text` was the raw spec-YAML block for the target's
-    Tier-1 group, i.e. the target code's siblings and their definitions.
+    Tier-1 group, i.e. the target code's siblings and their definitions; it was a
+    caller-supplied value in v1 too -- see `spec_text_for` for how it was built.
 
     Note: injecting the raw spec text is also how the ADWP/CON/DIR/RCWP
     abbreviation mismatch reached the model (see `synth.codes`).
@@ -61,5 +77,5 @@ def build_gen_messages(speaker: str, group: str, code: str, spec_text: str) -> L
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
-__all__ = ["build_gen_messages", "SynthSample", "SynthTurn",
+__all__ = ["build_gen_messages", "spec_text_for", "SynthSample", "SynthTurn",
            "PER_CODE", "RARE_MULTIPLIER", "RARE_CODES", "TEMPERATURE"]
