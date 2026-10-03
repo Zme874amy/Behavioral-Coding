@@ -116,12 +116,21 @@ Criteria: T2 macro-F1 vs the student's 0.399, plus precision on the tail codes.
 | Student (reference) | — | **0.399** [0.348–0.464] | 0.735 | 0.620 | — |
 | Gemma-4-31B-it qat w4a16 | vLLM | 0.362 [0.325–0.414] | 0.605 | 0.488 | 170513 |
 | gpt-oss-20b (reasoning low) | vLLM | 0.303 [0.265–0.350] | 0.593 | 0.410 | 170512 |
-| gpt-oss-120b (reasoning low) | Ollama (shared) | pending | | | 170514 |
-| Qwen3-30B-A3B-Instruct-2507 fp16 | Ollama (shared) | pending | | | 170515 |
-| Qwen3.6-27B q8 | Ollama (shared) | pending | | | 170516 |
+| Qwen3.6-27B q8 | Ollama (shared) | 0.362 [0.321–0.412] | 0.617 | 0.487 | 170516 |
+| gpt-oss-120b (reasoning low) | Ollama (shared) | 0.305 [0.272–0.349] | 0.573 | 0.417 | 170514 |
+| Qwen3-30B-A3B-Instruct-2507 fp16 | Ollama (shared) | 0.298 [0.253–0.346] | 0.530 | 0.437 | 170515 |
+| Llama4 Scout 16x17B | Ollama (shared) | 0.209 [0.184–0.242] | 0.558 | 0.371 | 170518 |
 | Gemma3-27B | Ollama (shared) | pending | | | 170517 |
-| Llama4 Scout 16x17B | Ollama (shared) | pending | | | 170518 |
 | Qwen3-VL-32B | Ollama (shared) | pending | | | 170519 |
+
+All Ollama runs: 0 errors, ≤ 1.1% unparseable, longest prompt ~4.3k tokens
+(context 12,288), so none were truncated. 1–4 s per row.
+
+**Model size does not buy MISC coding.** gpt-oss-120b (0.305) scores no better
+than gpt-oss-20b (0.303), and Llama4 Scout (109B total) is the weakest. The two
+best, Gemma-4-31B and Qwen3.6-27B, tie at 0.362, and both have CIs that overlap
+the student without beating it. Their tail-code precision stays far below the
+0.8 bar, except EC at 0.67–0.75.
 
 Gemma-4-31B is the best so far. It finds more tail rows (GI recall 0.53, AF
 0.65), but labels them with low precision (GI 0.22, AF 0.26, SU 0.10). Only EC
