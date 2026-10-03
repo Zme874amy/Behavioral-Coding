@@ -1,6 +1,6 @@
 # Model Scale x Adaptation x Rationale Alignment — Results
 
-*Generated 2026-09-30 by `baseline.eval`. Per-cell run dates are in the Coverage section; campaign history is in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).*
+*Generated 2026-10-03 by `baseline.eval`. Per-cell run dates are in the Coverage section; campaign history is in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).*
 
 Grid: 2 model tiers x adaptation arm x 2 inference styles (`Inf-Bare`, `Inf-CoT`), read within structural blocks.
 
@@ -95,6 +95,7 @@ Still missing (27 cells):
 
 Scored but outside the intended grid:
 
+- `qwen32b_fs_inf_bare_ctx5`
 - `qwen_ag_qwen_ft_bare_inf_cot_ctx5`
 - `qwen_ag_qwen_ft1mix_bare_inf_bare_ctx5`
 - `qwen_ag_qwen_ft1mix_bare_inf_cot_ctx5`
@@ -102,7 +103,7 @@ Scored but outside the intended grid:
 
 ### Run dates
 
-14 of 60 scored cells carry a recorded finish date. The rest predate run stamping and are dated only at campaign level in `docs/EXPERIMENT_LOG.md` — file timestamps here all reflect the last rescore rather than the run, so they are not used.
+14 of 61 scored cells carry a recorded finish date. The rest predate run stamping and are dated only at campaign level in `docs/EXPERIMENT_LOG.md` — file timestamps here all reflect the last rescore rather than the run, so they are not used.
 
 | Cell | ctx | Date (UTC) |
 |---|---:|---|
@@ -414,6 +415,16 @@ Each single-call arm is only evaluated in the style it was trained in, so its ro
 | FS-CoT | counsellor | 580 | 0.798 [0.768–0.829] | 0.739 [0.697–0.778] | 0.748 [0.657–0.845] | 0.748 [0.657–0.845] | 0.748 [0.656–0.845] |
 | FS-CoT | client | 241 | 0.880 [0.845–0.912] | 0.806 [0.737–0.861] | 0.881 [0.837–0.917] | 0.881 [0.837–0.917] | 0.881 [0.837–0.917] |
 
+### Qwen2.5-32B-Instruct-AWQ (teacher, report-only)
+
+#### Two-call, no adapter (in-context)
+
+| Condition | Scope | n | Accuracy | Cohen's kappa | Macro-F1 (gold) | Macro-F1 (learnable) | Macro-F1 (all) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| FS-Bare | all | 821 | 0.812 [0.784–0.843] | 0.781 [0.748–0.815] | 0.720 [0.691–0.831] | 0.720 [0.691–0.831] | 0.720 [0.691–0.790] |
+| FS-Bare | counsellor | 580 | 0.800 [0.769–0.833] | 0.744 [0.705–0.784] | 0.665 [0.640–0.825] | 0.665 [0.640–0.825] | 0.665 [0.640–0.789] |
+| FS-Bare | client | 241 | 0.842 [0.787–0.894] | 0.737 [0.646–0.818] | 0.828 [0.771–0.877] | 0.828 [0.771–0.877] | 0.828 [0.771–0.877] |
+
 ### Qwen2.5-7B-Instruct (SLM)
 
 #### Two-call, no adapter (in-context)
@@ -654,6 +665,16 @@ Each single-call arm is only evaluated in the style it was trained in, so its ro
 | FS-CoT | counsellor | 580 | 0.666 [0.636–0.702] | 0.629 [0.597–0.667] | 0.543 [0.516–0.629] | 0.543 [0.516–0.629] | 0.476 [0.457–0.592] |
 | FS-CoT | client | 241 | 0.714 [0.649–0.778] | 0.607 [0.538–0.680] | 0.542 [0.479–0.640] | 0.580 [0.501–0.651] | 0.440 [0.376–0.559] |
 
+### Qwen2.5-32B-Instruct-AWQ (teacher, report-only)
+
+#### Two-call, no adapter (in-context)
+
+| Condition | Scope | n | Accuracy | Cohen's kappa | Macro-F1 (gold) | Macro-F1 (learnable) | Macro-F1 (all) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| FS-Bare | all | 821 | 0.659 [0.630–0.689] | 0.630 [0.600–0.660] | 0.533 [0.497–0.590] | 0.561 [0.520–0.602] | 0.449 [0.414–0.521] |
+| FS-Bare | counsellor | 580 | 0.640 [0.596–0.682] | 0.597 [0.551–0.641] | 0.512 [0.484–0.593] | 0.512 [0.484–0.593] | 0.448 [0.421–0.547] |
+| FS-Bare | client | 241 | 0.705 [0.616–0.787] | 0.578 [0.473–0.667] | 0.555 [0.473–0.653] | 0.623 [0.526–0.685] | 0.451 [0.371–0.579] |
+
 ### Qwen2.5-7B-Instruct (SLM)
 
 #### Two-call, no adapter (in-context)
@@ -806,6 +827,12 @@ Every two-call arm trains its T2 adapter conditioned on the **gold** T1 label bu
 | FS-Bare | 5 | 821 | 20.1% | 656 | 0.837 | 165 | 0.000 | 0 | — | 0.837 | 0.669 | 0.0% |
 | FS-CoT | 5 | 821 | 17.8% | 675 | 0.827 | 146 | 0.000 | 0 | — | 0.827 | 0.680 | 0.7% |
 
+### Qwen2.5-32B-Instruct-AWQ (teacher, report-only)
+
+| Condition | ctx | n | T1 err | n (T1 ok) | T2 acc \| T1 ok | n (T1 wrong) | T2 acc \| T1 wrong | n (T1 unparseable) | T2 acc \| unparseable | Gap | T2 acc | Out-of-group |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| FS-Bare | 5 | 821 | 18.8% | 667 | 0.811 | 154 | 0.000 | 0 | — | 0.811 | 0.659 | 0.0% |
+
 ### Qwen2.5-7B-Instruct (SLM)
 
 | Condition | ctx | n | T1 err | n (T1 ok) | T2 acc \| T1 ok | n (T1 wrong) | T2 acc \| T1 wrong | n (T1 unparseable) | T2 acc \| unparseable | Gap | T2 acc | Out-of-group |
@@ -907,6 +934,8 @@ Rows marked `constrained` were decoded through a JSON schema that forced the out
 | GPT-4o (frontier) | FS-Bare | T2 | 821 | no | 0 (0.0%) | 100.0% | 0 (0.0%) | constrained |
 | GPT-4o (frontier) | FS-CoT | T1 | 821 | yes | 821 (100.0%) | 100.0% | 0 (0.0%) | constrained |
 | GPT-4o (frontier) | FS-CoT | T2 | 821 | yes | 821 (100.0%) | 100.0% | 0 (0.0%) | constrained |
+| Qwen2.5-32B-Instruct-AWQ (teacher, report-only) | FS-Bare | T1 | 821 | no | — | — | 0 (0.0%) | — |
+| Qwen2.5-32B-Instruct-AWQ (teacher, report-only) | FS-Bare | T2 | 821 | no | — | — | 0 (0.0%) | — |
 | Qwen2.5-7B-Instruct (SLM) | ZS-Bare | T1 | 821 | no | 0 (0.0%) | 100.0% | 1 (0.1%) | free |
 | Qwen2.5-7B-Instruct (SLM) | ZS-Bare | T2 | 821 | no | 3 (0.4%) | 99.6% | 46 (5.6%) | free |
 | Qwen2.5-7B-Instruct (SLM) | ZS-CoT | T1 | 821 | yes | 821 (100.0%) | 100.0% | 0 (0.0%) | free |

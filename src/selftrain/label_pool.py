@@ -92,7 +92,8 @@ class _RemoteScorer:
     """
 
     def __init__(self, model_name: str, tokenizer_path: str, base_url: Optional[str],
-                 structure_suffix: str = "_bare", fewshot_provider=None):
+                 structure_suffix: str = "_bare", fewshot_provider=None,
+                 answer_format: str = "auto"):
         from transformers import AutoTokenizer
 
         from components.utils import get_vllm_client
@@ -102,16 +103,36 @@ class _RemoteScorer:
         self.client = get_vllm_client(base_url)
         self.suffix = structure_suffix
         self.fewshot = fewshot_provider
+        # The answer string whose likelihood is scored must be the format THIS
+        # labeller is prompted to give, or every candidate is equally implausible
+        # and the ranking is noise. The student was fine-tuned on " CODE\n", but
+        # the teacher was not: zero-shot it answers a bare code and ends its turn;
+        # after the few-shot exemplars (whose replies are JSON) it answers
+        # {"label": "CODE"}. Ending with the end-of-turn token keeps a code from
+        # winning by being a prefix of another (N vs N+).
+        if answer_format == "auto":
+            answer_format = "json" if fewshot_provider else "bare"
+        self.answer_format = answer_format
+        self.eot = self.tok.eos_token or ""
+
+    def _answer(self, code: str) -> str:
+        import json
+
+        from sft.data import build_completion
+
+        if self.answer_format == "student":
+            return build_completion(code)
+        if self.answer_format == "json":
+            return json.dumps({"label": code}) + self.eot
+        return code + self.eot
 
     def score_codes(self, messages, codes):
         import math
 
-        from sft.data import build_completion
-
         prompt = self.tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         n_p = len(self.tok(prompt, add_special_tokens=False)["input_ids"])
         resp = self.client.completions.create(
-            model=self.name, prompt=[prompt + build_completion(c) for c in codes],
+            model=self.name, prompt=[prompt + self._answer(c) for c in codes],
             max_tokens=1, temperature=0.0, echo=True, logprobs=1,
         )
         loglik = {}
@@ -259,6 +280,9 @@ def main(argv: Optional[List[str]] = None) -> None:
                     help="drop rows that are themselves few-shot exemplars (HLQC calibration)")
     ap.add_argument("--teacher-tokenizer", default=None,
                     help="remote likelihood: tokenizer/chat template of the served model (default $MODEL)")
+    ap.add_argument("--teacher-answer-format", choices=["auto", "bare", "json", "student"], default="auto",
+                    help="answer string scored for the teacher: auto = json with --fewshot, else bare code; "
+                         "'student' = the student's ' CODE\\n' (the first, mismatched teacher run)")
     ap.add_argument("--greedy-check", type=int, default=0,
                     help="remote likelihood: on the first N rows also decode T1 greedily and report "
                          "argmax==greedy agreement and seconds per row (teacher smoke test)")
@@ -369,7 +393,8 @@ def main(argv: Optional[List[str]] = None) -> None:
             fewshot = _make_fewshot_provider(load_exemplars(exemplars_path(ctx)), rationales=False)
         tok_path = args.teacher_tokenizer or os.environ.get("MODEL") or args.labeler_model
         scorer = _RemoteScorer(args.labeler_model, tok_path, args.base_url,
-                               structure_suffix="_bare", fewshot_provider=fewshot)
+                               structure_suffix="_bare", fewshot_provider=fewshot,
+                               answer_format=args.teacher_answer_format)
         print(
             f"Labeling pool={args.pool} labeler=remote(likelihood) model={args.labeler_model} "
             f"fewshot={bool(fewshot)} ctx={ctx} n={len(positions)} -> {out_path}"

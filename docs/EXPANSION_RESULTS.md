@@ -1,6 +1,6 @@
 # Data-expansion results (1-adapter backbone)
 
-*Generated 2026-09-30 by `selftrain.expansion_table` — edit that module, not this file.*
+*Generated 2026-10-03 by `selftrain.expansion_table` — edit that module, not this file.*
 
 Every arm below is a retrain of **FT1-Mix-Bare** (one shared adapter, two calls), differing only in its training set, and is scored on the same 821 MIV6.3A gold utterances. The baseline is the same recipe on human HLQC data alone, run at 3 seeds.
 
@@ -28,6 +28,26 @@ Every arm below is a retrain of **FT1-Mix-Bare** (one shared adapter, two calls)
 - **v3 HLQC mix + SocialDial rule** — isolates the rule: same generator and topic mix, rule on
 - **v2 proto, synthetic rows only (no human)** — SocialDial's human / synthetic / both split; read with baseline (human) and v2 proto (both)
 - **v2 boundary, keep-hard (verifier off)** — isolates the verifier filter: same windows, unverified labels kept
+
+## Self-training v2 and the 32B-teacher comparison
+
+Same pipeline for every row: calibrated per-code thresholds, prior-aligned quotas, at most one pseudo label per human label, counsellor rows only. Only the labeller differs (the student's 3-seed self-ensemble vs the 32B teacher).
+
+| Arm | vs | Seeds | T2 acc | Δ acc [95% CI] | Verdict | T2 Macro-F1 | Δ Macro-F1 [95% CI] | Verdict |
+|---|---|---:|---:|---:|---|---:|---:|---|
+| Self-training v2 (Welivita) | baseline | 3/3 | 0.663 ± 0.019 | -0.010 [-0.024, +0.007] | ns | 0.410 ± 0.023 | -0.047 [-0.071, -0.025] | real |
+| Self-training v2, round 2 (Welivita) | baseline | 0/0 | — | — | pending | — | — | pending |
+| Self-training v2 (MIV6.3B pool) | baseline | 3/3 | 0.695 ± 0.009 | +0.023 [+0.006, +0.043] | real | 0.426 ± 0.021 | -0.030 [-0.046, -0.009] | <floor |
+| 32B-teacher labels (Welivita) | baseline | 0/0 | — | — | pending | — | — | pending |
+| 32B-teacher labels (MIV6.3B pool) | baseline | 0/0 | — | — | pending | — | — | pending |
+
+### Teacher vs self on the same pool
+
+| Arm | vs | Seeds | T2 acc | Δ acc [95% CI] | Verdict | T2 Macro-F1 | Δ Macro-F1 [95% CI] | Verdict |
+|---|---|---:|---:|---:|---|---:|---:|---|
+| Teacher vs self (Welivita) | selftrain_v2 | 0/0 | — | — | pending | — | — | pending |
+| Teacher vs self (MIV6.3B) | selftrain_v2b | 0/0 | — | — | pending | — | — | pending |
+
 
 ## Retrieval on the same backbone
 
@@ -58,6 +78,10 @@ Every arm below is a retrain of **FT1-Mix-Bare** (one shared adapter, two calls)
 | v2 proto, synthetic rows only (no human) | client | 1/1 | 0.416 | +0.002 [-0.106, +0.102] | ns |
 | v2 boundary, keep-hard (verifier off) | counsellor | 1/1 | 0.495 | -0.045 [-0.087, +0.003] | ns |
 | v2 boundary, keep-hard (verifier off) | client | 1/1 | 0.522 | +0.052 [-0.078, +0.159] | ns |
+| Self-training v2 (Welivita) | counsellor | 3/3 | 0.459 ± 0.026 | -0.039 [-0.063, -0.010] | real |
+| Self-training v2 (Welivita) | client | 3/3 | 0.358 ± 0.035 | -0.055 [-0.112, -0.002] | real |
+| Self-training v2 (MIV6.3B pool) | counsellor | 3/3 | 0.473 ± 0.004 | -0.024 [-0.051, +0.013] | ns |
+| Self-training v2 (MIV6.3B pool) | client | 3/3 | 0.376 ± 0.042 | -0.037 [-0.063, -0.008] | <floor |
 | Retrieval few-shot on FT1-Mix, Inf-Bare | counsellor | 1/1 | 0.506 | +0.005 [-0.030, +0.053] | ns |
 | Retrieval few-shot on FT1-Mix, Inf-Bare | client | 1/1 | 0.484 | +0.069 [-0.076, +0.172] | ns |
 | Retrieval few-shot on FT1-Mix, Inf-CoT | counsellor | 1/1 | 0.510 | +0.021 [-0.015, +0.079] | ns |
@@ -76,6 +100,8 @@ Every arm below is a retrain of **FT1-Mix-Bare** (one shared adapter, two calls)
 | v3 HLQC mix + SocialDial rule | 3/3 | 0.788 ± 0.009 | -0.002 [-0.015, +0.011] | ns |
 | v2 proto, synthetic rows only (no human) | 1/1 | 0.687 | -0.101 [-0.140, -0.054] | single-seed |
 | v2 boundary, keep-hard (verifier off) | 1/1 | 0.784 | -0.013 [-0.034, +0.009] | ns |
+| Self-training v2 (Welivita) | 3/3 | 0.796 ± 0.013 | +0.010 [-0.003, +0.023] | ns |
+| Self-training v2 (MIV6.3B pool) | 3/3 | 0.805 ± 0.009 | +0.019 [+0.005, +0.036] | real |
 | Retrieval few-shot on FT1-Mix, Inf-Bare | 1/1 | 0.780 | -0.009 [-0.027, +0.010] | ns |
 | Retrieval few-shot on FT1-Mix, Inf-CoT | 1/1 | 0.786 | -0.002 [-0.016, +0.012] | ns |
 
@@ -106,15 +132,9 @@ Read top to bottom: each rung adds one kind of shift. The cross-scheme rungs are
 
 ## Not yet available
 
-- Self-training v2 (Welivita) — seed 1
-- Self-training v2 (Welivita) — seed 2
-- Self-training v2 (Welivita) — seed 42
 - Self-training v2, round 2 (Welivita) — seed 1
 - Self-training v2, round 2 (Welivita) — seed 2
 - Self-training v2, round 2 (Welivita) — seed 42
-- Self-training v2 (MIV6.3B pool) — seed 1
-- Self-training v2 (MIV6.3B pool) — seed 2
-- Self-training v2 (MIV6.3B pool) — seed 42
 - 32B-teacher labels (Welivita) — seed 1
 - 32B-teacher labels (Welivita) — seed 2
 - 32B-teacher labels (Welivita) — seed 42
