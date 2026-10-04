@@ -146,6 +146,35 @@ Gemma-4-31B is the best so far. It finds more tail rows (GI recall 0.53, AF
 0.65), but labels them with low precision (GI 0.22, AF 0.26, SU 0.10). Only EC
 (0.75) and CR (0.55) come close to the 0.8 bar.
 
+### Audit: is the screen pipeline wrong, or is HLQC the wrong yardstick? (2026-10-04)
+
+Raised because GPT-4o few-shot scored well on MIV6.3A (0.539), while every open
+model scored ≤ 0.362 on HLQC.
+
+| Check | Result |
+|---|---|
+| Prompts vs the GPT-4o baseline (`baseline.main`) | **Byte-identical**: 0 diffs over 40 HLQC prompts (system template, few-shot turns, context excerpt, user turn) |
+| Output parsing (GPT-4o used enum-constrained structured output; screens use free text + `parse_label`) | Invalid raw codes are ≤ 1.1% at T1 (Gemma3 7.1%) and 2–7% at T2. Most are the prompt's own long forms (ADWP, RCWP, CON, DIR, a known frozen-prompt quirk), and `parse_label` maps all of them correctly. Cost ≤ ~0.01 |
+| **Same screen code on MIV6.3A** (report-only pipeline check, job 170529) | Gemma-4-31B: T2 acc 0.726, **macro-F1 0.583** [0.553–0.652]. GPT-4o few-shot: 0.669 / 0.539. Student 3-seed mean: macro-F1 0.457 |
+
+**Why HLQC penalises off-the-shelf models:**
+- **Annotation convention, with inconsistent gold.** The top teacher error is
+  FI→FA (103–117 rows). HLQC gold labels "okay" / "Yeah." as Filler 34 times and
+  as Facilitate 19 times, but the codebook text defines "Mm-hmm"-type
+  acknowledgements as FA. Models follow the codebook; the fine-tuned student
+  learned HLQC's habit, including FI being the most frequent counsellor code
+  (198 vs FA 55). Merging FA into FI narrows the gap from 0.037 to ~0.025.
+- **Domain.** HLQC is noisy speech-to-text transcripts, partly low-quality
+  sessions. It includes 107 IMI-group rows (ADW, RCW, WA, CO) that MIV6.3A never
+  has, while MIV6.3A has many SU/EC/AF rows that models handle well.
+- **Home advantage.** The student's 0.399 is out-of-fold, but it was trained on
+  the same annotators and conventions.
+
+**Consequence.** HLQC is still valid for *ranking teachers against each other*:
+all of them are off-the-shelf, so they meet its conventions on equal footing.
+It is NOT a fair *teacher-vs-student gate*. The Step 0 NO-GO for Qwen2.5-32B
+(also 0.533 on MIV6.3A) rested on that gate and should be read in this light.
+
 Track 2 (approved): LoRA-fine-tune the best ~27–31B open model on HLQC as the
 teacher, Noisy-Student style, with 5-fold calibration. It runs only if no
 off-the-shelf model clears the student.
