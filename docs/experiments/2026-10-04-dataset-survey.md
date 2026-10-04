@@ -1,5 +1,7 @@
 # External MI-coded dataset survey (2026-10-04)
 
+> The organised catalogue of the datasets we actually use (names, overlaps, cleaning, splits) is [../DATASETS.md](../DATASETS.md). This page records the external search behind it.
+
 **Question.** Which other MISC-, MITI- or MI-coded corpora actually exist and can be
 used? How good are their labels? Which ones duplicate what we already hold
 (MIV6.3A, HLQC, AnnoMI, Welivita)?
