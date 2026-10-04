@@ -31,8 +31,8 @@ considered then excluded (KMI, IC-AnnoMI, MIDAS) are covered in
 
 | ID | Domain | Modality / transcription | Sessions | Units (couns / client) | Scheme | Annotators / reliability | Role |
 |---|---|---|---:|---|---|---|---|
-| `misc.miv63a.gold` | smoking cessation | chatbot text (LLM counsellor, Prolific participants) | 10 | 821 (580 / 241) | MISC 2.5, two tiers, both speakers | 4 trained coders, consensus; Fleiss κ ≥ 0.6 after alignment | **test** |
-| `misc.hlqc.gold` | mixed health (alcohol, diet, exercise, smoking) | spoken demo videos, **ASR** (20% of units have sentence punctuation) | 10 | 1,925 (1,040 / 885) | MISC 2.5, two tiers, both speakers | AutoMISC team; no κ reported; FI/FA inconsistent | **train** |
+| `misc.miv63a.gold` | smoking cessation | chatbot text (LLM counsellor, Prolific participants) | 10 | 821 (580 / 241) | MISC 2.5 + AutoMISC AC± and T1 grouping (§3), both speakers | 4 trained coders, consensus; Fleiss κ ≥ 0.6 after alignment | **test** |
+| `misc.hlqc.gold` | mixed health (alcohol, diet, exercise, smoking) | spoken demo videos, **ASR** (20% of units have sentence punctuation) | 10 | 1,925 (1,040 / 885) | MISC 2.5 + AutoMISC AC± and T1 grouping (§3), both speakers | AutoMISC team; no κ reported; FI/FA inconsistent | **train** |
 | `pool.hlqc` | mixed health | spoken, ASR | 257 (154 high / 103 low) | 30,610 utts | none (session high/low only) | — | unlabelled pool |
 | `pool.miv63a` | smoking | chatbot text | 173 | 13,692 utts | none (+ readiness / importance / confidence pre, post, week-later) | — | unlabelled pool (minus test) |
 | `pool.miv63b` | smoking | chatbot text | 165 | 11,771 utts | none | — | unlabelled pool |
@@ -51,38 +51,81 @@ Licences:
 | CASAA | training material; research use with citation, not redistributed |
 | synthetic | ours |
 
-## 3. Coding schemes (every code)
+## 3. Coding schemes (every handbook code)
 
-**MISC 2.5** (target scheme; `automisc_ft.data`):
+Code lists come from the **handbooks**, not from the data, so a real class that no dataset contains is still listed:
+- **MISC 2.5:** [Houck et al. 2010](https://casaa.unm.edu/assets/docs/misc25.pdf) (counsellor categories p.16, No Code p.14, client categories pp.38–41, summary groups pp.47–48).
+- **MITI 4.2.1:** [Moyers, Manuel & Ernst 2015](https://casaa.unm.edu/assets/docs/miti4_21.pdf).
+- **Welivita:** Welivita & Pu 2022, Table 1.
+- **AnnoMI:** Wu et al. 2023, §4.
 
-| Speaker | T1 group | T2 codes |
-|---|---|---|
-| counsellor | CRL | CR (complex reflection), AF (affirm), SU (support), RF (reframe), EC (emphasise control) |
-| counsellor | SRL | SR (simple reflection) |
-| counsellor | IMC (MI-consistent) | ADP (advise with permission), RCP (raise concern with permission), GI (giving information) |
-| counsellor | IMI (MI-inconsistent) | ADW (advise without permission), CO (confront), DI (direct), RCW (raise concern without permission), WA (warn) |
-| counsellor | Q | OQ (open), CQ (closed) |
-| counsellor | O | FA (facilitate), FI (filler), ST (structure) |
-| client | C (change talk) | O+ D+ AB+ R+ N+ C+ AC+ TS+ (other, desire, ability, reasons, need, commitment, activation, taking steps) |
-| client | S (sustain talk) | O− D− AB− R− N− C− AC− TS− |
-| client | N | N (neutral) |
+Encoded in `eda.registry.HANDBOOK`, and compared with our vocabulary and the data by `eda.registry.handbook_check()` (notebook §3). Checked 2026-10-05.
 
-**MITI 4 (CASAA)** → MISC:
+### MISC 2.5 (target scheme)
+
+**Counsellor:** 17 categories in the handbook. Advise and Raise Concern split by permission, giving 19 codes, **all 19 in our vocabulary**.
+
+| Code | Name | Manual summary group | Our T1 (AutoMISC grouping) | Real gold examples |
+|---|---|---|---|---|
+| ADP | Advise with permission | MICO | IMC | HLQC, MIV |
+| ADW | Advise without permission | MIIN | IMI | HLQC only |
+| AF | Affirm | MICO | CRL | HLQC, MIV |
+| CO | Confront | MIIN | IMI | HLQC only |
+| DI | Direct | MIIN | IMI | HLQC, MIV |
+| EC | Emphasize control | MICO | CRL | HLQC, MIV |
+| FA | Facilitate | — | O | HLQC, MIV |
+| FI | Filler | — | O | HLQC, MIV |
+| GI | Giving information | — | IMC | HLQC, MIV |
+| OQ | Open question | MICO | Q | HLQC, MIV |
+| CQ | Closed question | — | Q | HLQC, MIV |
+| RCP | Raise concern with permission | MICO | IMC | **none** (synthetic only) |
+| RCW | Raise concern without permission | MIIN | IMI | HLQC only |
+| SR | Simple reflection | MICO | SRL | HLQC, MIV |
+| CR | Complex reflection | MICO | CRL | HLQC, MIV |
+| RF | Reframe | — | CRL | HLQC, MIV |
+| SU | Support | MICO | CRL | HLQC, MIV |
+| ST | Structure | — | O | HLQC, MIV |
+| WA | Warn | MIIN | IMI | HLQC only |
+
+**Client:** Follow/Neutral/Ask, plus 7 change-language types × valence.
+
+| Handbook code | Name | Ours | Real gold examples (+ / −) |
+|---|---|---|---|
+| FN | Follow / Neutral / Ask | `N` | HLQC, MIV |
+| C± | Commitment | `C±` | + HLQC, MIV / − HLQC only |
+| R± | Reason | `R±` | both, both |
+| D± | Desire | `D±` | both, both |
+| A± | Ability | `AB±` | both, both |
+| N± | Need | `N±` | + HLQC only / − both |
+| TS± | Taking steps | `TS±` | + MIV only / **− none** (synthetic only) |
+| O± | Other | `O±` | + both / − HLQC only |
+
+**Where we depart from the handbook:**
+
+| Item | Handbook | Ours | Consequence |
+|---|---|---|---|
+| **AC± (Activation)** | **not in MISC 2.5** | AutoMISC addition from Miller & Rollnick 2013 (DARN-CAT); thesis fn. 1 says so explicitly | Present in our gold (HLQC AC+ 23; MIV AC+ 11, AC− 1). The handbook codes "offering alternatives" as Commitment (C+). When comparing with other MISC data, map AC± to C± |
+| Counsellor T1 groups (CRL, SRL, IMC, IMI, Q, O) | not in the handbook; its groups are **MICO / MIIN** (+ neutral) | AutoMISC's grouping by semantic similarity (thesis §3) | IMC contains GI and CRL contains RF, which are neither MICO nor MIIN in the manual. Don't call T1 "the MISC hierarchy" |
+| No Code (NC) | exists (uncodable utterances) | not in our vocabulary | Fine for our data. A model can't abstain |
+| Reflection valence (SR/CR +, −, 0, ±) | required | dropped | We code SR/CR without valence |
+| 7 global ratings | Acceptance, Empathy, Direction, Autonomy Support, Collaboration, Evocation; client Self-Exploration | not used | Not in any of our datasets |
+
+### MITI 4.2.1 (CASAA): 10 behaviour codes + 4 globals, all present in CASAA
 
 | MITI code | MISC mapping |
 |---|---|
 | SR | SRL/SR, exact |
 | CR | CRL/CR, exact |
 | AF | CRL/AF, exact |
-| Emphasize | CRL/EC, exact |
+| Emphasize (autonomy) | CRL/EC, exact |
 | GI | IMC/GI, exact |
 | Confront | IMI/CO, exact |
 | Q | Q at T1 only (MITI 4 does not split open/closed) |
-| NC (not coded) | O at T1 only |
-| Persuade, PwP (persuade with permission), Seek (seeking collaboration) | none |
-| SAME | CASAA convention for a turn that continues the previous coded utterance; no gold |
+| Persuade, Persuade with Permission, Seek (collaboration) | none |
+| *NC, SAME* | **not MITI codes**: CASAA transcript conventions (uncoded; continuation). NC → O at T1 |
+| Globals | Cultivating Change Talk, Softening Sustain Talk, Partnership, Empathy (9 CASAA sessions) |
 
-**Welivita (MITI-derived, 15 codes)** → MISC (`selftrain.ingest.MITI_TO_MISC_T2`):
+### Welivita (Table 1 of the paper): 15 labels, all present in the data
 
 | Welivita code | MISC |
 |---|---|
@@ -96,27 +139,31 @@ Licences:
 | Confront | CO |
 | Emphasize Autonomy | EC |
 | Warn | WA |
-| Self-Disclose, Other | none |
+| Self-Disclose, Other | none (authors' additions, not MITI) |
 
-**AnnoMI** → MISC:
+"Give Information" includes giving an opinion, which is broader than MISC GI. Our ingest map (`selftrain.ingest.MITI_TO_MISC_T2`) also lists Reframe and Structure. Neither exists in Welivita's scheme, so they're dead entries; harmless, because no row carries them.
 
-| AnnoMI code | MISC mapping |
+### AnnoMI (§4 of the paper): all attributes present in the data
+
+Question / Input / Reflection are **separate attributes that can co-occur**, and one Main Behaviour is picked per utterance.
+
+| AnnoMI attribute | MISC mapping |
 |---|---|
 | question: open / closed | OQ / CQ |
 | reflection: simple / complex | SR / CR |
-| therapist input: information | GI |
-| therapist input: advice | ADP or ADW (permission not recorded) |
-| therapist input: negotiation, options; other | none |
+| input: information | GI |
+| input: advice | ADP or ADW (permission not recorded) |
+| input: negotiation/goal-setting, options; main: other | none |
 | client: change / sustain | C / S at T1 only |
-| client: neutral | N |
+| client: neutral | N (= FN) |
 
-**Code coverage gaps that matter for training:**
+**Coverage gaps that matter for training (real gold only):**
 
 | Gap | Codes |
 |---|---|
+| Handbook classes with **no real example anywhere** | RCP, TS− (synthetic only) |
 | In MIV test, absent from HLQC train | TS+, AC− |
-| Absent from MIV test | ADW, RCW, WA, CO |
-| Absent from every dataset | RCP |
+| In HLQC train, absent from MIV test | ADW, CO, RCW, WA, C−, N+, O− |
 | Thin in HLQC train | SU 9, RF 9, DI 12, CO 15, GI 16 |
 
 ## 4. Overlap map: who overlaps whom

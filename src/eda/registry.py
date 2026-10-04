@@ -72,7 +72,7 @@ META: Dict[str, Meta] = {m.id: m for m in [
         lineage="10 of the 173 pool.miv63a sessions; labels by 3 interns + 1 grad student aligned to MI clinicians (AutoMISC thesis).",
         domain="smoking cessation", modality="chatbot text (LLM counsellor, human client)", transcription="none (typed)",
         session_type="real participants (Prolific) with MIBot v6.3A", language="English",
-        scheme="MISC 2.5, two-tier (T1 group -> T2 code), both speakers", unit="utterance (thought unit), single label",
+        scheme="MISC 2.5 + AutoMISC extension (Activation AC+/-; AutoMISC T1 grouping), both speakers", unit="utterance (thought unit), single label",
         annotators="4 trained coders, consensus", reliability="Fleiss kappa >= 0.6 after alignment (thesis App. B)",
         licence="AutoMISC repo (research)", source="https://github.com/cimhasgithub/AutoMISC",
         role="fixed test set for all MISC models",
@@ -83,7 +83,7 @@ META: Dict[str, Meta] = {m.id: m for m in [
         lineage="10 of the 257 pool.hlqc sessions; labels by the AutoMISC team (released with NLPAI4Health 2025).",
         domain="mixed health behaviour (alcohol, diet, exercise, smoking, ...)", modality="spoken, transcribed",
         transcription="ASR (Pérez-Rosas et al. 2019), no casing/punctuation", session_type="MI demonstration / role-play videos",
-        language="English", scheme="MISC 2.5, two-tier, both speakers", unit="utterance, single label",
+        language="English", scheme="MISC 2.5 + AutoMISC extension (Activation AC+/-; AutoMISC T1 grouping), both speakers", unit="utterance, single label",
         annotators="AutoMISC team", reliability="not reported for this subset",
         licence="AutoMISC repo (research)", source="https://github.com/cimhasgithub/AutoMISC",
         role="training set for all MISC models; few-shot / synthesis exemplars",
@@ -317,44 +317,185 @@ def miv_outcomes(run: str = "A") -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------- code schemes
+# Code lists transcribed from the HANDBOOKS, not derived from the data, so that a
+# code no dataset happens to contain still shows up (checked 2026-10-05):
+#   MISC 2.5  Houck, Moyers, Miller, Glynn & Hallgren (2010), casaa.unm.edu/assets/docs/misc25.pdf
+#             counsellor categories p.16; No Code p.14; client categories pp.38-41;
+#             MICO/MIIN summary groups pp.47-48; globals p.1
+#   MITI 4.2.1 Moyers, Manuel & Ernst (2015), casaa.unm.edu/assets/docs/miti4_21.pdf
+#             "Behavior counts" + "Global ratings" sections and the coding summary sheet
+#   Welivita  Welivita & Pu (COLING 2022) Table 1 (15 labels adapted from MITI 2.0 / 4.2.1)
+#   AnnoMI    Wu et al. (Future Internet 2023) Sec. 4 utterance attributes
+HANDBOOK = {
+    "MISC 2.5": {
+        "counsellor": ["ADP", "ADW", "AF", "CO", "DI", "EC", "FA", "FI", "GI", "OQ", "CQ",
+                       "RCP", "RCW", "SR", "CR", "RF", "SU", "ST", "WA"],
+        "client": ["FN"] + [f"{c}{v}" for c in ("C", "R", "D", "A", "N", "TS", "O") for v in "+-"],
+        "either": ["NC"],
+        "globals": ["Acceptance", "Empathy", "Direction", "Autonomy Support", "Collaboration", "Evocation",
+                    "Self-Exploration (client)"],
+        "notes": "SR/CR require a valence (+/-/0/+-) in the manual; Ask is part of Follow/Neutral (FN).",
+    },
+    "MITI 4.2.1": {
+        "counsellor": ["GI", "Persuade", "Persuade with Permission", "Q", "SR", "CR", "AF", "Seek",
+                       "Emphasize", "Confront"],
+        "client": [],
+        "globals": ["Cultivating Change Talk", "Softening Sustain Talk", "Partnership", "Empathy"],
+        "notes": "Clients are not coded; Q is not split into open/closed; uncodable utterances get no code.",
+    },
+    "Welivita (MITI-derived)": {
+        "counsellor": ["Closed Question", "Open Question", "Simple Reflection", "Complex Reflection",
+                       "Give Information", "Advise with Permission", "Affirm", "Emphasize Autonomy", "Support",
+                       "Advise without Permission", "Confront", "Direct", "Warn", "Self-Disclose", "Other"],
+        "client": [],
+        "notes": "Seekers are not coded. Self-Disclose and Other are not MITI codes (added by the authors).",
+    },
+    "AnnoMI": {
+        "counsellor": ["question:open", "question:closed", "reflection:simple", "reflection:complex",
+                       "input:information", "input:advice", "input:options", "input:negotiation/goal-setting",
+                       "main:question", "main:input", "main:reflection", "main:other"],
+        "client": ["change", "neutral", "sustain"],
+        "notes": "Question/Input/Reflection are separate attributes that can co-occur in one utterance; "
+                 "a single Main Behaviour is chosen per utterance.",
+    },
+}
+
+# Our MISC vocabulary vs the MISC 2.5 handbook (AutoMISC naming in brackets).
+OUR_MISC_ALIASES = {"N": "FN", **{f"AB{v}": f"A{v}" for v in "+-"}}
+MISC_EXTENSIONS = {
+    "AC+": "AutoMISC addition (Activation, from Miller & Rollnick 2013 DARN-CAT); not in MISC 2.5. "
+           "In the manual, 'offering alternatives' is Commitment (C+).",
+    "AC-": "AutoMISC addition (Activation-); not in MISC 2.5.",
+}
+MISC_MICO = {"AF", "ADP", "EC", "RCP", "SU", "OQ", "SR", "CR"}      # manual p.47 (sMICO incl. OQ + reflections)
+MISC_MIIN = {"ADW", "CO", "DI", "RCW", "WA"}                          # manual pp.47-48
+
+
+def handbook_check(frames: Dict[str, pd.DataFrame] = None) -> pd.DataFrame:
+    """Every handbook code vs (a) our vocabulary and (b) what each dataset contains.
+
+    status: 'ok' (in handbook + our vocabulary), 'not in our vocabulary',
+            'extension (not in handbook)'. `datasets_with_examples` shows where it occurs;
+            an empty cell is a class no dataset covers, not a class that does not exist.
+    """
+    from automisc_ft.data import CLIENT_GROUPS, COUNSELLOR_GROUPS
+    frames = frames or {}
+    ours = {("counsellor", c) for cs in COUNSELLOR_GROUPS.values() for c in cs}
+    ours |= {("client", OUR_MISC_ALIASES.get(c, c)) for cs in CLIENT_GROUPS.values() for c in cs}
+    observed = defaultdict_set()
+    for ds, f in frames.items():
+        if ds.startswith(("misc.", "synth.")):
+            for spk, c in zip(f.speaker, f.t2):
+                if c is not None:
+                    observed[(spk, OUR_MISC_ALIASES.get(c, c) if spk == "client" else c)].add(ds)
+    rows = []
+    hb = HANDBOOK["MISC 2.5"]
+    for spk in ("counsellor", "client"):
+        for c in hb[spk]:
+            grp = "MICO" if c in MISC_MICO else "MIIN" if c in MISC_MIIN else ("" if spk == "client" else "neither")
+            rows.append({"scheme": "MISC 2.5", "speaker": spk, "code": c, "manual_group": grp,
+                         "status": "ok" if (spk, c) in ours else "not in our vocabulary",
+                         "datasets_with_examples": ", ".join(sorted(observed.get((spk, c), [])))})
+    rows.append({"scheme": "MISC 2.5", "speaker": "either", "code": "NC", "manual_group": "",
+                 "status": "not in our vocabulary", "datasets_with_examples": "(uncodable; rare by design)"})
+    for (spk, c) in sorted(ours):
+        if c not in hb.get(spk, []):
+            rows.append({"scheme": "MISC 2.5", "speaker": spk, "code": c, "manual_group": "",
+                         "status": "extension (not in handbook): " + MISC_EXTENSIONS.get(c, ""),
+                         "datasets_with_examples": ", ".join(sorted(observed.get((spk, c), [])))})
+    for scheme, ds, col in [("MITI 4.2.1", "miti.casaa.gold", "native"),
+                            ("Welivita (MITI-derived)", "welivita.gold", "native"),
+                            ("AnnoMI", "annomi.gold", None)]:
+        seen = set()
+        if ds in frames:
+            f = frames[ds]
+            if scheme == "AnnoMI":
+                for k, colname in (("question", "question_subtype"), ("reflection", "reflection_subtype"),
+                                   ("input", "therapist_input_subtype")):
+                    seen |= {f"{k}:{v}" for v in f[colname].dropna().unique()}
+                seen |= {f"main:{'input' if v == 'therapist_input' else v}" for v in
+                         f[f.speaker == "counsellor"].native.dropna().unique()}
+                seen |= set(f[f.speaker == "client"].native.dropna().unique())
+            else:
+                for v in f[col].dropna():
+                    seen |= set(str(v).split("|"))
+        canon = {"PwP": "Persuade with Permission"}
+        seen = {canon.get(x, x) for x in seen}
+        if scheme == "AnnoMI":
+            seen = {x.replace("input:negotiation", "input:negotiation/goal-setting") for x in seen}
+        hb = HANDBOOK[scheme]
+        for spk in ("counsellor", "client"):
+            for c in hb[spk]:
+                rows.append({"scheme": scheme, "speaker": spk, "code": c, "manual_group": "", "status": "ok",
+                             "datasets_with_examples": ds if c in seen else ""})
+        extra = seen - set(hb["counsellor"]) - set(hb["client"])
+        for c in sorted(extra):
+            rows.append({"scheme": scheme, "speaker": "", "code": c, "manual_group": "",
+                         "status": "in data, not in handbook" + (" (CASAA transcript convention)" if c in ("NC", "SAME") else ""),
+                         "datasets_with_examples": ds})
+    return pd.DataFrame(rows)
+
+
+def defaultdict_set():
+    from collections import defaultdict
+    return defaultdict(set)
+
+
 def schemes() -> Dict[str, pd.DataFrame]:
-    """Every code of every scheme in use, with its MISC 2.5 crosswalk."""
+    """Every handbook code of every scheme in use, with its MISC 2.5 crosswalk."""
     from automisc_ft.data import CLIENT_GROUPS, COUNSELLOR_GROUPS
     from baseline.prep_casaa import MITI_TO_MISC
     from selftrain.ingest import MITI_TO_MISC_T2
 
-    misc = [{"speaker": "counsellor", "t1": g, "t2": c} for g, cs in COUNSELLOR_GROUPS.items() for c in cs]
-    misc += [{"speaker": "client", "t1": g, "t2": c} for g, cs in CLIENT_GROUPS.items() for c in cs]
-    t1_of = {r["t2"]: r["t1"] for r in misc if r["speaker"] == "counsellor"}
+    t1_of = {c: g for g, cs in COUNSELLOR_GROUPS.items() for c in cs}
+    misc = [{"speaker": "counsellor", "code": c, "our_t1 (AutoMISC grouping)": t1_of.get(c),
+             "manual_group": "MICO" if c in MISC_MICO else "MIIN" if c in MISC_MIIN else "neither",
+             "source": "MISC 2.5 p.16"} for c in HANDBOOK["MISC 2.5"]["counsellor"]]
+    our_client = {OUR_MISC_ALIASES.get(c, c): (g, c) for g, cs in CLIENT_GROUPS.items() for c in cs}
+    for c in HANDBOOK["MISC 2.5"]["client"]:
+        g, ours = our_client.get(c, (None, None))
+        misc.append({"speaker": "client", "code": c + (f" (ours: {ours})" if ours and ours != c else ""),
+                     "our_t1 (AutoMISC grouping)": g, "manual_group": "CT" if c.endswith("+") else "ST" if c.endswith("-") else "",
+                     "source": "MISC 2.5 pp.38-41"})
+    for c in ("AC+", "AC-"):
+        misc.append({"speaker": "client", "code": c, "our_t1 (AutoMISC grouping)": "C" if c.endswith("+") else "S",
+                     "manual_group": "-", "source": MISC_EXTENSIONS[c]})
+    misc.append({"speaker": "either", "code": "NC (No Code)", "our_t1 (AutoMISC grouping)": None,
+                 "manual_group": "-", "source": "MISC 2.5 p.14; not in our vocabulary"})
 
     miti = []
-    for code, desc in [("GI", "Giving information"), ("Persuade", "Persuade (incl. unsolicited advice)"),
-                       ("PwP", "Persuade with permission"), ("Q", "Question (open/closed not split)"),
-                       ("SR", "Simple reflection"), ("CR", "Complex reflection"), ("AF", "Affirm"),
-                       ("Seek", "Seeking collaboration"), ("Emphasize", "Emphasizing autonomy"),
-                       ("Confront", "Confront"), ("NC", "Not coded (structure, greeting, facilitate)"),
-                       ("SAME", "CASAA convention: continues the previous coded utterance")]:
+    meaning = {"GI": "Giving information", "Persuade": "Persuade", "Persuade with Permission": "Persuade with permission",
+               "Q": "Question (open/closed not split)", "SR": "Simple reflection", "CR": "Complex reflection",
+               "AF": "Affirm", "Seek": "Seeking collaboration", "Emphasize": "Emphasizing autonomy", "Confront": "Confront"}
+    for code in HANDBOOK["MITI 4.2.1"]["counsellor"]:
+        t1, t2 = MITI_TO_MISC.get("PwP" if code == "Persuade with Permission" else code, (None, None))
+        miti.append({"code": code, "meaning": meaning[code], "misc_t1": t1, "misc_t2": t2,
+                     "mapping": "exact" if t2 else ("T1 only" if t1 else "none"), "source": "MITI 4.2.1"})
+    for code, desc in [("NC", "CASAA transcript convention: not coded (structure, greeting, facilitate)"),
+                       ("SAME", "CASAA transcript convention: continues the previous coded utterance")]:
         t1, t2 = MITI_TO_MISC.get(code, (None, None))
         miti.append({"code": code, "meaning": desc, "misc_t1": t1, "misc_t2": t2,
-                     "mapping": "exact" if t2 else ("T1 only" if t1 else "none")})
+                     "mapping": "T1 only" if t1 else "none", "source": "not a MITI code"})
 
-    wel = [{"code": k, "misc_t2": v, "misc_t1": t1_of.get(v), "mapping": "exact"} for k, v in MITI_TO_MISC_T2.items()]
-    wel.append({"code": "Self-Disclose", "misc_t2": None, "misc_t1": None, "mapping": "none"})
-    wel.append({"code": "Other", "misc_t2": None, "misc_t1": None, "mapping": "none"})
+    wel = []
+    for code in HANDBOOK["Welivita (MITI-derived)"]["counsellor"]:
+        t2 = MITI_TO_MISC_T2.get(code)
+        wel.append({"code": code, "misc_t2": t2, "misc_t1": t1_of.get(t2), "mapping": "exact" if t2 else "none",
+                    "source": "Welivita & Pu 2022 Table 1"})
 
     annomi = [
         ("therapist", "question", "open", "OQ", "exact"), ("therapist", "question", "closed", "CQ", "exact"),
         ("therapist", "reflection", "simple", "SR", "exact"), ("therapist", "reflection", "complex", "CR", "exact"),
-        ("therapist", "therapist_input", "information", "GI", "exact"),
-        ("therapist", "therapist_input", "advice", "ADP/ADW", "permission unknown"),
-        ("therapist", "therapist_input", "negotiation", None, "none"),
-        ("therapist", "therapist_input", "options", None, "none"),
-        ("therapist", "other", None, None, "none"),
+        ("therapist", "input", "information", "GI", "exact"),
+        ("therapist", "input", "advice", "ADP/ADW", "permission unknown"),
+        ("therapist", "input", "negotiation/goal-setting", None, "none"),
+        ("therapist", "input", "options", None, "none"),
+        ("therapist", "other (main behaviour)", None, None, "none"),
         ("client", "change", None, "C (T1)", "T1 only"), ("client", "sustain", None, "S (T1)", "T1 only"),
-        ("client", "neutral", None, "N", "exact"),
+        ("client", "neutral", None, "N (= FN)", "exact"),
     ]
-    annomi = [dict(zip(["speaker", "main", "subtype", "misc", "mapping"], r)) for r in annomi]
-    return {"MISC 2.5": pd.DataFrame(misc), "MITI 4 (CASAA)": pd.DataFrame(miti),
+    annomi = [dict(zip(["speaker", "attribute", "subtype", "misc", "mapping"], r)) for r in annomi]
+    return {"MISC 2.5": pd.DataFrame(misc), "MITI 4.2.1 (CASAA)": pd.DataFrame(miti),
             "Welivita MITI-derived": pd.DataFrame(wel), "AnnoMI": pd.DataFrame(annomi)}
 
 
