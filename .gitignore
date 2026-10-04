@@ -48,3 +48,6 @@ outputs/baseline_eval/*
 outputs/grpo/*
 !outputs/grpo/faithfulness_*.json
 !outputs/grpo/calibration_*.json
+
+# CASAA MITI training transcripts: third-party material, parsed locally only
+/data/external/casaa/

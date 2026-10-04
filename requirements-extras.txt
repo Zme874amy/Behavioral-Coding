@@ -9,3 +9,4 @@ lmstudio
 tf-keras
 python-dotenv
 tqdm
+pdfplumber   # baseline.prep_casaa (CASAA PDF parsing)

@@ -59,3 +59,87 @@ session scratch dir, not into `data/`.
 ```bash
 python scripts/audit_external_datasets.py /tmp/mi_dataset_audit
 ```
+
+## Follow-up (same day): MI-TAGS access, same-scheme pairs, CASAA parsed
+
+### Has anyone outside the MI-TAGS authors' lab actually got the data?
+
+There's no evidence anyone has. The user's own form request has gone unanswered.
+
+Semantic Scholar lists 13 papers citing MI-TAGS (queried 2026-10-04), and I read the
+full text of every one available on arXiv. **Only the authors' own lab used the data**:
+Yosef, Zisquit, Cohen, Klomek, Bar and Friedman (npj Mental Health Research 2025)
+fine-tuned a 13B model on 6,000 MI-TAGS samples. Everyone else cites it without
+using the data:
+
+- CAMI and MIThinker use only its GPT-4o MITI prompt.
+- Kong & Moon (2025) and Mahmood et al. (MIBot 2025) mention it in related work.
+- StratCBT (2026) lists it in a dataset comparison table.
+- The rest are surveys.
+
+Releases are also lopsided: the GitHub repo holds a 10-row sample, and the Zenodo
+record holds only the paper PDF.
+
+**Next step:** email the authors directly. bencohen3@gmail.com is the README contact,
+and Kfir Bar and Doron Friedman (Reichman University) are the senior authors. In the
+same email, ask whether the 140 HLQC-derived sessions can be shared alone.
+
+### More searching, aimed at same-scheme pairs or splittable corpora
+
+None of these adds usable MI-coded data:
+
+| Lead | What it is | Why it doesn't help |
+|---|---|---|
+| MIRROR @ IberLEF 2026 | MITI 4.2.1 shared task: SR/CR, OQ/CQ, PE/GI | Test sets are hidden and Spanish; the seeds are 3×200 rows. Binary pairs only |
+| AutoMISC NLPAI4Health 2025 | Says it releases 506 MISC-labelled transcripts | The 506 are **GPT-4.1 labels** (AnnoMI, HLQC, MIBot). Its human labels are the 821 + 1,924 we already hold |
+| EMMI (2024) | Multimodal annotations on AnnoMI + HLQC | No new MI codes |
+| Boosting-with-MI (Welivita 2023) | MI-adherent rephrasing | Same Welivita gold plus automatic augmentation |
+| CoachLah (2026) | 36,852 real health-coaching utterances | Behaviour-goal labels only. Could serve as an *unlabelled* pool |
+| "Say it aloud" (Zenodo) | Change-talk counts for 16 participants | No transcripts |
+| 7 Cups (Hsu 2022), Pérez-Rosas 2016/17 (MITI, 277 sessions), BiMISC (MISC, 8.5k utts) | Real MI-coded corpora | Request-only or unreleased. Contacts: x.sun2@uva.nl / j.pei@uva.nl (BiMISC), vperezr@txstate.edu (Pérez-Rosas, now at Texas State) |
+
+**What we can actually train and evaluate on, by scheme:**
+
+| Scheme | Train | Eval | Note |
+|---|---|---|---|
+| MISC 2.5 | HLQC_balanced_manual (1,924) | MIV6.3A (821) **+ CASAA mapped** (T2 311 / T1 484, clean sessions only) | CASAA is a second MISC-compatible test set, but covers only 6 T2 codes |
+| MITI 4.x | **none public**; Welivita (MITI-derived, written forum text) is the closest | CASAA (670 counsellor turns) | MI-TAGS would complete this pair |
+| AnnoMI scheme | AnnoMI split by transcript | AnnoMI held-out transcripts | 133 sessions is enough for grouped CV. Stratify by `annotator_id`, because the annotator effect is large |
+| Welivita MITI | Welivita `stage I agreed` (7,152) split by dialogue | same, held out | Big enough, but forum text and weak gold |
+
+### CASAA parsed: `src/baseline/prep_casaa.py`
+
+The parser works on word coordinates (pdfplumber). It handles:
+
+- notes columns, and coder notes inside the code cell ("GI / Persuade ruled out because…" gives GI only);
+- parenthesised remarks, and words that wrap within a cell ("Empha / size");
+- the speaker column drifting across pages;
+- a turn-number typo in the source ("Q C" for "2 C");
+- MITI global ratings typed after the last turn, which go to `casaa_globals.csv` (9 sessions).
+
+**Output:** 20 transcripts, 1,329 turns (670 counsellor), giving 1,346 eval rows in the
+`load_manual` schema plus the columns `miti_codes`, `align`, `miti_turn` and
+`hlqc_overlap`. Files are gitignored under `data/external/casaa/`; the transcripts are
+CASAA's.
+
+- **Single-code counsellor rows:** CR 160, Q 107, NC 90, SR 83, Confront 52, GI 51, Persuade 30, Seek 25, AF 15, Emphasize 8, PwP 1. SAME (8) marks continuations.
+- **Multi-code turns:** 32 split by sentence where the sentence count equals the code count; 50 left as multi-label with no gold.
+- **MISC gold:** T2 369 (CR 160, SR 83, CO 52, GI 51, AF 15, EC 8). T1 566, which adds Q→Q and NC→O.
+
+**Checks:**
+
+- Turn numbers are continuous, except 3 PDFs that skip turn 25 in the source itself.
+- No code tokens left in any utterance text, and all 7 counsellor turns without a code are genuine backchannels.
+- 18 of 18 randomly sampled turns match the source PDF text, codes and notes.
+- `load_manual` reads the file.
+
+**Overlap:** CASAA *Emmy's First Encounter* is HLQC `high_121` (0.55 5-gram hit rate
+against the ASR text), which is **in our training set**. *The Rounder* is HLQC
+`high_072`, which holds only its first ~900 words. Both carry `hlqc_overlap`. Excluding
+them leaves T2 gold 311 (CR 126, SR 74, CO 52, GI 43, AF 13, EC 3) and T1 gold 484.
+No overlap with AnnoMI or MIV6.3.
+
+```bash
+pip install pdfplumber
+PYTHONPATH=src python -m baseline.prep_casaa   # downloads the 20 PDFs, then parses
+```
