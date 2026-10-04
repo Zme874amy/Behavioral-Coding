@@ -1,0 +1,20 @@
+{
+ "dup_threshold": 0.1,
+ "redundant_duplicates": {
+  "synth.v1": [
+   "synth:client:TS+:61",
+   "synth:counsellor:EC:12",
+   "synth:counsellor:FA:9"
+  ],
+  "synth.v2_boundary": [],
+  "synth.v2_proto": [],
+  "synth.v3_hlqcmix": [],
+  "synth.v3_mivmix": []
+ },
+ "role": "train only; never gold",
+ "seed": 42,
+ "v3_windows_shared_by_both_mixes": [
+  "synth:proto:train:19 = synth:proto:eval:19",
+  "synth:proto:train:33 = synth:proto:eval:33"
+ ]
+}

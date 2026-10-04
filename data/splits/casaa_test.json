@@ -1,0 +1,30 @@
+{
+ "dup_threshold": 0.1,
+ "exclude": [
+  "casaa_emmys-first-encounter",
+  "casaa_rounder-miti-4"
+ ],
+ "notes": "Test only. Excluded sessions duplicate HLQC (Emmy = high_121 in HLQC gold train; Rounder = high_072).",
+ "scheme": "MITI 4 (counsellor); MISC-mapped on SR CR AF EC GI CO + T1",
+ "seed": 42,
+ "test": [
+  "casaa_have-you-ever-been-a-smoker",
+  "casaa_hawaii-every-month",
+  "casaa_i-guess-i-dont-have-a-choice",
+  "casaa_living-with-diabetes",
+  "casaa_maybe-hell-take-my-kids",
+  "casaa_my-father-also-hit-me",
+  "casaa_now-i-only-wear-yoga-pants",
+  "casaa_orientation-to-a-parenting-class",
+  "casaa_overuse-of-directing",
+  "casaa_overuse-of-following",
+  "casaa_session1miti",
+  "casaa_session2miti",
+  "casaa_session3miti",
+  "casaa_session4miti",
+  "casaa_session5miti",
+  "casaa_should-i-really-be-honest",
+  "casaa_the-confirmed-smoker",
+  "casaa_the-suspiscious-smoker"
+ ]
+}
