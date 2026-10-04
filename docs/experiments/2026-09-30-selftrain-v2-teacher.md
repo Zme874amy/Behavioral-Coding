@@ -1,8 +1,9 @@
 # Self-training v2, the teacher comparison, and the teacher-model search
 
 **Started** 2026-09-30 · **Status** self-training v2 complete (two pools, 3 seeds
-each); Qwen2.5-32B teacher NO-GO; open-model teacher search in progress
-(2026-10-04) · **Backbone** `ft1mix_bare` (1 shared adapter, mixed regime) ·
+each); Qwen2.5-32B teacher NO-GO; off-the-shelf teacher screen complete
+(2026-10-04): no open model beats the student; track 2 (fine-tuned large
+teacher) not started · **Backbone** `ft1mix_bare` (1 shared adapter, mixed regime) ·
 **Context length** 5
 
 ## The question
@@ -120,10 +121,19 @@ Criteria: T2 macro-F1 vs the student's 0.399, plus precision on the tail codes.
 | gpt-oss-120b (reasoning low) | Ollama (shared) | 0.305 [0.272–0.349] | 0.573 | 0.417 | 170514 |
 | Qwen3-30B-A3B-Instruct-2507 fp16 | Ollama (shared) | 0.298 [0.253–0.346] | 0.530 | 0.437 | 170515 |
 | Llama4 Scout 16x17B | Ollama (shared) | 0.209 [0.184–0.242] | 0.558 | 0.371 | 170518 |
-| Gemma3-27B | Ollama (shared) | pending | | | 170517 |
-| Qwen3-VL-32B | Ollama (shared) | pending | | | 170519 |
+| Gemma3-27B | Ollama (shared) | 0.319 [0.280–0.354] | 0.538 | 0.425 | 170517 |
+| Qwen3-VL-32B | Ollama (shared) | **invalid** (100% empty answers) | | | 170519 |
 
-All Ollama runs: 0 errors, ≤ 1.1% unparseable, longest prompt ~4.3k tokens
+Qwen3-VL-32B: the shared `qwen3-vl:32b` tag is the *thinking* build. It ignored
+`think: false` and returned empty content within the 48-token budget on every
+row. Ollama also serves this architecture one request at a time. A valid run
+would need thinking on and ~2k tokens per call, roughly 10+ h serial. Not re-run,
+given that every other model sits at or below 0.362.
+
+Gemma3-27B failed to parse at T1 on 7.1% of rows; those fall back to the
+speaker's first group.
+
+All other Ollama runs: 0 errors, ≤ 1.1% unparseable, longest prompt ~4.3k tokens
 (context 12,288), so none were truncated. 1–4 s per row.
 
 **Model size does not buy MISC coding.** gpt-oss-120b (0.305) scores no better
