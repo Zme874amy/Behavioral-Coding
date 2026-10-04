@@ -246,6 +246,7 @@ def load_annomi() -> pd.DataFrame:
     a = pd.read_csv(D / "AnnoMI.csv")[["conv_id", "utterance_id"]]
     ev["transcript_id"], ev["utterance_id"] = a["conv_id"].values, a["utterance_id"].values
     s = s.merge(ev[key + ["t1_label_GT", "t2_label_GT"]], on=key, how="left")
+    s["topic"] = s["topic"].astype(str).str.strip()   # the release has whitespace variants ("smoking cessation ")
     s["native"] = np.where(s.interlocutor == "therapist", s.main_therapist_behaviour, s.client_talk_type)
     s = s.sort_values(key)
     return _std(s, "annomi.gold", "transcript_id", "interlocutor", "utterance_id", "utterance_id",

@@ -146,6 +146,13 @@ def dataset_specific(frames: Dict[str, pd.DataFrame], pairs: pd.DataFrame) -> Li
         rows.append(_row("miti.casaa.gold", "client rows carrying a code (source quirk)",
                          ((c.speaker == "client") & c.native.notna()).sum(), (c.speaker == "client").sum(),
                          action="handled: client rows never get gold"))
+    if "annomi.gold" in frames:
+        import pandas as _pd
+        from eda.registry import EXT
+        raw = _pd.read_csv(EXT / "annomi" / "AnnoMI-simple.csv").groupby("transcript_id").topic.first()
+        variants = raw[raw != raw.str.strip()]
+        rows.append(_row("annomi.gold", "topic labels with stray whitespace", len(variants), len(raw),
+                         repr(variants.iloc[0]) if len(variants) else "", action="handled: stripped in eda.registry"))
     if "welivita.gold" in frames:
         w = frames["welivita.gold"]
         rows.append(_row("welivita.gold", "listener rows with '-' / no final label", (w.speaker == "counsellor").sum()
