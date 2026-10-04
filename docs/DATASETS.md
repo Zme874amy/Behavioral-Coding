@@ -104,7 +104,7 @@ Encoded in `eda.registry.HANDBOOK`, and compared with our vocabulary and the dat
 
 | Item | Handbook | Ours | Consequence |
 |---|---|---|---|
-| **AC± (Activation)** | **not in MISC 2.5** | AutoMISC addition from Miller & Rollnick 2013 (DARN-CAT); thesis fn. 1 says so explicitly | Present in our gold (HLQC AC+ 23; MIV AC+ 11, AC− 1). The handbook codes "offering alternatives" as Commitment (C+). When comparing with other MISC data, map AC± to C± |
+| **AC± (Activation)** | **not in MISC 2.5** | AutoMISC addition; thesis footnote 1 on "17 client codes": "Although not listed in the MISC 2.5, we include Activation+/- … based on definitions in [49]" = Miller & Rollnick, *Motivational Interviewing*, 4th ed. 2023. Not in MISC 2.1 either | Present in our gold (HLQC AC+ 23; MIV AC+ 11, AC− 1). The handbook codes "offering alternatives" as Commitment (C+). When comparing with other MISC data, map AC± to C± |
 | Counsellor T1 groups (CRL, SRL, IMC, IMI, Q, O) | not in the handbook; its groups are **MICO / MIIN** (+ neutral) | AutoMISC's grouping by semantic similarity (thesis §3) | IMC contains GI and CRL contains RF, which are neither MICO nor MIIN in the manual. Don't call T1 "the MISC hierarchy" |
 | No Code (NC) | exists (uncodable utterances) | not in our vocabulary | Fine for our data. A model can't abstain |
 | Reflection valence (SR/CR +, −, 0, ±) | required | dropped | We code SR/CR without valence |

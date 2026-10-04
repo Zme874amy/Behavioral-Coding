@@ -363,7 +363,7 @@ HANDBOOK = {
 # Our MISC vocabulary vs the MISC 2.5 handbook (AutoMISC naming in brackets).
 OUR_MISC_ALIASES = {"N": "FN", **{f"AB{v}": f"A{v}" for v in "+-"}}
 MISC_EXTENSIONS = {
-    "AC+": "AutoMISC addition (Activation, from Miller & Rollnick 2013 DARN-CAT); not in MISC 2.5. "
+    "AC+": "AutoMISC addition (Activation; thesis footnote 1 cites Miller & Rollnick, Motivational Interviewing, 4th ed. 2023, mobilising change talk); not in MISC 2.5 or MISC 2.1. "
            "In the manual, 'offering alternatives' is Commitment (C+).",
     "AC-": "AutoMISC addition (Activation-); not in MISC 2.5.",
 }
