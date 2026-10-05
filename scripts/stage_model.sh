@@ -17,8 +17,9 @@ source "$(dirname "$0")/setup_grpo_env.sh" use
 # need the one saved under userdata4.
 TOKEN_FILE=/mnt/userdata4/jia-wen/.cache/huggingface/token
 [[ -s "$TOKEN_FILE" ]] && export HF_TOKEN="$(cat "$TOKEN_FILE")"
-# Weight duplicates some repos ship (gpt-oss: original/ and metal/ copies; GGUF).
-EXCLUDES=("*.gguf" "original/*" "metal/*")
+# Weight duplicates some repos ship (gpt-oss: original/ and metal/ copies; GGUF;
+# Mistral: consolidated.safetensors, the native-format copy of the HF shards).
+EXCLUDES=("*.gguf" "original/*" "metal/*" "consolidated.safetensors")
 
 need_gb=$(python3 - "$REPO" "${EXCLUDES[@]}" <<'PY'
 import fnmatch, sys
