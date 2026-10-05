@@ -1,0 +1,20 @@
+C: |
+   - **Desire (D+)**: The client expresses a desire to change the target behaviour, e.g. "I want to quit smoking".
+   - **Ability (AB+)**: The client expresses optimism about their ability to change, e.g. "I think it's possible for me to quit".
+   - **Reasons (R+)**: The client provides reasons for changing the target behaviour, e.g. "My children are begging me to quit".
+   - **Need (N+)**: The client expresses a need to change the target behaviour, e.g. "I've got to quit before it gets worse".
+   - **Commitment (C+)**: The client expresses a commitment to change, e.g. "I'm going to quit smoking".
+   - **Activation (AC+)**: The client leans towards action, e.g. "I'm willing to give it another try". This includes suggestions of alternatives to the target behaviour.
+   - **Taking Steps (TS+)**: The client mentions recent steps towards change, e.g. "I cut back on smoking this week".
+   - **Other (O+)**: The client makes a statement that supports change but does not fit into the other categories. This usually includes problem recognition or hypotheticals.
+S: |
+   - **Desire (D-)**: The client expresses a desire to maintain the target behaviour, e.g. "I enjoy smoking too much to quit".
+   - **Ability (AB-)**: The client expresses pessimism about their ability to change, e.g. "I don't think I can quit".
+   - **Reasons (R-)**: The client provides reasons for maintaining the target behaviour, e.g. "Smoking is the only way I can relax".
+   - **Need (N-)**: The client expresses a need to maintain the target behaviour, e.g. "I need to have my morning cigarettes".
+   - **Commitment (C-)**: The client expresses a commitment to maintain the target behaviour, e.g. "I'm not going to quit smoking".
+   - **Activation (AC-)**: The client leans towards inaction, e.g. "I'm not ready to quit yet". This includes suggestions of maintaining the target behaviour.
+   - **Taking Steps (TS-)**: The client mentions recent steps reinforcing the target behaviour, e.g. "I bought two packs today".
+   - **Other (O-)**: The client makes a statement that supports maintaining the target behaviour but does not fit into the other categories. This usually includes problem recognition or hypotheticals.
+N: |
+   - The utterance does not clearly support or oppose change. There is no further categorization, so just use "N".

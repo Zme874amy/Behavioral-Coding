@@ -1,0 +1,376 @@
+generated_by: python -m components.prompts.registry --write
+known_issues_v1: client t2.j2 and flat.j2 say "counsellor's final utterance"; spec YAML and counsellor flat.j2 use ADWP/CON/DIR/RCWP
+  for ADW/CO/DI/RCW; typos (Guild, expect IMC and IMC, 'about will happen', 'is a question is')
+conventions: 'Deliberate project conventions kept in v2 (not in the MISC 2.5 manual): the CQ/OQ grammatical yes/no test with
+  ''if ambiguous, CQ''; AutoMISC''s T1 groups put GI under IMC (with permission), although MISC 2.5 does not require permission
+  for GI.'
+final_prompt_per_setting:
+  zero-shot: misc.v2.{speaker}.t1_bare + t2_bare (two-call), user_prompt v2
+  few-shot: same as zero-shot + exemplar block drawn per fold (seed recorded in .meta.json)
+  sft_bare: misc.v2.{speaker}.t1_bare + t2_bare; training target = label
+  sft_cot: misc.v2.{speaker}.t1 + t2; training target = rationale + label
+  single_call_and_grpo: misc.v2.{speaker}.t12
+  miti_same_scheme: miti.v1.counsellor.bare (or .cot)
+  annomi_same_scheme: annomi.v1.{speaker}.bare
+  cross_scheme_transfer: the MISC prompt, labelled 'MISC-prompt transfer'
+prompts:
+- id: misc.v1.counsellor.t1
+  version: v1
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T1, CoT (rationale + label)
+  status: frozen
+  path: components/prompts/templates/counsellor/t1.j2
+  sha256: 018f65264a15fe583285712a5761ed8e44501a47f380747d91c5a17a3ef0d7f5
+- id: misc.v1.counsellor.t2
+  version: v1
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T2, CoT; spec of the predicted T1 group injected
+  status: frozen
+  path: components/prompts/templates/counsellor/t2.j2
+  sha256: f1a7fd20c5857f78c63c5f593fba571f5c918f1f3116160418a9d8d1e129bd8d
+- id: misc.v1.counsellor.t1_bare
+  version: v1
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T1, label only (zero-shot / few-shot / SFT bare)
+  status: frozen
+  path: components/prompts/templates/counsellor/t1_bare.j2
+  sha256: c7b7a43dd39f7acfb0ddce1aef8e5b4df3c5876500323fd6f59c3ecd1ec75c9b
+- id: misc.v1.counsellor.t2_bare
+  version: v1
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T2, label only; spec injected
+  status: frozen
+  path: components/prompts/templates/counsellor/t2_bare.j2
+  sha256: 54a95e43f3e2671a63549d53d672e25056ebd6e04a4ca1f88308c5fb537533ae
+- id: misc.v1.counsellor.t12
+  version: v1
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: single call, both tiers (single-call SFT / GRPO)
+  status: frozen
+  path: components/prompts/templates/counsellor/t12.j2
+  sha256: 97d8214383ff7dada172dc4e0ab5c2df298d2d34fb91bec19bc6647173fe04e6
+- id: misc.v1.counsellor.flat
+  version: v1
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: flat T2 without the T1 step (legacy rich zero-shot)
+  status: frozen
+  path: components/prompts/templates/counsellor/flat.j2
+  sha256: 67977ddb225ebacff8fa3ee0b60e62e34dbe7a2d6e890630ff0df901b1debbc8
+  notes: not used by the re-run
+- id: misc.v1.counsellor.spec_t2
+  version: v1
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: T2 code definitions per T1 group (injected)
+  status: frozen
+  path: components/prompts/specs/counsellor_t2.yaml
+  sha256: 15eafe88c572a2880efaf1ce2b419d6a74fad601c8fa1a0ddb73f0b263ec5b03
+- id: misc.v1.client.t1
+  version: v1
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T1, CoT (rationale + label)
+  status: frozen
+  path: components/prompts/templates/client/t1.j2
+  sha256: 98d5cc290800a924619f8a968d487ae327dabc8b6337d5e177b7263cae566667
+- id: misc.v1.client.t2
+  version: v1
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T2, CoT; spec of the predicted T1 group injected
+  status: frozen
+  path: components/prompts/templates/client/t2.j2
+  sha256: dbc4c320d49b5caa42e8e479f81b5edba40d2e2f1f8be75ec9a0f6e1633f60c6
+- id: misc.v1.client.t1_bare
+  version: v1
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T1, label only (zero-shot / few-shot / SFT bare)
+  status: frozen
+  path: components/prompts/templates/client/t1_bare.j2
+  sha256: 126012b244aabb2308482b23783dd8031938af1201ab6465ee456e178420aa68
+- id: misc.v1.client.t2_bare
+  version: v1
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T2, label only; spec injected
+  status: frozen
+  path: components/prompts/templates/client/t2_bare.j2
+  sha256: 39a88ebb154abfa1abb1933a616ec68bc8ded0fa56b81c5813209be2a8492a2c
+- id: misc.v1.client.t12
+  version: v1
+  scheme: MISC 2.5
+  speaker: client
+  setting: single call, both tiers (single-call SFT / GRPO)
+  status: frozen
+  path: components/prompts/templates/client/t12.j2
+  sha256: 3f485ac764ca9196c1c4c56696a98bc0432703c1c75deaefe5de17b8e8350ff5
+- id: misc.v1.client.flat
+  version: v1
+  scheme: MISC 2.5
+  speaker: client
+  setting: flat T2 without the T1 step (legacy rich zero-shot)
+  status: frozen
+  path: components/prompts/templates/client/flat.j2
+  sha256: 7ea78f83c1858e8185789d330b16b6e6982247e8f4ae4e6c8fd9e8202877f7f9
+  notes: not used by the re-run
+- id: misc.v1.client.spec_t2
+  version: v1
+  scheme: MISC 2.5
+  speaker: client
+  setting: T2 code definitions per T1 group (injected)
+  status: frozen
+  path: components/prompts/specs/client_t2.yaml
+  sha256: 21afb7c0aed7ad44d13a4ce7fa380c1a5cc75c3f3f8dc70dac8d90a2c4230fdb
+- id: misc.v1.user_prompt
+  version: v1
+  scheme: any
+  speaker: both
+  setting: 'user turn: transcript excerpt + target utterance'
+  status: frozen
+  path: components/prompts/templates/user_prompt.j2
+  sha256: 501476ca44379364252ff0199c0abad7df8d89ca1d1c147517fe357e6c08fc2a
+- id: misc.v2.counsellor.t1
+  version: v2
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T1, CoT (rationale + label)
+  status: active
+  path: components/prompts/templates/v2/counsellor/t1.j2
+  sha256: 60b22f51562f849739c93a370af75571b8284c1aaa747b2d305448dfea9a109c
+- id: misc.v2.counsellor.t2
+  version: v2
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T2, CoT; spec of the predicted T1 group injected
+  status: active
+  path: components/prompts/templates/v2/counsellor/t2.j2
+  sha256: f1a7fd20c5857f78c63c5f593fba571f5c918f1f3116160418a9d8d1e129bd8d
+- id: misc.v2.counsellor.t1_bare
+  version: v2
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T1, label only (zero-shot / few-shot / SFT bare)
+  status: active
+  path: components/prompts/templates/v2/counsellor/t1_bare.j2
+  sha256: 69397552315b7f2b353fda77322a1009ebdb346f59fe1f947035135e21014c53
+- id: misc.v2.counsellor.t2_bare
+  version: v2
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: two-call T2, label only; spec injected
+  status: active
+  path: components/prompts/templates/v2/counsellor/t2_bare.j2
+  sha256: 54a95e43f3e2671a63549d53d672e25056ebd6e04a4ca1f88308c5fb537533ae
+- id: misc.v2.counsellor.t12
+  version: v2
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: single call, both tiers (single-call SFT / GRPO)
+  status: active
+  path: components/prompts/templates/v2/counsellor/t12.j2
+  sha256: e84178ff3e75031455b40d199c148fddf40ad6b11c7dddcfec2b270bb750de9a
+- id: misc.v2.counsellor.flat
+  version: v2
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: flat T2 without the T1 step (legacy rich zero-shot)
+  status: active
+  path: components/prompts/templates/v2/counsellor/flat.j2
+  sha256: 91d920bb100f0d7868cbe50af817a0672fa91f14e5a99cd4b394e41485603a07
+  notes: not used by the re-run
+- id: misc.v2.counsellor.spec_t2
+  version: v2
+  scheme: MISC 2.5
+  speaker: counsellor
+  setting: T2 code definitions per T1 group (injected)
+  status: active
+  path: components/prompts/specs/v2/counsellor_t2.yaml
+  sha256: 873b0fdb6299ea0a21a9a7c3988ef4c058e850ddbd3ab3c3f4a77ef1dec82367
+- id: misc.v2.client.t1
+  version: v2
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T1, CoT (rationale + label)
+  status: active
+  path: components/prompts/templates/v2/client/t1.j2
+  sha256: 98d5cc290800a924619f8a968d487ae327dabc8b6337d5e177b7263cae566667
+- id: misc.v2.client.t2
+  version: v2
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T2, CoT; spec of the predicted T1 group injected
+  status: active
+  path: components/prompts/templates/v2/client/t2.j2
+  sha256: b70dd69614d38d2b1f836eddd134d715a1697c811b54400bf26528244c28b84b
+- id: misc.v2.client.t1_bare
+  version: v2
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T1, label only (zero-shot / few-shot / SFT bare)
+  status: active
+  path: components/prompts/templates/v2/client/t1_bare.j2
+  sha256: 126012b244aabb2308482b23783dd8031938af1201ab6465ee456e178420aa68
+- id: misc.v2.client.t2_bare
+  version: v2
+  scheme: MISC 2.5
+  speaker: client
+  setting: two-call T2, label only; spec injected
+  status: active
+  path: components/prompts/templates/v2/client/t2_bare.j2
+  sha256: 39a88ebb154abfa1abb1933a616ec68bc8ded0fa56b81c5813209be2a8492a2c
+- id: misc.v2.client.t12
+  version: v2
+  scheme: MISC 2.5
+  speaker: client
+  setting: single call, both tiers (single-call SFT / GRPO)
+  status: active
+  path: components/prompts/templates/v2/client/t12.j2
+  sha256: 3f485ac764ca9196c1c4c56696a98bc0432703c1c75deaefe5de17b8e8350ff5
+- id: misc.v2.client.flat
+  version: v2
+  scheme: MISC 2.5
+  speaker: client
+  setting: flat T2 without the T1 step (legacy rich zero-shot)
+  status: active
+  path: components/prompts/templates/v2/client/flat.j2
+  sha256: be04b4d5a6bc60987ebe816d0dbe3a44fdca83c990554a81b678e674d33a4719
+  notes: not used by the re-run
+- id: misc.v2.client.spec_t2
+  version: v2
+  scheme: MISC 2.5
+  speaker: client
+  setting: T2 code definitions per T1 group (injected)
+  status: active
+  path: components/prompts/specs/v2/client_t2.yaml
+  sha256: 21afb7c0aed7ad44d13a4ce7fa380c1a5cc75c3f3f8dc70dac8d90a2c4230fdb
+- id: misc.v2.user_prompt
+  version: v2
+  scheme: any
+  speaker: both
+  setting: 'user turn: transcript excerpt + target utterance'
+  status: active
+  path: components/prompts/templates/v2/user_prompt.j2
+  sha256: 501476ca44379364252ff0199c0abad7df8d89ca1d1c147517fe357e6c08fc2a
+- id: miti.v1.codes
+  version: v1
+  scheme: MITI 4.2.1
+  speaker: counsellor
+  setting: shared MITI 4.2.1 code definitions + decision rules
+  status: active
+  path: components/prompts/templates/miti/_codes.j2
+  sha256: 9bcf3289690939e53078aa33ba27db4abdfa036460116857ed30e415292dd4de
+  notes: definitions paraphrase MITI 4.2.1 sections E.4.a-g and F
+- id: miti.v1.counsellor.bare
+  version: v1
+  scheme: MITI 4.2.1
+  speaker: counsellor
+  setting: single tier, label only
+  status: active
+  path: components/prompts/templates/miti/counsellor/t_bare.j2
+  sha256: 37d7a130fea8350898dfcda6ac06b3216400c4428f74030d2452795606bb23b3
+  notes: definitions paraphrase MITI 4.2.1 sections E.4.a-g and F
+- id: miti.v1.counsellor.cot
+  version: v1
+  scheme: MITI 4.2.1
+  speaker: counsellor
+  setting: single tier, rationale + label
+  status: active
+  path: components/prompts/templates/miti/counsellor/t_cot.j2
+  sha256: cbae2c0c6b415fe4cf50ce30d1fde95c4601cd3d3fb5e197abd764211507e359
+  notes: definitions paraphrase MITI 4.2.1 sections E.4.a-g and F
+- id: annomi.v1.counsellor.bare
+  version: v1
+  scheme: AnnoMI
+  speaker: counsellor
+  setting: main behaviour:subtype, label only
+  status: pending-source-check
+  path: components/prompts/templates/annomi/counsellor/main_bare.j2
+  sha256: ca0c3871eae3dbef1e8b2afe160e34f4dc43162211bbd8ad728ce6d772459931
+  notes: definitions written from the MI literature; the AnnoMI paper (Future Internet 2023, section 4) was not reachable
+    on 2026-10-05; check wording against it before use
+- id: annomi.v1.client.bare
+  version: v1
+  scheme: AnnoMI
+  speaker: client
+  setting: talk type, label only
+  status: pending-source-check
+  path: components/prompts/templates/annomi/client/talk_bare.j2
+  sha256: 6bfd99710fe3ceacfb14c746b7cc1d561f7c057d872675271bcc56755dcd7dac
+  notes: definitions written from the MI literature; the AnnoMI paper (Future Internet 2023, section 4) was not reachable
+    on 2026-10-05; check wording against it before use
+- id: parser
+  version: file
+  scheme: MISC 2.5
+  speaker: '-'
+  setting: utterance segmentation (volley -> utterances)
+  status: active
+  path: components/parser.py
+  sha256: 0a34e04360a5edd0499a97e91059f92136e7546e211c7a93cdf3363e256f9dae
+  hash_scope: file
+- id: rationale_distill
+  version: file
+  scheme: MISC 2.5
+  speaker: '-'
+  setting: teacher rationale generation for SFT CoT targets
+  status: active
+  path: baseline/rationalize.py
+  sha256: ff2032023f64f7e855a0986b050736434ea33e1b326e27cc2b9cb372b85ec188
+  hash_scope: file
+  notes: Stage 2 regenerates rationales per training fold
+- id: fewshot_rationale
+  version: file
+  scheme: MISC 2.5
+  speaker: '-'
+  setting: frozen rationales for few-shot exemplars
+  status: active
+  path: baseline/fewshot.py
+  sha256: 18befcbbee4ebe4c8df6ac0aeadbeeeeddb68d7ba3aed3ef1fac0940c2c266df
+  hash_scope: file
+  notes: duplicates rationale_distill; P2 merges them into one prompt
+- id: agent_system
+  version: file
+  scheme: MISC 2.5
+  speaker: '-'
+  setting: retrieval agent system prompt
+  status: active
+  path: agentic/agent.py
+  sha256: 76216ec7b6f86cfde8f9ab67be4abc39eec5106541d9ead5ab96b61842796fe5
+  hash_scope: file
+  notes: Stage 4 only, if retrieval is kept
+- id: synth_v1
+  version: file
+  scheme: MISC 2.5
+  speaker: '-'
+  setting: synthesis v1 generator
+  status: frozen
+  path: synth/prompts_v1.py
+  sha256: 456f7031a4b4273b8a8d40d08d0d9259b44236a3d2cb6dc2e753293dc0f51c9a
+  hash_scope: file
+  notes: v1 data only
+- id: synth_v2
+  version: file
+  scheme: MISC 2.5
+  speaker: '-'
+  setting: synthesis v2/v3 generator + segment + label
+  status: frozen
+  path: synth/prompts_v2.py
+  sha256: 0efd9b09160463fb2914271ed7f5e655901308142c127a8fabeca51c4dc004a1
+  hash_scope: file
+  notes: v2/v3 data; synthesis v4 gets a new module
+- id: synth_judge
+  version: file
+  scheme: MISC 2.5
+  speaker: '-'
+  setting: synthesis quality judge
+  status: active
+  path: synth/judge.py
+  sha256: 0bf022d3afc9191a2787d4975bfebea86b6b9f6fa6af9dadf84f03d0842fe340
+  hash_scope: file
+  notes: 'reads v2 scenario columns, so v3 windows are judged ''(not specified)'': fix before v4'

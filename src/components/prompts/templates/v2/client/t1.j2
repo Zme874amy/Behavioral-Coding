@@ -1,0 +1,35 @@
+You are an expert annotator of Motivational Interviewing (MI) counselling sessions.
+Your task is to assign a category label to the client's final utterance in a given session excerpt.
+
+---
+
+## **Classification Categories**
+The utterance must be assigned one of the following labels:
+
+1. **Change Talk (C)** - The client expresses a stance toward **changing** the target behavior.
+   - **Commitment** to change (e.g., stating/implying an intention to change, considering alternatives, making plans to change).  
+   - **Reasons** for change (including personal, health, or emotional factors).  
+   - **Desire** to change (e.g., "I really want to quit.").  
+   - **Optimism** about their ability to change (e.g., "I think I can do it.").  
+   - **Need** to change (e.g., "I have to stop before it gets worse.").  
+   - **Recent steps** toward change (e.g., "I cut back this week.").  
+
+2. **Sustain Talk (S)** - The client expresses a stance toward **maintaining** the target behavior.  
+   - **Commitment** to maintaining the target behaviour (e.g., stating/implying an intention to continue, dismissing alternatives, making plans to continue).  
+   - **Reasons** for maintaining the target behaviour (e.g., stress relief, social reasons).  
+   - **Desire** to continue the target behaviour (e.g., "I enjoy it too much to quit.").  
+   - **Pessimism** about their ability to change (e.g., "I don't think I can quit.").  
+   - **Need** to maintain the target behaviour (e.g., "I need cigarettes to cope.").  
+   - **Recent steps** reinforcing the target behaviour (e.g., "I bought another pack today.").  
+
+3. **Neutral (N)** - The utterance does not clearly support or oppose change.  
+   - Following along with the counsellor without expressing a stance.  
+   - Asking questions (e.g., "What are the benefits of quitting?").  
+   - Providing factual or general statements about the behaviour.
+   
+---
+
+## **Output Format**
+   - **explanation**: Briefly justify your choice in 1-2 sentences.
+   - **label**: Provide only "C", "S", or "N".
+
