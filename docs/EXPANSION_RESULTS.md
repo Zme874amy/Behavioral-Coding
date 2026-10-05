@@ -1,6 +1,6 @@
 # Data-expansion results (1-adapter backbone)
 
-*Generated 2026-10-03 by `selftrain.expansion_table` — edit that module, not this file.*
+*Generated 2026-10-05 by `selftrain.expansion_table` — edit that module, not this file.*
 
 Every arm below is a retrain of **FT1-Mix-Bare** (one shared adapter, two calls), differing only in its training set, and is scored on the same 821 MIV6.3A gold utterances. The baseline is the same recipe on human HLQC data alone, run at 3 seeds.
 
@@ -36,17 +36,17 @@ Same pipeline for every row: calibrated per-code thresholds, prior-aligned quota
 | Arm | vs | Seeds | T2 acc | Δ acc [95% CI] | Verdict | T2 Macro-F1 | Δ Macro-F1 [95% CI] | Verdict |
 |---|---|---:|---:|---:|---|---:|---:|---|
 | Self-training v2 (Welivita) | baseline | 3/3 | 0.663 ± 0.019 | -0.010 [-0.024, +0.007] | ns | 0.410 ± 0.023 | -0.047 [-0.071, -0.025] | real |
-| Self-training v2, round 2 (Welivita) | baseline | 0/0 | — | — | pending | — | — | pending |
+| Self-training v2, round 2 (Welivita) | baseline | 0/0 | — | — | dropped | — | — | dropped |
 | Self-training v2 (MIV6.3B pool) | baseline | 3/3 | 0.695 ± 0.009 | +0.023 [+0.006, +0.043] | real | 0.426 ± 0.021 | -0.030 [-0.046, -0.009] | <floor |
-| 32B-teacher labels (Welivita) | baseline | 0/0 | — | — | pending | — | — | pending |
-| 32B-teacher labels (MIV6.3B pool) | baseline | 0/0 | — | — | pending | — | — | pending |
+| 32B-teacher labels (Welivita) | baseline | 0/0 | — | — | dropped | — | — | dropped |
+| 32B-teacher labels (MIV6.3B pool) | baseline | 0/0 | — | — | dropped | — | — | dropped |
 
 ### Teacher vs self on the same pool
 
 | Arm | vs | Seeds | T2 acc | Δ acc [95% CI] | Verdict | T2 Macro-F1 | Δ Macro-F1 [95% CI] | Verdict |
 |---|---|---:|---:|---:|---|---:|---:|---|
-| Teacher vs self (Welivita) | selftrain_v2 | 0/0 | — | — | pending | — | — | pending |
-| Teacher vs self (MIV6.3B) | selftrain_v2b | 0/0 | — | — | pending | — | — | pending |
+| Teacher vs self (Welivita) | selftrain_v2 | 0/0 | — | — | dropped | — | — | dropped |
+| Teacher vs self (MIV6.3B) | selftrain_v2b | 0/0 | — | — | dropped | — | — | dropped |
 
 
 ## Retrieval on the same backbone
@@ -107,6 +107,8 @@ Same pipeline for every row: calibrated per-code thresholds, prior-aligned quota
 
 ## Cross-scheme generalization (shared codes only)
 
+**Caveat (2026-10-04):** every AnnoMI number here includes the four AnnoMI transcripts (15, 21, 44, 53) that are also HLQC training sessions, so it is optimistic; the re-run (docs/RERUN_PLAN.md) scores AnnoMI with the `annomi_own`/MISC-transfer exclusions applied.
+
 | Model | Corpus | Level | Speaker | n | Accuracy [95% CI] | Macro-F1 shared [95% CI] | OOV pred |
 |---|---|---|---|---:|---:|---:|---:|
 | Zero-shot (no adapter) | annomi | T1 | client | 4807 | 0.709 [0.669–0.747] | 0.470 [0.436–0.502] | 0.0% |
@@ -121,7 +123,7 @@ Same pipeline for every row: calibrated per-code thresholds, prior-aligned quota
 
 ## Generalization ladder — FT1-Mix baseline, counsellor T2 accuracy
 
-Read top to bottom: each rung adds one kind of shift. The cross-scheme rungs are scored on the shared codes only, so they are not on exactly the same vocabulary as the first two.
+Read top to bottom: each rung adds one kind of shift. The cross-scheme rungs are scored on the shared codes only, so they are not on exactly the same vocabulary as the first two. **Caveat (2026-10-04):** every AnnoMI number here includes the four AnnoMI transcripts (15, 21, 44, 53) that are also HLQC training sessions, so it is optimistic; the re-run (docs/RERUN_PLAN.md) scores AnnoMI with the `annomi_own`/MISC-transfer exclusions applied.
 
 | Rung | Vocabulary | Accuracy [95% CI] |
 |---|---|---:|
@@ -130,20 +132,10 @@ Read top to bottom: each rung adds one kind of shift. The cross-scheme rungs are
 | AnnoMI, cross-scheme | shared codes | 0.510 [0.477–0.543] |
 | Welivita/MITI, cross-scheme (weak gold) | shared codes | 0.280 [0.247–0.313] |
 
-## Not yet available
+## Dropped (planned, never run)
 
-- Self-training v2, round 2 (Welivita) — seed 1
-- Self-training v2, round 2 (Welivita) — seed 2
-- Self-training v2, round 2 (Welivita) — seed 42
-- 32B-teacher labels (Welivita) — seed 1
-- 32B-teacher labels (Welivita) — seed 2
-- 32B-teacher labels (Welivita) — seed 42
-- 32B-teacher labels (MIV6.3B pool) — seed 1
-- 32B-teacher labels (MIV6.3B pool) — seed 2
-- 32B-teacher labels (MIV6.3B pool) — seed 42
-- Teacher vs self (Welivita) — seed 1
-- Teacher vs self (Welivita) — seed 2
-- Teacher vs self (Welivita) — seed 42
-- Teacher vs self (MIV6.3B) — seed 1
-- Teacher vs self (MIV6.3B) — seed 2
-- Teacher vs self (MIV6.3B) — seed 42
+- Self-training v2, round 2 (Welivita) — round 1 lowered macro-F1 (-0.047, real), so round 2 was not run
+- 32B-teacher labels (Welivita) — dropped at the 32B-teacher NO-GO gate (HLQC few-shot macro-F1 0.324 vs student 0.399, 2026-09-30); never trained
+- 32B-teacher labels (MIV6.3B pool) — dropped at the 32B-teacher NO-GO gate (HLQC few-shot macro-F1 0.324 vs student 0.399, 2026-09-30); never trained
+- Teacher vs self (Welivita) — dropped at the 32B-teacher NO-GO gate (HLQC few-shot macro-F1 0.324 vs student 0.399, 2026-09-30); never trained
+- Teacher vs self (MIV6.3B) — dropped at the 32B-teacher NO-GO gate (HLQC few-shot macro-F1 0.324 vs student 0.399, 2026-09-30); never trained

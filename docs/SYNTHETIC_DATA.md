@@ -33,7 +33,7 @@ The registry loader (`eda.registry.load_synth`) returns the synthetic rows only.
 | `synth.v3_hlqcmix` | 50 | 848 | 409 | 14 / 15 | 0 | 0 | 18 |
 | `synth.v3_mivmix` | 50 | 788 | 387 | 16 / 16 | 0 | 5 | 14 |
 
-Labels are generator-assigned and checked by an independent verifier; they are not human gold.
+Labels are generator-assigned and re-checked by a verifier pass that is the **same Qwen2.5-32B-Instruct-AWQ model** (and the quality judge is that model too), so the check is a self-consistency filter, not an independent rater. They are not human gold.
 Synthetic sets are the only source of the two MISC 2.5 classes with no real example
 (RCP, TS−; see DATASETS.md §3), so any result on those classes reflects synthetic supervision only.
 Like our gold sets, they use AutoMISC's AC± extension.

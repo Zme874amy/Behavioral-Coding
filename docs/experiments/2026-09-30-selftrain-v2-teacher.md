@@ -2,7 +2,11 @@
 
 **Started** 2026-09-30 · **Status** self-training v2 complete (two pools, 3 seeds
 each); Qwen2.5-32B teacher NO-GO; off-the-shelf teacher screen complete
-(2026-10-04): no open model beats the student; track 2 (fine-tuned large
+(2026-10-04), but its HLQC gate is invalid (corrected 2026-10-05): on HLQC no
+open model beats the student, yet on MIV6.3A (report-only) Gemma-4-31B few-shot
+reaches macro-F1 0.583 vs the student's 0.457, so the HLQC ranking reflects
+HLQC's coding conventions, not teacher quality; the re-run gates on the HLQC
+val fold with robust metrics (docs/RERUN_PLAN.md P5); track 2 (fine-tuned large
 teacher) not started · **Backbone** `ft1mix_bare` (1 shared adapter, mixed regime) ·
 **Context length** 5
 

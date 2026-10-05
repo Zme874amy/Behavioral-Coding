@@ -38,6 +38,9 @@ VARIANCE_RULES = {
                  "leave-one-session-out, so no result rests on one fold assignment",
     "single_split": "do not report a single random train/test split as a headline: use the grouped k-fold CV",
 }
+# What the existing code actually does (verified 2026-10-05); the split review's L6 row.
+CHECKPOINT_RULE = ('SFT arms: no selection, the end-of-training adapter is used (3 epochs; no load_best_model_at_end, no eval set). GRPO arms only: best step by macro-F1 on HLQC val fold 0 of 7 (grpo.py / grpo_tc.py ValidationSelector); caveat: their SFT warm start trained on all HLQC including that fold, so the selector is optimistic (no MIV leak). The re-run retrains the warm start without the val fold (docs/RERUN_PLAN.md P3)')
+
 # Exemplars (few-shot, retrieval index, synthesis style anchors); section 10 of the split review.
 EXEMPLAR_RULES = {
     "source": "exemplars come only from the training side of the split: HLQC gold under misc_main; under pooled CV, "
@@ -170,6 +173,7 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
             "annomi.gold (additionally, when the model saw pool.hlqc: self-training/retrieval over the pool)":
                 sorted(twins("pool.hlqc", set(frames["pool.hlqc"].conv_id), "annomi.gold"), key=int),
         },
+        "checkpoint_selection": CHECKPOINT_RULE,
         "notes": "Unchanged from all prior experiments. CASAA sessions duplicating any HLQC session are excluded.",
     }
 
@@ -194,7 +198,7 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
         "recommended_design": "loso for headline numbers (10 folds, no fold-assignment randomness, 9 MIV sessions "
                               "in every training set); 5fold_seed_tied for exploratory arms (training seed s uses "
                               "fold draw s, so the reported spread includes fold-assignment variance)",
-        "checkpoint_selection": "HLQC validation fold as in misc_main (val_folds 7, val_fold 0); never an MIV session",
+        "checkpoint_selection": "as in misc_main (never an MIV session): " + CHECKPOINT_RULE,
         "external_test": man["misc_main"]["test"]["miti.casaa.gold (MISC-mapped)"],
         "exclude": man["misc_main"]["exclude"],
         "notes": "Answers RQ1 as worded (a service adapting on labels it already holds). misc_main remains the "

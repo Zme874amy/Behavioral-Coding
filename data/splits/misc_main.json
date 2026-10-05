@@ -1,4 +1,5 @@
 {
+ "checkpoint_selection": "SFT arms: no selection, the end-of-training adapter is used (3 epochs; no load_best_model_at_end, no eval set). GRPO arms only: best step by macro-F1 on HLQC val fold 0 of 7 (grpo.py / grpo_tc.py ValidationSelector); caveat: their SFT warm start trained on all HLQC including that fold, so the selector is optimistic (no MIV leak). The re-run retrains the warm start without the val fold (docs/RERUN_PLAN.md P3)",
  "dev": {
   "misc.hlqc.gold (5-fold CV, baseline.oof_t1)": {
    "high_001": 3,

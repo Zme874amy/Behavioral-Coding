@@ -61,6 +61,18 @@ There is **no dev split**. Hyperparameters were not tuned per arm; they are fixe
 across the grid (§5) so that arms differ only in the axis under study. The two
 corpora are disjoint, so no evaluation utterance appears in any prompt or target.
 
+**Disclosure (2026-10-05): some design constants were informed by the test set.**
+No test label is trained on, but these choices were made by looking at MIV6.3A:
+the retriever's rare-code list (`agentic.retriever.RARE_T2`: SU, EC, AF, GI),
+`agent_arm --tail-only` (filters *evaluation* rows by gold label), the
+self-training "no cap" codes (`selftrain.select.RARE_DEFAULT`), synthesis
+`RARE_CODES` and the `v3_mivmix` topic counts (`ontology.MIXES["eval"]`),
+`classic.TAIL`, `oof_t1.REFERENCE_T1_ACC`, the flat `eval.SEED_NOISE_FLOOR`, and
+the choice of the main setting (`ft1mix_bare`, ctx 5) by comparing MIV scores.
+Results that depend on them are optimistic by an unknown amount. The re-run
+derives every such constant from each fold's training data
+([RERUN_PLAN.md](RERUN_PLAN.md) P3; split review L5).
+
 Both tiers are predicted for every utterance: **T1** is the coarse group and
 **T2** the fine code within it. Counsellor and client have separate vocabularies,
 which is why results are broken out by scope (`all`, `counsellor`, `client`).

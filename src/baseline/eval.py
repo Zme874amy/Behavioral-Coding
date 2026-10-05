@@ -1599,10 +1599,15 @@ def _compliance_tables(comp: pd.DataFrame) -> list[str]:
 CROSS_SCHEME = {
     "annomi": {
         "label": "AnnoMI — cross-scheme (gold)",
-        "note": "AnnoMI's core codes are identical to MISC: client change/"
-                "sustain/neutral talk on T1, therapist question/reflection/"
-                "information on T2. Out-of-scheme AnnoMI codes and multi-label "
-                "volleys are excluded upstream (see `prep_crossscheme.py`).",
+        "note": "AnnoMI's core codes overlap MISC: client change/sustain/neutral "
+                "talk on T1, therapist question/reflection/information on T2. "
+                "The overlap is approximate, not identical: AnnoMI 'open' is not "
+                "MISC OQ (68/114 disagree) and its SR/CR line differs "
+                "(docs/DATASETS.md). Out-of-scheme AnnoMI codes and multi-label "
+                "volleys are excluded upstream (see `prep_crossscheme.py`). "
+                "**Optimistic:** AnnoMI transcripts 15, 21, 44 and 53 are HLQC "
+                "training sessions and are still included here; the re-run "
+                "excludes them.",
         "levels": {
             "t1": {"client": ["C", "S", "N"]},
             "t2": {"counsellor": ["OQ", "CQ", "SR", "CR", "GI"]},
@@ -1610,10 +1615,12 @@ CROSS_SCHEME = {
     },
     "welivita": {
         "label": "Welivita / MITI — cross-scheme (weak-gold)",
-        "note": "MITI-coded (therapist behaviour), already mapped to MISC T2 in "
-                "the corpus. Counsellor-only, and the labels are weak (not "
-                "consensus gold), so read this as a coarse generalization signal. "
-                "The self-training arm is excluded (it trained on this corpus).",
+        "note": "A MITI variant (labels adapted from MITI 2.0/4.2.1; maps to MITI "
+                "via `eda.registry.WELIVITA_TO_MITI`), scored here after the "
+                "corpus's own mapping to MISC T2. Counsellor-only, and the labels "
+                "are crowd labels (kappa 0.34), not consensus gold, so read this "
+                "as a coarse generalization signal. The self-training arm is "
+                "excluded (it trained on this corpus).",
         "levels": {
             "t2": {"counsellor": ["GI", "ADW", "CR", "SU", "AF", "CQ", "DI",
                                   "SR", "ADP", "OQ", "CO", "EC", "WA"]},

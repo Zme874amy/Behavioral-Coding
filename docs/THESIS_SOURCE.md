@@ -2,6 +2,17 @@
 
 Compiled 28 September 2026 from the repository at the time of writing. This file is a fact pack for a later drafting model. It is not the thesis.
 
+> **Stale in parts — corrections as of 2026-10-05.** This pack is regenerated at the end of the re-run ([RERUN_PLAN.md](RERUN_PLAN.md)). Until then, these corrections override the text below:
+> - **Pending jobs are finished.** Every job listed under "Missing cells and jobs" as pending (170044–170081) ran; 21 that failed on the disk quota were resubmitted as 170168–170191 and finished 2026-09-30. Their results are in `EXPANSION_RESULTS.md` (regenerated 2026-10-05): self-training, v1, v2 boundary and both topic mixes now have 3 matched seeds on the one-adapter backbone (all synthesis variants: real macro-F1 gain; self-training: real loss −0.044); SocialDial rule ns; retrieval on `ft1mix_bare` ns; HLQC CV anchor 0.621. The "Do not claim … pending" bullets about these are superseded.
+> - **Later campaigns are missing here:** self-training v2 and the 32B teacher (NO-GO), the Ollama teacher screen (its HLQC gate is invalid; Gemma-4-31B few-shot 0.583 on MIV, report-only), and the 2026-10-04/05 dataset, annotation-quality and split reviews. See `EXPERIMENT_LOG.md`.
+> - **Gemma and Qwen3.5 were not "not run".** gemma-4-e4b and qwen3.5-9b ran zero-shot through LM Studio before the project (April–May 2026, unscored); Gemma-4-31B, Gemma3-27B, Qwen3.6-27B and others ran few-shot as teacher candidates (2026-10-03/04). Still true: the only *adapted* model is Qwen2.5-7B-Instruct.
+> - **Recovery probe files exist** and are tracked: `outputs/grpo/recovery_*.json` (14 files). `grpo_mix_dec` seed 0: recovery rate 0.069, follow rate 0.837.
+> - **Seeds:** SFT/retrain arms use 42/1/2; GRPO arms use 0/1/2. Several retrain sidecars record `seed: null`; the folder name (`*_s1`, `*_s2`) is the seed record.
+> - **AnnoMI numbers are optimistic:** AnnoMI transcripts 15/21/44/53 are HLQC training sessions and were not excluded.
+> - **Test-informed design constants** exist (EXPERIMENTS.md §"Disclosure"); "not tuned on the test" must be qualified.
+> - **Checkpoint rule:** SFT does no selection (end-of-training adapter); only GRPO selects on HLQC val fold 0/7, and its SFT warm start had trained on that fold.
+> - The synthesis verifier is the same 32B model as the generator, not an independent rater.
+
 ## Rules for the drafting model
 
 - Do not invent a number, interval, seed, job id, dataset size, or citation. If a figure is not in this file or in a file this file names, leave it out or mark it as not yet measured.

@@ -58,11 +58,18 @@ over seeds) accuracy / macro-F1 (learnable) the argument rests on:
 
 | Cell | Arm | T2 acc | T2 F1(learn) |
 |---|---|---|---|
-| F (1-call, 1-ad) | `sc_ft_bare` / `sc_grpo` | 0.660 / 0.660 | 0.485 / 0.481 |
-| A (2-call, 2-ad) | `ft_bare` | 0.642 | 0.446 |
+| F (1-call, 1-ad) | `sc_ft_bare` (1 seed) / `sc_grpo` (3 seeds) | 0.653 / 0.658 | 0.496 / 0.479 |
+| A (2-call, 2-ad) | `ft_bare` Inf-Bare / Inf-CoT (1 seed) | 0.660 / 0.646 | 0.458 / 0.428 |
 | | `grpo_pair_dec` / `grpo_pair_joint` | 0.647 / 0.648 | 0.429 / 0.431 |
-| B (2-call, 1-ad) | `ft1mix_bare` | 0.678 | 0.502 |
+| B (2-call, 1-ad) | `ft1mix_bare` Inf-Bare (3 seeds) / Inf-CoT (1 seed) | 0.673 / 0.666 | 0.493 / 0.490 |
 | | `grpo_mix_dec` / `grpo_mix_joint` | 0.667 / 0.661 | 0.489 / 0.486 |
+
+*Corrected 2026-10-05 from `outputs/baseline_eval/comparison.csv`.* The table
+first written here quoted SFT reference values that no longer match the
+generated grid (`sc_ft_bare` 0.660, `sc_grpo` 0.660, `ft_bare` 0.642,
+`ft1mix_bare` 0.678 — the last is seed 2 alone). The GRPO rows were already
+right. None of the conclusions below change: GRPO still draws level with SFT in
+every cell.
 
 Seed spreads on the generated table are small (±0.001–0.006), so the ~0.01 gaps
 below sit at or inside the noise band.

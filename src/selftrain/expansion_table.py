@@ -76,6 +76,7 @@ class Arm:
     xs_dir: Optional[Path] = None   # dir holding its `_ds<corpus>` cross-scheme files
     xs_skip: tuple = ()             # corpora it must not be scored on (leakage)
     note: str = ""
+    dropped: str = ""               # why a planned arm was abandoned (never run)
     seeds: Dict[int, Path] = field(init=False)
 
     def __post_init__(self):
@@ -92,6 +93,17 @@ BASELINES = {
         42: ANN / "baseline" / "qwen_ft1mix_bare_inf_cot_ctx5.csv",
     }, style="cot"),
 }
+
+
+# docs/DATASETS.md overlap map (2026-10-04): HLQC gold train sessions low_001,
+# high_099, low_033 and low_080 are AnnoMI transcripts 53, 21, 44 and 15.
+ANNOMI_CAVEAT = ("**Caveat (2026-10-04):** every AnnoMI number here includes the four "
+                 "AnnoMI transcripts (15, 21, 44, 53) that are also HLQC training sessions, "
+                 "so it is optimistic; the re-run (docs/RERUN_PLAN.md) scores AnnoMI with "
+                 "the `annomi_own`/MISC-transfer exclusions applied.")
+
+NOGO = ("dropped at the 32B-teacher NO-GO gate (HLQC few-shot macro-F1 0.324 vs "
+        "student 0.399, 2026-09-30); never trained")
 
 
 def _registry() -> List[Arm]:
@@ -128,17 +140,18 @@ def _registry() -> List[Arm]:
         Arm("selftrain_v2", "Self-training v2 (Welivita)", "st2", _seeded("selftrain_v2_1a"),
             xs_dir=s / "selftrain_v2_1a", xs_skip=("welivita",)),
         Arm("selftrain_v2r2", "Self-training v2, round 2 (Welivita)", "st2",
-            _seeded("selftrain_v2r2_1a"), xs_dir=s / "selftrain_v2r2_1a", xs_skip=("welivita",)),
+            _seeded("selftrain_v2r2_1a"), xs_dir=s / "selftrain_v2r2_1a", xs_skip=("welivita",),
+            dropped="round 1 lowered macro-F1 (-0.047, real), so round 2 was not run"),
         Arm("selftrain_v2b", "Self-training v2 (MIV6.3B pool)", "st2", _seeded("selftrain_v2b_1a"),
             xs_dir=s / "selftrain_v2b_1a"),
         Arm("distill_v2", "32B-teacher labels (Welivita)", "st2", _seeded("distill_v2_1a"),
-            xs_dir=s / "distill_v2_1a", xs_skip=("welivita",)),
+            xs_dir=s / "distill_v2_1a", xs_skip=("welivita",), dropped=NOGO),
         Arm("distill_v2b", "32B-teacher labels (MIV6.3B pool)", "st2", _seeded("distill_v2b_1a"),
-            xs_dir=s / "distill_v2b_1a"),
+            xs_dir=s / "distill_v2b_1a", dropped=NOGO),
         Arm("distill_v2_vs_self", "Teacher vs self (Welivita)", "self_vs_teacher",
-            _seeded("distill_v2_1a"), ref="selftrain_v2"),
+            _seeded("distill_v2_1a"), ref="selftrain_v2", dropped=NOGO),
         Arm("distill_v2b_vs_self", "Teacher vs self (MIV6.3B)", "self_vs_teacher",
-            _seeded("distill_v2b_1a"), ref="selftrain_v2b"),
+            _seeded("distill_v2b_1a"), ref="selftrain_v2b", dropped=NOGO),
         # Retrieval: the same 1-adapter model, with retrieved exemplars in the prompt.
         Arm("ag_bare", "Retrieval few-shot on FT1-Mix, Inf-Bare", "retrieval",
             {42: s / "baseline" / "qwen_ag_qwen_ft1mix_bare_inf_bare_ctx5.csv"}),
@@ -245,7 +258,8 @@ def compare(arm: Arm, ref: Arm, level: str = "T2", scope: str = "all") -> dict:
            "level": level, "scope": scope, "seeds_run": len(arm.seeds),
            "seeds_matched": len(matched)}
     if not arm.seeds:
-        return {**row, "verdict_acc": "pending", "verdict_f1": "pending"}
+        v = "dropped" if arm.dropped else "pending"
+        return {**row, "verdict_acc": v, "verdict_f1": v}
     lvl = level.lower()
     arm_pts = {s: _point(_load(p), lvl, scope) for s, p in arm.seeds.items()}
     ref_pts = {s: _point(_load(p), lvl, scope) for s, p in ref.seeds.items()}
@@ -427,6 +441,7 @@ def main() -> None:
                  f"| {_delta(r, 'acc')} | {r['verdict_acc']} |")
     if xs:
         L += ["", "## Cross-scheme generalization (shared codes only)", "",
+              ANNOMI_CAVEAT, "",
               "| Model | Corpus | Level | Speaker | n | Accuracy [95% CI] | Macro-F1 shared [95% CI] | OOV pred |",
               "|---|---|---|---|---:|---:|---:|---:|"]
         for r in xs:
@@ -439,12 +454,16 @@ def main() -> None:
         L += ["", "## Generalization ladder — FT1-Mix baseline, counsellor T2 accuracy", "",
               "Read top to bottom: each rung adds one kind of shift. The cross-scheme rungs are "
               "scored on the shared codes only, so they are not on exactly the same vocabulary "
-              "as the first two.", "",
+              "as the first two. " + ANNOMI_CAVEAT, "",
               "| Rung | Vocabulary | Accuracy [95% CI] |", "|---|---|---:|"]
         for g in rungs:
             L.append(f"| {g['rung']} | {g['vocab']} | {_f(g['acc'])} [{_f(g['lo'])}–{_f(g['hi'])}] |")
     pending = [(a.label, s) for a in arms for s in (SEEDS if a.group == "main" else sorted(a.files))
-               if s in a.files and s not in a.seeds]
+               if s in a.files and s not in a.seeds and not a.dropped]
+    dropped = [a for a in arms if a.dropped and not a.seeds]
+    if dropped:
+        L += ["", "## Dropped (planned, never run)", ""] + [f"- {a.label} — {a.dropped}"
+                                                            for a in dropped]
     if pending:
         L += ["", "## Not yet available", ""] + [f"- {lab} — seed {s}" for lab, s in pending]
     L.append("")

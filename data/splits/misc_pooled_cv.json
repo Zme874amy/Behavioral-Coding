@@ -1,5 +1,5 @@
 {
- "checkpoint_selection": "HLQC validation fold as in misc_main (val_folds 7, val_fold 0); never an MIV session",
+ "checkpoint_selection": "as in misc_main (never an MIV session): SFT arms: no selection, the end-of-training adapter is used (3 epochs; no load_best_model_at_end, no eval set). GRPO arms only: best step by macro-F1 on HLQC val fold 0 of 7 (grpo.py / grpo_tc.py ValidationSelector); caveat: their SFT warm start trained on all HLQC including that fold, so the selector is optimistic (no MIV leak). The re-run retrains the warm start without the val fold (docs/RERUN_PLAN.md P3)",
  "designs": {
   "5fold_seed_tied": {
    "1": {

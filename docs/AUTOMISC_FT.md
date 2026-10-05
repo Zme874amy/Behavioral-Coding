@@ -9,7 +9,10 @@ conditions is the adapter weights.
 ## Design
 
 - **Data:** `data/manual/MIV6.3A_manual.csv` (821 human-consensus utterances,
-  10 conversations). The parser is out of scope (E1); we score against the
+  10 conversations) by default (`dataset.manual_csv`). **The recorded run
+  (job 168271, 2026-09-16) overrode this to HLQC** (1,925 rows, ctx 3); its
+  figures are in THESIS_SOURCE.md "AutoMISC-prompt 5-fold on HLQC" and are not
+  MIV numbers. The parser is out of scope (E1); we score against the
   human-segmented consensus utterances, exactly as the paper does.
 - **CV:** conversation-level 5-fold (no conversation leaks). Zero-shot runs once
   over all rows; fine-tuned predictions are pooled out-of-fold (every utterance
