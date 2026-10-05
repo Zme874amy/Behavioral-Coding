@@ -1,0 +1,11 @@
+{
+  "arm": "ag_tfidf_ft_bare",
+  "style": "cot",
+  "ctx": 5,
+  "n_rows": 821,
+  "artifact": "qwen_ag_tfidf_ft_bare_inf_cot_ctx5.csv",
+  "started_utc": "2026-08-25T02:52:14+00:00",
+  "finished_utc": "2026-08-25T03:20:53+00:00",
+  "git_sha": "3a04564",
+  "slurm_job_id": "166692"
+}

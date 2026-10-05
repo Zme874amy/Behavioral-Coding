@@ -1,0 +1,14 @@
+{
+  "arm": "grpo_pair_joint",
+  "ctx": 5,
+  "seed": 1,
+  "wrong_seed": 0,
+  "n": 821,
+  "gold_cond_acc": 0.8209500609013398,
+  "pred_cond_acc": 0.6492082825822169,
+  "wrong_cond_acc": 0.0048721071863581,
+  "follow_rate": 0.9914738124238733,
+  "recovery_rate": 0.0048721071863581,
+  "gold_minus_pred": 0.17174177831912296,
+  "pred_minus_wrong": 0.6443361753958587
+}

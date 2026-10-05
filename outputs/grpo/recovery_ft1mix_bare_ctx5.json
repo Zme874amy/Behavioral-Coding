@@ -1,0 +1,14 @@
+{
+  "arm": "ft1mix_bare",
+  "ctx": 5,
+  "seed": null,
+  "wrong_seed": 0,
+  "n": 821,
+  "gold_cond_acc": 0.8526187576126675,
+  "pred_cond_acc": 0.6699147381242387,
+  "wrong_cond_acc": 0.08404384896467722,
+  "follow_rate": 0.8160779537149817,
+  "recovery_rate": 0.08404384896467722,
+  "gold_minus_pred": 0.18270401948842874,
+  "pred_minus_wrong": 0.5858708891595615
+}

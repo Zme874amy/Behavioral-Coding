@@ -1,0 +1,11 @@
+{
+  "arm": "grpo_mix_dec",
+  "style": "cot",
+  "ctx": 5,
+  "n_rows": 821,
+  "artifact": "qwen_grpo_mix_dec_inf_cot_ctx5_seed2.csv",
+  "started_utc": "2026-08-30T04:33:29+00:00",
+  "finished_utc": "2026-08-30T05:26:47+00:00",
+  "git_sha": "3a04564",
+  "slurm_job_id": "166970"
+}

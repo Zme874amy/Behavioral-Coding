@@ -1,0 +1,11 @@
+{
+  "arm": "ft_bare_tffull",
+  "style": "bare",
+  "ctx": 5,
+  "n_rows": 821,
+  "artifact": "qwen_ft_bare_tffull_inf_bare_ctx5.csv",
+  "started_utc": "2026-08-19T14:14:50+00:00",
+  "finished_utc": "2026-08-19T14:23:41+00:00",
+  "git_sha": "3a04564",
+  "slurm_job_id": "160635"
+}

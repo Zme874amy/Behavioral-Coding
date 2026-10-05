@@ -1,0 +1,13 @@
+{
+  "arm": "ft1mix_bare",
+  "style": "bare",
+  "ctx": 5,
+  "seed": null,
+  "dataset": "miv63a",
+  "n_rows": 821,
+  "artifact": "qwen_ft1mix_bare_inf_bare_ctx5.csv",
+  "started_utc": "2026-10-02T09:51:56+00:00",
+  "finished_utc": "2026-10-02T10:00:53+00:00",
+  "git_sha": "3a04564",
+  "slurm_job_id": "170429"
+}

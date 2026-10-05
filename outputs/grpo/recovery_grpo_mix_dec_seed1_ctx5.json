@@ -1,0 +1,14 @@
+{
+  "arm": "grpo_mix_dec",
+  "ctx": 5,
+  "seed": 1,
+  "wrong_seed": 0,
+  "n": 821,
+  "gold_cond_acc": 0.8526187576126675,
+  "pred_cond_acc": 0.6686967113276492,
+  "wrong_cond_acc": 0.06942752740560293,
+  "follow_rate": 0.8367844092570037,
+  "recovery_rate": 0.06942752740560293,
+  "gold_minus_pred": 0.1839220462850183,
+  "pred_minus_wrong": 0.5992691839220463
+}

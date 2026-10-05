@@ -33,19 +33,20 @@ SLURM=scripts/mlerp_grpo.slurm
 TALLY=$(mktemp)
 trap 'rm -f "$TALLY"' EXIT
 
-# submit <label> <bigcats|housecats> <train|light> <dep-or-empty> <VAR=val ...>
+# submit <label> bigcats <train|light> <dep-or-empty> <VAR=val ...>
 submit() {
   label="$1"; where="$2"; kind="$3"; dep="$4"; shift 4
 
-  # Concurrency is capped per QOS, not per user: lion allows 4 running jobs,
-  # panther 4, tabby 1. Eight GRPO runs all sit under lion by default and six
-  # of them would idle behind the cap for a full 20-hour wave, so the training
-  # jobs are spread across all three. BigCats permits lion and panther alike;
-  # panther differs only in a 7-day wall, which nothing here needs.
+  # Every GPU job goes to lion (4 concurrent jobs). Do NOT route to panther:
+  # it is capped at gres/gpu=0 (`sacctmgr show qos`), so a GPU job there sits
+  # PENDING with QOSMaxGRESPerJob forever instead of failing. tabby
+  # (HouseCats) allows GPUs but runs 1 job at a time on 20GB MIG slices, which
+  # OOM on a 7B model, so it is also unusable here (see submit_tf_axis.sh).
+  # Jobs beyond the cap simply queue behind it.
   case "$where" in
-    housecats) place="--partition=HouseCats --qos=tabby" ;;
     bigcats)   place="--partition=BigCats --qos=lion" ;;
-    panther)   place="--partition=BigCats --qos=panther" ;;
+    housecats|panther)
+      echo "partition $where cannot run 7B GPU jobs; use bigcats" >&2; exit 1 ;;
     *) echo "bad partition $where" >&2; exit 1 ;;
   esac
   case "$kind" in
@@ -86,15 +87,14 @@ if [ "${CAL:-}" = "none" ]; then
 elif [ -n "${CAL:-}" ]; then
   echo "  reusing queued calibration $CAL" >&2
 else
-  CAL=$(submit cal housecats cal "" STAGE=calibrate CTX=5)
+  CAL=$(submit cal bigcats cal "" STAGE=calibrate CTX=5)
 fi
 
 echo "=== Phase 1: headline arm, 3 seeds ===" >&2
-# One seed onto tabby's single slot, the other two onto panther, leaving all
-# four lion slots for Phase 2 so that every training job can run concurrently.
-G0=$(submit g_s0 housecats train "$CAL" STAGE=grpo SEED=0 CTX=5)
-G1=$(submit g_s1 panther   train "$CAL" STAGE=grpo SEED=1 CTX=5)
-G2=$(submit g_s2 panther   train "$CAL" STAGE=grpo SEED=2 CTX=5)
+# All three seeds on lion; Phase-2 jobs queue behind them under the 4-job cap.
+G0=$(submit g_s0 bigcats   train "$CAL" STAGE=grpo SEED=0 CTX=5)
+G1=$(submit g_s1 bigcats   train "$CAL" STAGE=grpo SEED=1 CTX=5)
+G2=$(submit g_s2 bigcats   train "$CAL" STAGE=grpo SEED=2 CTX=5)
 P0=$(submit p_s0 bigcats light "$G0" STAGE=predict ARM=sc_grpo SEED=0 CTX=5)
 submit p_s1 bigcats light "$G1" STAGE=predict ARM=sc_grpo SEED=1 CTX=5 >/dev/null
 submit p_s2 bigcats light "$G2" STAGE=predict ARM=sc_grpo SEED=2 CTX=5 >/dev/null
@@ -124,10 +124,10 @@ if [ "${SFT3:-}" = "done" ]; then
 else
   SFT3=$(submit sft3_bare bigcats train "" STAGE=sft TARGET=bare CTX=3)
 fi
-submit p3_bare panther light "$SFT3" STAGE=predict ARM=sc_ft_bare CTX=3 >/dev/null
+submit p3_bare bigcats light "$SFT3" STAGE=predict ARM=sc_ft_bare CTX=3 >/dev/null
 # Join whichever of the two gates actually exist into one afterok list.
 G3DEP=$(echo "$SFT3:$CAL" | sed 's/^://; s/:$//')
-G3=$(submit g3_s0 panther train "$G3DEP" STAGE=grpo SEED=0 CTX=3)
+G3=$(submit g3_s0 bigcats train "$G3DEP" STAGE=grpo SEED=0 CTX=3)
 submit p3_s0 bigcats light "$G3" STAGE=predict ARM=sc_grpo SEED=0 CTX=3 >/dev/null
 
 echo >&2

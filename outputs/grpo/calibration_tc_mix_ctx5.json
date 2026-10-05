@@ -1,0 +1,17 @@
+{
+  "regime": "mix",
+  "steps_timed": 5,
+  "s_per_step": 24.03,
+  "s_per_prompt": 6.008,
+  "t2_prompt_tokens": {
+    "mean": 407,
+    "max": 872
+  },
+  "reward_components": {
+    "reward": 0.7537499999999999,
+    "t2/format": 0.99375,
+    "t2/hierarchy": 0.99375,
+    "t2/t2_hit": 0.69375,
+    "rationale_words": 30.99375
+  }
+}

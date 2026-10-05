@@ -1,0 +1,34 @@
+{
+  "steps_timed": 5,
+  "wall_clock_s": 355.1,
+  "s_per_step": 71.02,
+  "prompts_per_step": 4,
+  "s_per_prompt": 17.754,
+  "projected_epoch_hours": 8.14,
+  "projected_run_hours": 16.27,
+  "projected_phase1_hours": 54.3,
+  "projected_phase2_hours": 66.1,
+  "projected_phase3_hours": 19.3,
+  "reward_components": {
+    "reward": 0.7675,
+    "format": 0.975,
+    "hierarchy": 0.95,
+    "t1_hit": 0.8,
+    "t2_hit": 0.6375,
+    "rationale_words": 32.60625
+  },
+  "peak_reserved_gib": 39.9,
+  "gpu_total_gib": 39.5,
+  "vllm_gpu_memory_utilization": 0.45,
+  "vllm_sleep_mode": true,
+  "prompt_tokens": {
+    "counsellor": {
+      "mean": 2488,
+      "max": 2579
+    },
+    "client": {
+      "mean": 1390,
+      "max": 1446
+    }
+  }
+}

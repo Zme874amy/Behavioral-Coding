@@ -1,0 +1,13 @@
+{
+  "arm": "zs",
+  "style": "bare",
+  "ctx": 5,
+  "seed": null,
+  "dataset": "annomi",
+  "n_rows": 9699,
+  "artifact": "qwen_zs_inf_bare_ctx5_dsannomi.csv",
+  "started_utc": "2026-09-15T05:19:42+00:00",
+  "finished_utc": "2026-09-15T06:06:21+00:00",
+  "git_sha": "3a04564",
+  "slurm_job_id": "167927"
+}
