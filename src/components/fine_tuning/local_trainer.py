@@ -315,5 +315,34 @@ def run_local_fine_tuning(
     trainer.train()
     trainer.save_model(local_model_dir)
     log.info(f"Saved fine-tuned model to {local_model_dir}")
+    _write_train_log(trainer, model, local_model_dir)
 
     return local_model_dir
+
+
+def _write_train_log(trainer, model, out_dir) -> None:
+    """Loss curve, peak GPU memory and LoRA placement, next to the adapter.
+
+    save_strategy=no leaves no trainer_state.json, so without this a run keeps
+    no record of whether training converged. `lora_modules_outside_lm` counts
+    LoRA layers placed on a vision/audio tower of a multimodal checkpoint
+    (wasted parameters for our text-only task).
+    """
+    import json
+
+    import torch
+
+    names = [n for n, _ in model.named_modules() if n.endswith(".lora_A")]
+    off_lm = [n for n in names if any(k in n for k in ("vision", "visual", "audio", "image", "projector"))]
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    rec = {
+        "log_history": trainer.state.log_history,
+        "peak_gpu_mem_gb": (round(torch.cuda.max_memory_allocated() / 2**30, 2)
+                            if torch.cuda.is_available() else None),
+        "trainable_params": int(trainable), "total_params": int(total),
+        "n_lora_modules": len(names), "lora_modules_outside_lm": len(off_lm),
+        "lora_outside_lm_examples": off_lm[:5],
+    }
+    Path(out_dir, "train_log.json").write_text(json.dumps(rec, indent=2, default=str))
+
