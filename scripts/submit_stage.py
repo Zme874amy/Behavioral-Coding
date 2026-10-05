@@ -39,7 +39,9 @@ def expand(cfg: dict):
                 for seed in cell.get("seeds", cfg["seeds"]):
                     for fold in range(folds.n_folds(proto["manifest"], proto["design"])):
                         yield {"MANIFEST": proto["manifest"], "DESIGN": proto["design"], "FOLD": fold,
-                               "SEED": seed, "ARM": cell["arm"], "INF": cell["inf"], "STUDENT": st["model"],
+                               "SEED": seed, "ARM": cell["arm"], "INF": cell["inf"],
+                               # staged copy on MLeRP if given (compute nodes are offline)
+                               "STUDENT": st.get("path", st["model"]),
                                "CTX": cfg["ctx"], "PROMPT": cell.get("prompt", cfg["prompt"]), "SOURCE": cell.get("source", ""),
                                "EXTRA": st.get("extra", "")}
 

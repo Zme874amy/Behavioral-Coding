@@ -13,7 +13,7 @@ protocols:
   cold_start: {manifest: misc_main, design: cold_start}
   pooled_loso: {manifest: misc_pooled_cv, design: loso}
   pooled_5fold: {manifest: misc_pooled_cv, design: 5fold_seed_tied}
-students:
+students:   # `path:` = staged copy under /mnt/userdata4/jia-wen/models (results are keyed by its basename)
   # primary (headline, full LOSO): Apache-2.0, ungated, 2026-03; thinking switched off
   # through the chat template (components.hf_load.chat_template_kwargs)
   qwen35_9b: {model: Qwen/Qwen3.5-9B, enabled: false}               # flip after its P5 pilot
