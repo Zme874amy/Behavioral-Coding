@@ -120,6 +120,18 @@ def _loss_drop(hist) -> tuple:
     return round(first, 3), round(last, 3)
 
 
+def reparse(d: pd.DataFrame) -> pd.DataFrame:
+    """Re-parse the saved raw generations with the current parser, using the same
+    allowed sets the run used (T1: speaker's groups; T2: speaker's whole vocabulary,
+    as predict_row does with restrict_t2_to_group=False)."""
+    from automisc_ft.infer import parse_label
+    from schemes.misc import t1_codes, t2_codes
+    d = d.copy()
+    d["t1_label_auto"] = [parse_label(str(r), t1_codes(s)) for r, s in zip(d.t1_raw.fillna(""), d.speaker)]
+    d["t2_label_auto"] = [parse_label(str(r), t2_codes(s)) for r, s in zip(d.t2_raw.fillna(""), d.speaker)]
+    return d
+
+
 def summarise(slug: str) -> dict:
     from baseline import fold_stats
     from baseline.rerun_eval import ROBUST, score_block
@@ -130,7 +142,10 @@ def summarise(slug: str) -> dict:
         train, _ = split()
         learn = fold_stats.learnable_codes(train)
         row["n"] = len(d)
-        row["parseable %"] = round(100 * (1 - (d[["t1_label_auto", "t2_label_auto"]] == "UNKNOWN").any(axis=1).mean()), 1)
+        bad = lambda x: (x[["t1_label_auto", "t2_label_auto"]] == "UNKNOWN").any(axis=1).mean()
+        row["parseable % (strict)"] = round(100 * (1 - bad(d)), 1)
+        d = reparse(d)          # current parser: also resolves full code names (deviation 1)
+        row["parseable %"] = round(100 * (1 - bad(d)), 1)
         f1s, rob = [], []
         for spk in ("counsellor", "client"):
             s = d[(d.speaker == spk) & d.t2_label_GT.notna()]

@@ -78,3 +78,34 @@ def t1_of(speaker: str, t2: str) -> Optional[str]:
 def canonical(code: str) -> str:
     """Resolve a v1 long-form alias (ADWP -> ADW, ...) to the canonical code."""
     return LABEL_ALIASES.get(code, code)
+
+
+# Full names as the prompts spell them (spec YAML v2 / t1 templates), plus the
+# few variants models produce. Used only to resolve an answer written as a name
+# ("Affirm", "Simple Reflection") onto its code; a name shared by several codes
+# (client "Desire" = D+ or D-) resolves only when the caller's allowed set makes
+# it unique (the T2 call allows one T1 group).
+CODE_NAMES: Dict[str, List[str]] = {
+    "CR": ["complex reflection"], "AF": ["affirm", "affirmation"], "SU": ["support"],
+    "RF": ["reframe"], "EC": ["emphasize control", "emphasise control"],
+    "SR": ["simple reflection"],
+    "ADP": ["advise with permission"], "RCP": ["raise concern with permission"],
+    "GI": ["giving information", "give information"],
+    "ADW": ["advise without permission"], "CO": ["confront"], "DI": ["direct"],
+    "RCW": ["raise concern without permission"], "WA": ["warn"],
+    "OQ": ["open question"], "CQ": ["closed question"],
+    "FA": ["facilitate"], "FI": ["filler"], "ST": ["structure"],
+    "N": ["neutral", "follow/neutral"],
+    **{f"{c}{s}": [n, f"{n}{s}"] for c, n in (("D", "desire"), ("AB", "ability"), ("R", "reasons"),
+                                              ("N", "need"), ("C", "commitment"), ("AC", "activation"),
+                                              ("TS", "taking steps"), ("O", "other")) for s in "+-"},
+    "CRL": ["c-reflective", "complex reflective"], "SRL": ["s-reflective", "simple reflective"],
+    "IMC": ["imperative-mico"], "IMI": ["imperative-miin"], "Q": ["question"],
+}
+
+
+def code_from_name(text: str, allowed) -> Optional[str]:
+    """The allowed code whose full name `text` is, if exactly one matches."""
+    t = " ".join(str(text).lower().replace("_", " ").split()).strip(" .:*`\"'")
+    hits = [c for c in allowed if t in CODE_NAMES.get(c, ())]
+    return hits[0] if len(hits) == 1 else None

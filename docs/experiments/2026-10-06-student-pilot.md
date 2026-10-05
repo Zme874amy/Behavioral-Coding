@@ -38,6 +38,17 @@ outside that fold. **MIV6.3A and CASAA are never read.**
    seconds per utterance).
 5. **None passes:** fall back to two families (Qwen3.5, Gemma-4) and say so.
 
+**Deviation 1 (2026-10-06, after the Qwen2.5-7B reference and OLMo-3-7B
+zero-shot runs, before any candidate was ranked).** Under the strict parser, the
+compliance gate failed even for the reference model (94.9%; OLMo 89.4%). Every
+strict failure but one was a valid code written as its full name ("Affirm",
+"Facilitate", "Direct", "label: Support"). The parser now also resolves a code's
+full name when it is unique among the allowed codes (`schemes.misc.code_from_name`;
+the ambiguous client "Desire" stays unresolved unless the T1 group fixes it).
+The change is applied identically to every candidate by re-parsing the saved raw
+generations. Both figures are reported: "parseable % (strict)" and "parseable %"
+(gate). The rule itself is unchanged. This also fixes every future zero-shot arm.
+
 Zero-shot F1 on 369 rows is a coarse signal. It is used only to rank
 candidates for the third slot, never as a result.
 

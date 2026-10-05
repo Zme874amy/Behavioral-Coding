@@ -27,6 +27,7 @@ from automisc_ft.data import (
     t2_codes_for_speaker,
 )
 from components.hf_load import chat_template_kwargs, load_model_and_tokenizer
+from schemes.misc import code_from_name
 from sft.eval import LABEL_ALIASES
 
 
@@ -59,6 +60,14 @@ def parse_label(generated: str, allowed: List[str]) -> str:
     if not generated:
         return "UNKNOWN"
     text = generated.strip()
+
+    # 0) the whole answer, or a "label:" line, is a code's full name ("Affirm",
+    #    "label: Simple Reflection"). Zero-shot models do this often; it resolves
+    #    only if the name is unique among `allowed` (added 2026-10-06, P5 pilot).
+    for cand in [text] + re.findall(r'label["\']?\s*[:=]\s*["\']?([^\n"\'}]+)', text, flags=re.IGNORECASE)[::-1]:
+        hit = code_from_name(cand, allowed)
+        if hit:
+            return hit
 
     # 1) explicit "label": "XX" / label = XX (take the last occurrence)
     field = re.findall(
