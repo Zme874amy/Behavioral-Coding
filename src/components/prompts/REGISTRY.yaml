@@ -331,7 +331,7 @@ prompts:
   setting: frozen rationales for few-shot exemplars
   status: active
   path: baseline/fewshot.py
-  sha256: 18befcbbee4ebe4c8df6ac0aeadbeeeeddb68d7ba3aed3ef1fac0940c2c266df
+  sha256: ba1490a9416d12c0a992f1f020c17f2d65cb63be9151e72243074f83baecfff5
   hash_scope: file
   notes: duplicates rationale_distill; P2 merges them into one prompt
 - id: agent_system

@@ -9,7 +9,7 @@ trajectory sidecar (.jsonl) for the first rows so decisions are auditable.
 
 Backbone defaults to `none` (the base instruct model): the `ft_bare` adapters are
 tuned to emit bare labels and fight multi-step JSON tool-use, so base is the right
-reasoner for an agent. `--tail-only` restricts to rows whose gold T2 is a rare
+reasoner for an agent. (`--tail-only` is disabled: it filtered eval rows by gold label.) It restricted to rows whose gold T2 is a rare
 code (SU/EC/AF/GI) for a cheap pilot.
 
 Smoke test on CPU with a tiny model (validates loop mechanics, not quality):
@@ -53,8 +53,11 @@ def cmd_predict(args) -> None:
     df = load_manual(REPO_ROOT / cfg.dataset.eval_csv)
     df = df.drop(columns=[c for c in df.columns if c.endswith("_auto")])
     if args.tail_only:
-        df = df[df["t2_label_GT"].isin(RARE_T2)].reset_index(drop=True)
-        print(f"tail-only pilot: {len(df)} rows with gold T2 in {RARE_T2}")
+        # Removed 2026-10-05: it chose EVALUATION rows by their gold label, so its
+        # scores are not comparable to anything (docs/RERUN_PLAN.md P3). The one
+        # partial run (agent_tfidf_none_tail, 132/821 rows) stays unscored.
+        raise SystemExit("--tail-only selects evaluation rows by gold label and is disabled; "
+                         "score the full set and read tail F1 from baseline.eval")
 
     limit = args.limit if args.limit is not None else cfg.limit
     n_total = len(df) if limit in (None, "null") else min(int(limit), len(df))

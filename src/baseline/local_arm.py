@@ -49,6 +49,7 @@ Smoke test on CPU with a tiny model:
 from __future__ import annotations
 
 import argparse
+import os
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -385,6 +386,8 @@ def cmd_train(args) -> None:
 
     started = _utc_now()
     cfg = load_config(args.overrides)
+    if getattr(args, "manifest", None):
+        return _train_manifest(args, cfg, started)
     ctx = args.ctx
     target = args.target
     regime = args.regime
@@ -520,6 +523,8 @@ def cmd_predict(args) -> None:
 
     started = _utc_now()
     cfg = load_config(args.overrides)
+    if getattr(args, "manifest", None):
+        return _predict_manifest(args, cfg, started)
     ctx = args.ctx
     arm, style = args.arm, args.inf
     suffix = structure_suffix_for(style)
@@ -692,13 +697,169 @@ def _report(df: Optional[pd.DataFrame], cond: str, save_path: Path,
         )
 
 
+# -----------------------------------------------------------------------------
+# Re-run (manifest) mode. Same training/inference code as above; only where the
+# data comes from and where the outputs go differ (baseline.folds, baseline.rerun).
+# -----------------------------------------------------------------------------
+REGIME_PREFIX = {"pair": "ft", "mixed": "ft1mix", "sequential": "ft1seq"}
+
+
+def _manifest_context(args, cfg):
+    from baseline import folds, rerun
+    source = {"misc.hlqc.gold": args.training_source} if args.training_source else None
+    train_df, test_df, fold_meta = folds.load_fold(
+        args.manifest, args.design, args.fold, args.seed if args.design == "5fold_seed_tied" else None,
+        training_source=source, test_datasets=["misc.miv63a.gold", "misc.hlqc.gold"])
+    key = dict(manifest=args.manifest, design=args.design, student=rerun.student_slug(cfg.model.base_model),
+               ctx=args.ctx, prompt_version=os.environ["PROMPT_VERSION"], seed=args.seed, fold=args.fold,
+               training_source=source)
+    return train_df, test_df, fold_meta, key
+
+
+def _cell_meta(args, cfg, fold_meta, train_df, started) -> dict:
+    from baseline import fold_stats
+    from components.prompts.loader import prompt_fingerprint
+    return {"fold": fold_meta, "train_label_stats": fold_stats.summary(train_df),
+            "prompts": prompt_fingerprint(), "base_model": cfg.model.base_model,
+            "training_seed": args.seed, "config": CONFIG_PATH.name,
+            "overrides": list(args.overrides), "started_utc": started, "finished_utc": _utc_now()}
+
+
+def _train_manifest(args, cfg, started) -> None:
+    from automisc_ft.train import train_adapter_pair, train_single_adapter
+    from baseline import rerun
+    arm = args.arm
+    if arm is None or ARM_ADAPTER.get(arm) is None or arm in ARM_TF:
+        raise SystemExit("manifest mode trains --arm ft_bare / ft1mix_bare / ft1seq_bare "
+                         "(rationale and teacher-forcing arms join in Stages 2-3)")
+    regime, target = ARM_ADAPTER[arm]
+    if target != "bare":
+        raise SystemExit("rationale targets need per-fold rationales (Stage 2); not wired yet")
+    train_df, _, fold_meta, key = _manifest_context(args, cfg)
+    positions = list(range(len(train_df)))[: args.limit or None]
+    k = {x: key[x] for x in ("manifest", "design", "student", "ctx", "prompt_version", "seed", "fold",
+                             "training_source")}
+    out_dir = rerun.adapter_path(arm=arm, **k)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[rerun] train {arm} {args.manifest}/{args.design} fold {args.fold} seed {args.seed} "
+          f"prompts {key['prompt_version']}: {len(positions)} rows -> {out_dir}")
+    if regime == "pair":
+        t1, t2 = train_adapter_pair(cfg, train_df, positions, out_dir, "_bare", None)
+        adapters = {"t1_adapter": str(t1), "t2_adapter": str(t2)}
+    else:
+        shared = train_single_adapter(cfg, train_df, positions, out_dir, "_bare", None, regime)
+        adapters = {"shared_adapter": str(shared)}
+    meta = {"arm": arm, "regime": regime, "target": target, "n_rows": len(positions),
+            "n_epochs": cfg.training.num_train_epochs, "learning_rate": cfg.training.learning_rate,
+            "lora": {"r": cfg.model.peft_r, "alpha": cfg.model.peft_alpha}, **adapters,
+            **_cell_meta(args, cfg, fold_meta, train_df, started)}
+    rerun.write_meta(out_dir / "train_metadata.csv", meta)
+
+
+def _predict_manifest(args, cfg, started) -> None:
+    import shutil
+    from automisc_ft.infer import TieredAnnotator
+    from baseline import rerun
+    from baseline.fewshot import build_exemplars
+
+    arm, style = args.arm, args.inf
+    train_df, test_df, fold_meta, key = _manifest_context(args, cfg)
+    test_df = test_df.drop(columns=[c for c in test_df.columns if c.endswith("_auto")])
+    k = {x: key[x] for x in ("manifest", "design", "student", "ctx", "prompt_version", "seed", "fold",
+                             "training_source")}
+    save_path = rerun.result_path(arm=arm, style=style, **k)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    done = set()
+    existing_df = None
+    if save_path.exists():
+        existing_df = pd.read_csv(save_path)
+        done = set(existing_df["uid"])
+    positions = [i for i in range(len(test_df)) if test_df.iloc[i]["uid"] not in done][: args.limit or None]
+
+    t1 = t2 = shared = None
+    spec = ARM_ADAPTER[arm]
+    if spec is not None:
+        if arm in ARM_TF or spec[1] != "bare":
+            raise SystemExit("manifest mode predicts zs / fs / *_bare fine-tuned arms for now")
+        root = rerun.adapter_path(arm=arm, **k)
+        if spec[0] == "pair":
+            t1, t2 = root / "t1" / "local_finetuned_model", root / "t2" / "local_finetuned_model"
+        else:
+            shared = root / "local_finetuned_model"
+        for p in (t1, t2, shared):
+            if p is not None and not p.exists():
+                raise SystemExit(f"Missing adapter {p}; train it with the same --manifest/--design/--fold/--seed")
+
+    fewshot_provider, exemplar_info = None, None
+    if arm == "fs":
+        if style != "bare":
+            raise SystemExit("few-shot CoT needs per-fold exemplar rationales (Stage 2)")
+        ex_seed = args.seed
+        exemplars = build_exemplars(args.ctx, seed=ex_seed, source=train_df)
+        fewshot_provider = _make_fewshot_provider(exemplars, rationales=False)
+        exemplar_info = {"seed": ex_seed, "source": "fold training side",
+                         "sessions": sorted({e["conv_id"] for v in exemplars.values()
+                                             for e in v["t1"] + [x for g in v["t2"].values() for x in g]})}
+
+    if positions:
+        max_input_len = int(cfg.inference.max_input_len[arm])
+        annotator = TieredAnnotator(
+            base_model=cfg.model.base_model,
+            t1_adapter_dir=str(t1) if t1 else None, t2_adapter_dir=str(t2) if t2 else None,
+            shared_adapter_dir=str(shared) if shared else None,
+            force_cpu=bool(cfg.inference.force_cpu),
+            trust_remote_code=bool(cfg.model.get("trust_remote_code", False)),
+            max_new_tokens=int(cfg.inference.max_new_tokens), max_input_len=max_input_len,
+            structure_suffix=structure_suffix_for(style), fewshot_provider=fewshot_provider)
+        rows: List[Dict] = []
+
+        def save() -> None:
+            nonlocal existing_df, rows
+            if rows:
+                out = pd.DataFrame(rows)
+                existing_df = out if existing_df is None else pd.concat([existing_df, out], ignore_index=True)
+                existing_df.to_csv(save_path, index=False)
+                rows = []
+        try:
+            for pos in tqdm(positions, desc=f"{arm}_{style} fold{args.fold}", unit="utt"):
+                pred = annotator.predict_row(test_df, pos, cfg.annotator.context_mode, args.ctx,
+                                             bool(cfg.annotator.get("restrict_t2_to_group", False)))
+                rows.append({**test_df.iloc[pos].to_dict(),
+                             "t1_label_auto": pred["t1_pred"], "t2_label_auto": pred["t2_pred"],
+                             "t1_raw": pred["t1_raw"], "t2_raw": pred["t2_raw"],
+                             "t1_emitted_rationale": pred["t1_emitted_rationale"],
+                             "t2_emitted_rationale": pred["t2_emitted_rationale"],
+                             "t1_n_prompt_tokens": pred["t1_n_prompt_tokens"],
+                             "t2_n_prompt_tokens": pred["t2_n_prompt_tokens"],
+                             "t1_n_gen_tokens": pred["t1_n_gen_tokens"],
+                             "t2_n_gen_tokens": pred["t2_n_gen_tokens"]})
+                if len(rows) >= int(cfg.checkpoint_every):
+                    save()
+        finally:
+            save()
+            annotator.close()
+        _report(existing_df, f"{arm}_inf_{style}", save_path, int(cfg.inference.max_new_tokens), max_input_len)
+
+    n = 0 if existing_df is None else len(existing_df)
+    complete = n == len(test_df)
+    rerun.write_meta(save_path, {"arm": arm, "style": style, "n_rows": n, "n_expected": len(test_df),
+                                 "complete": complete, "exemplars": exemplar_info,
+                                 "adapter": str(shared or t1 or "") or None,
+                                 **_cell_meta(args, cfg, fold_meta, train_df, started)})
+    print(f"[rerun] {n}/{len(test_df)} rows -> {save_path}")
+    if complete and spec is not None and os.environ.get("KEEP_ADAPTERS") != "1" and args.drop_adapter:
+        shutil.rmtree(rerun.adapter_path(arm=arm, **k), ignore_errors=True)
+        print("[rerun] fold adapter deleted after a complete prediction (--drop-adapter)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_train = sub.add_parser("train", help="train the LoRA adapter(s) for one arm")
-    p_train.add_argument("--target", choices=TRAIN_TARGETS, required=True,
+    p_train.add_argument("--target", choices=TRAIN_TARGETS, default=None,
                          help="bare = label-only targets; rat = rationale + label targets")
     p_train.add_argument("--regime", choices=REGIMES, default="pair",
                          help="pair = one adapter per tier (2 adapters); "
@@ -717,8 +878,22 @@ def main() -> None:
     p_pred.add_argument("--arm", choices=ARMS, required=True)
     p_pred.add_argument("--inf", choices=STYLES, required=True,
                         help="inference prompt style")
+    p_pred.add_argument("--drop-adapter", action="store_true",
+                        help="manifest mode: delete this fold's adapter once its prediction file is "
+                             "complete (disk quota); KEEP_ADAPTERS=1 overrides")
 
+    p_train.add_argument("--arm", choices=ARMS, default=None,
+                         help="manifest mode: the fine-tuning arm to train (sets --regime/--target)")
     for p in (p_train, p_pred):
+        p.add_argument("--manifest", default=None,
+                       help="re-run mode: data/splits manifest (misc_main, misc_pooled_cv, ...); "
+                            "train/test come from baseline.folds, results from baseline.rerun paths")
+        p.add_argument("--design", default=None, help="manifest design (cold_start, loso, 5fold_seed_tied)")
+        p.add_argument("--fold", type=int, default=0)
+        p.add_argument("--training-source", default=None,
+                       help="swap the HLQC training file, e.g. misc.hlqc.gold.cleaned (ablation)")
+        p.add_argument("--prompt-version", default=None,
+                       help="prompt set (default v2 in manifest mode, v1 otherwise)")
         p.add_argument("--seed", type=int, default=None,
                        help="replicate index for the teacher-forcing arms. Gives "
                             "the run its own adapter tree and a _seed{N} result "
@@ -732,6 +907,15 @@ def main() -> None:
                        help="OmegaConf dotlist overrides, e.g. inference.force_cpu=true")
 
     args = parser.parse_args()
+
+    if args.cmd == "train" and not args.manifest and args.target is None:
+        parser.error("--target is required (manifest mode uses --arm instead)")
+    if args.manifest:
+        if args.seed is None:
+            parser.error("manifest mode needs --seed (42/1/2)")
+        os.environ["PROMPT_VERSION"] = args.prompt_version or "v2"
+    elif args.prompt_version:
+        os.environ["PROMPT_VERSION"] = args.prompt_version
 
     if args.ctx is None:
         args.ctx = int(load_config(args.overrides).annotator.num_context_turns)
