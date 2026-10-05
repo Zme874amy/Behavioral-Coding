@@ -250,10 +250,12 @@ Three channels put HLQC gold text in front of a model:
 
 | Route | CASAA MITI macro-F1 | CASAA acc |
 |---|---:|---:|
-| MISC gold (HLQC + MIV) only | 0.246 | 0.399 |
+| MISC gold (HLQC + MIV) only | 0.247 | 0.401 |
 | Welivita, all labels | 0.282 | 0.347 |
 | Welivita, agreed labels | 0.303 | 0.364 |
-| **Welivita (agreed) + MISC gold** | **0.335** | **0.429** |
+| **Welivita (agreed) + MISC gold** | **0.339** | **0.433** |
+
+*Updated 2026-10-05: the MISC→MITI map now drops Reframe (no MITI code; 10 rows) instead of forcing it to NC; before: 0.246/0.399 and 0.335/0.429.*
 
 - **Consequence:**
   - For MITI there are now **two datasets in the same scheme:** Welivita for training and selection (its 5-fold CV), and CASAA as the reference test.

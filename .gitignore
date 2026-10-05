@@ -18,6 +18,9 @@ __pycache__/
 *.jsonl
 !data/manual/
 !data/manual/*.csv
+# Derived ablation copies (eda.clean_apply): small, and MLeRP needs them.
+!data/clean/
+!data/clean/*.csv
 
 # Model weights and trainer state: regenerable, and individually large enough
 # that GitHub rejects them (a Qwen-7B optimizer.pt is ~320MB against a 100MB

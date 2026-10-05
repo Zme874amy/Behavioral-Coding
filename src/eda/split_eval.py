@@ -287,7 +287,7 @@ def exemplar_sources() -> pd.DataFrame:
 
 def miti_routes() -> pd.DataFrame:
     """Routes to a MITI coder, scored on CASAA (clean sessions, single-code counsellor turns, excl. Seek)."""
-    from eda.quality import MISC_TO_MITI
+    from schemes.mappings import misc_to_miti
     C = registry.load("miti.casaa.gold")
     keep = set(json.load(open(registry.REPO / "data/splits/casaa_test.json"))["test"])
     T = C[C.conv_id.isin(keep) & (C.speaker == "counsellor") & C.native.notna()
@@ -296,7 +296,9 @@ def miti_routes() -> pd.DataFrame:
     L = w[(w.speaker == "counsellor") & w.miti.notna()]
     H, M = registry.load("misc.hlqc.gold"), registry.load("misc.miv63a.gold")
     misc = pd.concat([H, M])
-    misc = misc[misc.speaker == "counsellor"].assign(miti=lambda d: d.t2.map(lambda c: MISC_TO_MITI.get(c, "NC")))
+    # Codes with no MITI counterpart (RF) are dropped, not forced to NC.
+    misc = misc[misc.speaker == "counsellor"].assign(miti=lambda d: d.t2.map(misc_to_miti))
+    misc = misc[misc.miti.notna()]
     labs = sorted(set(T.native) - {"Seek"})
     rows = {}
     for name, tr_text, tr_y in (

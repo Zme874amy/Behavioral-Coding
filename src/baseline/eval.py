@@ -1616,7 +1616,7 @@ CROSS_SCHEME = {
     "welivita": {
         "label": "Welivita / MITI — cross-scheme (weak-gold)",
         "note": "A MITI variant (labels adapted from MITI 2.0/4.2.1; maps to MITI "
-                "via `eda.registry.WELIVITA_TO_MITI`), scored here after the "
+                "via `schemes.mappings.WELIVITA_TO_MITI`), scored here after the "
                 "corpus's own mapping to MISC T2. Counsellor-only, and the labels "
                 "are crowd labels (kappa 0.34), not consensus gold, so read this "
                 "as a coarse generalization signal. The self-training arm is "

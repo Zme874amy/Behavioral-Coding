@@ -32,23 +32,9 @@ from sft.data import (
     build_completion,
 )
 
-# -----------------------------------------------------------------------------
-# Tier-1 grouping -> candidate Tier-2 codes. Mirrors the spec YAMLs and is used
-# to (optionally) restrict T2 parsing to the predicted T1 group.
-# -----------------------------------------------------------------------------
-COUNSELLOR_GROUPS: Dict[str, List[str]] = {
-    "CRL": ["CR", "AF", "SU", "RF", "EC"],
-    "SRL": ["SR"],
-    "IMC": ["ADP", "RCP", "GI"],
-    "IMI": ["ADW", "CO", "DI", "RCW", "WA"],
-    "Q": ["OQ", "CQ"],
-    "O": ["FA", "FI", "ST"],
-}
-CLIENT_GROUPS: Dict[str, List[str]] = {
-    "C": ["O+", "D+", "AB+", "R+", "N+", "C+", "AC+", "TS+"],
-    "S": ["O-", "D-", "AB-", "R-", "N-", "C-", "AC-", "TS-"],
-    "N": ["N"],
-}
+# Tier-1 grouping -> candidate Tier-2 codes, used to (optionally) restrict T2
+# parsing to the predicted T1 group. Defined once in `schemes.misc`.
+from schemes.misc import CLIENT_GROUPS, COUNSELLOR_GROUPS  # noqa: E402
 
 
 def t1_codes_for_speaker(speaker: str) -> List[str]:

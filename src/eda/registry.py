@@ -332,8 +332,16 @@ LOADERS: Dict[str, Callable[[], pd.DataFrame]] = {
 }
 
 
+# Derived copies of a real dataset (never edited in place). Kept out of LOADERS so
+# load_all(), the overlap map and the split manifests never count them twice.
+DERIVED: Dict[str, Callable[[], pd.DataFrame]] = {
+    # eda.clean_apply: R1 FI->FA acknowledgements, R2 T1:=group(T2); ablation only.
+    "misc.hlqc.gold.cleaned": lambda: _misc_gold(D / "clean" / "misc.hlqc.gold.cleaned.csv", "misc.hlqc.gold.cleaned"),
+}
+
+
 def load(dataset_id: str) -> pd.DataFrame:
-    return LOADERS[dataset_id]()
+    return LOADERS[dataset_id]() if dataset_id in LOADERS else DERIVED[dataset_id]()
 
 
 REAL_IDS = [k for k in LOADERS if not k.startswith("synth.")]
@@ -363,70 +371,12 @@ def miv_outcomes(run: str = "A") -> pd.DataFrame:
 #             "Behavior counts" + "Global ratings" sections and the coding summary sheet
 #   Welivita  Welivita & Pu (COLING 2022) Table 1 (15 labels adapted from MITI 2.0 / 4.2.1)
 #   AnnoMI    Wu et al. (Future Internet 2023) Sec. 4 utterance attributes
-HANDBOOK = {
-    "MISC 2.5": {
-        "counsellor": ["ADP", "ADW", "AF", "CO", "DI", "EC", "FA", "FI", "GI", "OQ", "CQ",
-                       "RCP", "RCW", "SR", "CR", "RF", "SU", "ST", "WA"],
-        "client": ["FN"] + [f"{c}{v}" for c in ("C", "R", "D", "A", "N", "TS", "O") for v in "+-"],
-        "either": ["NC"],
-        "globals": ["Acceptance", "Empathy", "Direction", "Autonomy Support", "Collaboration", "Evocation",
-                    "Self-Exploration (client)"],
-        "notes": "SR/CR require a valence (+/-/0/+-) in the manual; Ask is part of Follow/Neutral (FN).",
-    },
-    "MITI 4.2.1": {
-        "counsellor": ["GI", "Persuade", "Persuade with Permission", "Q", "SR", "CR", "AF", "Seek",
-                       "Emphasize", "Confront"],
-        "client": [],
-        "globals": ["Cultivating Change Talk", "Softening Sustain Talk", "Partnership", "Empathy"],
-        "notes": "Clients are not coded; Q is not split into open/closed; uncodable utterances get no code.",
-    },
-    "Welivita (MITI-derived)": {
-        "counsellor": ["Closed Question", "Open Question", "Simple Reflection", "Complex Reflection",
-                       "Give Information", "Advise with Permission", "Affirm", "Emphasize Autonomy", "Support",
-                       "Advise without Permission", "Confront", "Direct", "Warn", "Self-Disclose", "Other"],
-        "client": [],
-        "notes": "A MITI variant: labels adapted from MITI 2.0 and 4.2.1 (open/closed questions, Direct, Warn, Support from "
-                 "earlier MITI versions) plus Self-Disclose and Other. Maps to MITI 4.2.1 via WELIVITA_TO_MITI. Seekers are not coded.",
-    },
-    "AnnoMI": {
-        "counsellor": ["question:open", "question:closed", "reflection:simple", "reflection:complex",
-                       "input:information", "input:advice", "input:options", "input:negotiation/goal-setting",
-                       "main:question", "main:input", "main:reflection", "main:other"],
-        "client": ["change", "neutral", "sustain"],
-        "notes": "Question/Input/Reflection are separate attributes that can co-occur in one utterance; "
-                 "a single Main Behaviour is chosen per utterance.",
-    },
-}
-
-# Welivita's 15 labels (adapted from MITI 2.0 and 4.2.1) -> MITI 4.2.1, with the manual basis.
-# exact 57% / approximate 34% / none 8% of listener labels (docs/experiments/2026-10-05-split-review.md section 12).
-WELIVITA_TO_MITI = {
-    "Closed Question": ("Q", "exact", "MITI 4.2.1 does not split open/closed"),
-    "Open Question": ("Q", "exact", "MITI 4.2.1 does not split open/closed"),
-    "Simple Reflection": ("SR", "exact", ""),
-    "Complex Reflection": ("CR", "exact", ""),
-    "Affirm": ("AF", "exact", "MITI 4.2.1 Affirm is stricter than earlier versions (p.26)"),
-    "Emphasize Autonomy": ("Emphasize", "exact", ""),
-    "Confront": ("Confront", "exact", ""),
-    "Advise with Permission": ("PwP", "exact", "E.4.c: permission asked/given or autonomy-supportive preface"),
-    "Advise without Permission": ("Persuade", "exact", "E.4.b: advice/suggestions without autonomy emphasis"),
-    "Warn": ("Confront", "exact", "E.4.g.2 lists 'warning' under Confront"),
-    "Support": ("NC", "exact", "p.26: statements of support are no longer coded ('I know it's really hard to stop smoking')"),
-    "Other": ("NC", "exact", "F: greetings and off-topic statements are not coded"),
-    "Give Information": ("GI", "approx", "Welivita GI includes opinions; MITI codes unsolicited opinions as Persuade (E.4.b)"),
-    "Direct": ("Persuade", "approx", "imperatives are advice (Persuade); with disapproval they are Confront"),
-    "Self-Disclose": (None, "none", "Persuade only when used to persuade (E.4.b), otherwise not coded: needs context"),
-}
-
-# Our MISC vocabulary vs the MISC 2.5 handbook (AutoMISC naming in brackets).
-OUR_MISC_ALIASES = {"N": "FN", **{f"AB{v}": f"A{v}" for v in "+-"}}
-MISC_EXTENSIONS = {
-    "AC+": "AutoMISC addition (Activation; thesis footnote 1 cites Miller & Rollnick, Motivational Interviewing, 4th ed. 2023, mobilising change talk); not in MISC 2.5 or MISC 2.1. "
-           "In the manual, 'offering alternatives' is Commitment (C+).",
-    "AC-": "AutoMISC addition (Activation-); not in MISC 2.5.",
-}
-MISC_MICO = {"AF", "ADP", "EC", "RCP", "SU", "OQ", "SR", "CR"}      # manual p.47 (sMICO incl. OQ + reflections)
-MISC_MIIN = {"ADW", "CO", "DI", "RCW", "WA"}                          # manual pp.47-48
+from schemes import HANDBOOK  # noqa: E402
+from schemes.mappings import WELIVITA_TO_MITI  # noqa: E402
+from schemes.misc import EXTENSIONS as MISC_EXTENSIONS  # noqa: E402
+from schemes.misc import HANDBOOK_NAMES as OUR_MISC_ALIASES  # noqa: E402
+from schemes.misc import MIIN as MISC_MIIN  # noqa: E402
+from schemes.misc import MICO as MISC_MICO  # noqa: E402
 
 
 def handbook_check(frames: Dict[str, pd.DataFrame] = None) -> pd.DataFrame:

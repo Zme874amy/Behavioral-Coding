@@ -72,12 +72,7 @@ def _load_hf(
 # Production flat.j2 templates use longer abbreviations for a few codes
 # (ADWP/RCWP/CON/DIR) than the canonical vocab in `sft.data`. Map them so the
 # parser accepts either form regardless of which prompt the model saw.
-LABEL_ALIASES = {
-    "ADWP": "ADW",
-    "RCWP": "RCW",
-    "CON": "CO",
-    "DIR": "DI",
-}
+from schemes.misc import LABEL_ALIASES  # noqa: E402  (ADWP->ADW, RCWP->RCW, CON->CO, DIR->DI)
 
 
 def _parse_label(generated: str, allowed: List[str]) -> str:

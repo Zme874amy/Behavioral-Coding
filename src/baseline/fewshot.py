@@ -45,29 +45,17 @@ def exemplars_path(num_context_turns: int) -> Path:
         return legacy
     return suffixed
 
-# Valid T2 codes per T1 group (from the prompt specs / response formats).
-T2_GROUPS = {
-    "counsellor": {
-        "CRL": ["CR", "AF", "SU", "RF", "EC"],
-        "SRL": ["SR"],
-        "IMC": ["ADP", "RCP", "GI"],
-        "IMI": ["ADW", "RCW", "WA", "DI", "CO"],
-        "Q": ["OQ", "CQ"],
-        "O": ["FA", "FI", "ST"],
-    },
-    "client": {
-        "C": ["D+", "AB+", "R+", "N+", "C+", "AC+", "TS+", "O+"],
-        "S": ["D-", "AB-", "R-", "N-", "C-", "AC-", "TS-", "O-"],
-        "N": ["N"],
-    },
-}
+# Valid T2 codes per T1 group, per speaker (schemes.misc). The v1 exemplar files
+# in data/fewshot/ are frozen, so this ordering does not change them.
+from schemes.misc import GROUPS as T2_GROUPS  # noqa: E402
 
 
 class _Rationale(BaseModel):
     explanation: str
 
 
-def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame, num_context_turns: int) -> dict | None:
+def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame, num_context_turns: int,
+                   seed: int = SEED) -> dict | None:
     """Pick one exemplar row, preferring mid-length utterances."""
     if candidates.empty:
         return None
@@ -75,7 +63,7 @@ def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame, num_context_turns
         candidates["utt_text"].str.len().between(20, 400)
     ]
     pool = preferred if not preferred.empty else candidates
-    row = pool.sample(1, random_state=SEED).iloc[0]
+    row = pool.sample(1, random_state=seed).iloc[0]
     transcript = build_context_excerpt(
         df, int(row.name), CONTEXT_MODE, num_context_turns
     )
@@ -85,11 +73,22 @@ def _pick_exemplar(df: pd.DataFrame, candidates: pd.DataFrame, num_context_turns
         "utterance": row["utt_text"],
         "t1_label": row["t1_label_GT"],
         "t2_label": row["t2_label_GT"],
+        "conv_id": row["conv_id"],
     }
 
 
-def build_exemplars(num_context_turns: int = DEFAULT_CONTEXT_TURNS) -> dict:
-    df = pd.read_csv(HLQC_PATH).reset_index(drop=True)
+def build_exemplars(num_context_turns: int = DEFAULT_CONTEXT_TURNS, seed: int = SEED,
+                    source: pd.DataFrame | None = None, exclude_sessions=()) -> dict:
+    """One exemplar per T1 group and per T2 code, drawn with `seed`.
+
+    `source` is the TRAINING side of the fold (default: HLQC gold, the v1
+    behaviour); exemplars never come from the test side. `exclude_sessions`
+    drops sessions the manifest's exemplar_rules exclude (e.g. HLQC sessions
+    duplicated in a transfer test set). Each exemplar records its conv_id, so
+    scoring on the exemplars' own corpus can drop those sessions. The re-run
+    uses >= 3 draws (seeds 42/1/2) per fold (docs/RERUN_PLAN.md P2).
+    """
+    df = (pd.read_csv(HLQC_PATH) if source is None else source).reset_index(drop=True)
     exemplars = {}
     for speaker, groups in T2_GROUPS.items():
         spk_df = df[df["speaker"] == speaker]
@@ -102,7 +101,8 @@ def build_exemplars(num_context_turns: int = DEFAULT_CONTEXT_TURNS) -> dict:
                 (spk_df["t1_label_GT"] == t1_code)
                 & (spk_df["t2_label_GT"].isin(t2_codes))
             ]
-            ex = _pick_exemplar(df, consistent, num_context_turns)
+            consistent = consistent[~consistent["conv_id"].isin(set(exclude_sessions))]
+            ex = _pick_exemplar(df, consistent, num_context_turns, seed)
             if ex is not None:
                 t1_exemplars.append(ex)
             else:
@@ -111,7 +111,7 @@ def build_exemplars(num_context_turns: int = DEFAULT_CONTEXT_TURNS) -> dict:
             group_list = []
             for t2_code in t2_codes:
                 cand = consistent[consistent["t2_label_GT"] == t2_code]
-                ex2 = _pick_exemplar(df, cand, num_context_turns)
+                ex2 = _pick_exemplar(df, cand, num_context_turns, seed)
                 if ex2 is not None:
                     group_list.append(ex2)
                 else:

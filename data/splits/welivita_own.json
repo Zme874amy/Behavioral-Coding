@@ -2716,7 +2716,7 @@
  },
  "label_subset": "listener rows with stage1_agreed (ann1 == ann2): 7152 rows; the remaining rows are context only",
  "notes": "Duplicate dialogues and same-post threads (containment >= 0.10) share a fold; stratified by source.",
- "scheme": "Welivita, a MITI variant (15 codes; maps to MITI 4.2.1 via registry.WELIVITA_TO_MITI)",
+ "scheme": "Welivita, a MITI variant (15 codes; maps to MITI 4.2.1 via schemes.mappings.WELIVITA_TO_MITI)",
  "seed": 42,
  "variance_rules": {
   "fold_draw": "for k-fold designs, re-draw the fold assignment with each training seed (seed-tied) or use leave-one-session-out, so no result rests on one fold assignment",

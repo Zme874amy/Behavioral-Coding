@@ -23,25 +23,9 @@ from pathlib import Path
 
 import pandas as pd
 
-# MITI listener label -> MISC 2.5 counsellor T2 code, for optional weak-sup
-# gating in select.py. Labels with no clean MISC counterpart are left unmapped.
-MITI_TO_MISC_T2 = {
-    "Give Information": "GI",
-    "Advise without Permission": "ADW",
-    "Advise with Permission": "ADP",
-    "Complex Reflection": "CR",
-    "Simple Reflection": "SR",
-    "Support": "SU",
-    "Affirm": "AF",
-    "Closed Question": "CQ",
-    "Open Question": "OQ",
-    "Direct": "DI",
-    "Confront": "CO",
-    "Emphasize Autonomy": "EC",
-    "Warn": "WA",
-    "Reframe": "RF",
-    "Structure": "ST",
-}
+# Welivita listener label -> MISC 2.5 counsellor T2 (schemes.mappings). Labels
+# with no clean MISC counterpart (Self-Disclose, Other) are left unmapped.
+from schemes.mappings import WELIVITA_TO_MISC_T2 as MITI_TO_MISC_T2  # noqa: E402
 
 
 def ingest_welivita(src: Path) -> pd.DataFrame:

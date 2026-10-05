@@ -207,11 +207,7 @@ def align(a: pd.DataFrame, b: pd.DataFrame, min_cover: float = 0.5) -> Tuple[pd.
     return pd.DataFrame(rows), stats
 
 
-MISC_TO_ANNOMI = {"OQ": "question", "CQ": "question", "SR": "reflection", "CR": "reflection",
-                  "GI": "therapist_input", "ADP": "therapist_input", "ADW": "therapist_input"}
-MISC_TO_MITI = {"SR": "SR", "CR": "CR", "OQ": "Q", "CQ": "Q", "GI": "GI", "AF": "AF", "EC": "Emphasize",
-                "CO": "Confront", "FA": "NC", "FI": "NC", "ST": "NC", "ADW": "Persuade", "RCW": "Persuade",
-                "WA": "Persuade", "DI": "Persuade", "ADP": "PwP", "RCP": "PwP"}
+from schemes.mappings import MISC_TO_ANNOMI, MISC_TO_MITI  # noqa: E402
 
 
 def cross_annotation() -> Dict[str, object]:

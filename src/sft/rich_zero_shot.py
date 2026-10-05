@@ -42,12 +42,7 @@ from sft.data import (  # noqa: E402
 # Production flat.j2 templates use slightly longer abbreviations than the
 # label vocabulary the dataset uses. Normalise the model's output so both
 # sets resolve to the canonical short form.
-LABEL_ALIASES = {
-    "ADWP": "ADW",
-    "RCWP": "RCW",
-    "CON": "CO",
-    "DIR": "DI",
-}
+from schemes.misc import LABEL_ALIASES  # noqa: E402  (ADWP->ADW, RCWP->RCW, CON->CO, DIR->DI)
 
 
 def build_rich_prompt(speaker: str, utt_text: str, class_structure: str) -> str:

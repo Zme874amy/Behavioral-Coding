@@ -90,11 +90,7 @@ CODE_FORMS = {
 MULTI_FORMS = {("persuade", "with", "permission"): "PwP", ("persuasion", "with", "permission"): "PwP",
                ("not", "coded"): "NC"}
 CANCEL = {("ruled", "out"), ("rule", "out"), ("not", "coded")}
-MITI_TO_MISC = {  # canonical MITI code -> (T1, T2 or None)
-    "SR": ("SRL", "SR"), "CR": ("CRL", "CR"), "AF": ("CRL", "AF"),
-    "Emphasize": ("CRL", "EC"), "GI": ("IMC", "GI"), "Confront": ("IMI", "CO"),
-    "Q": ("Q", None), "NC": ("O", None),
-}
+from schemes.mappings import MITI_TO_MISC  # noqa: E402  canonical MITI code -> (T1, T2 or None)
 # Same session as an HLQC transcript (5-gram overlap with the HLQC ASR text, checked
 # 2026-10-04). Drop these from evaluation of anything trained on HLQC.
 HLQC_OVERLAP = {

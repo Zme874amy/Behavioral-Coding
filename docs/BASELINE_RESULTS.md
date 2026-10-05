@@ -1057,7 +1057,7 @@ AnnoMI's core codes overlap MISC: client change/sustain/neutral talk on T1, ther
 
 ## Welivita / MITI — cross-scheme (weak-gold)
 
-A MITI variant (labels adapted from MITI 2.0/4.2.1; maps to MITI via `eda.registry.WELIVITA_TO_MITI`), scored here after the corpus's own mapping to MISC T2. Counsellor-only, and the labels are crowd labels (kappa 0.34), not consensus gold, so read this as a coarse generalization signal. The self-training arm is excluded (it trained on this corpus).
+A MITI variant (labels adapted from MITI 2.0/4.2.1; maps to MITI via `schemes.mappings.WELIVITA_TO_MITI`), scored here after the corpus's own mapping to MISC T2. Counsellor-only, and the labels are crowd labels (kappa 0.34), not consensus gold, so read this as a coarse generalization signal. The self-training arm is excluded (it trained on this corpus).
 
 ### T2 — counsellor (shared codes: GI, ADW, CR, SU, AF, CQ, DI, SR, ADP, OQ, CO, EC, WA)
 

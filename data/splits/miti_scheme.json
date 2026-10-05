@@ -20,6 +20,7 @@
   "RCW": "Persuade",
   "SR": "SR",
   "ST": "NC",
+  "SU": "NC",
   "WA": "Persuade"
  },
  "not_mappable": [
@@ -51,8 +52,8 @@
  ],
  "training_options": {
   "if obtained": "MI-TAGS (MITI 4.2, 242 sessions) after dedup against HLQC, AnnoMI and CASAA",
-  "recommended": "pooled in MITI space: welivita.gold (stage-I-agreed labels, mapped with registry.WELIVITA_TO_MITI; Self-Disclose dropped) + MISC gold mapped with MISC_TO_MITI. Proxy on CASAA (all routes trained on MITI-mapped labels): macro-F1 0.335 vs 0.246 (MISC gold only) and 0.303 (Welivita only)",
+  "recommended": "pooled in MITI space: welivita.gold (stage-I-agreed labels, mapped with schemes.mappings.WELIVITA_TO_MITI; Self-Disclose dropped) + MISC gold mapped with MISC_TO_MITI. Proxy on CASAA (all routes trained on MITI-mapped labels): macro-F1 0.339 vs 0.247 (MISC gold only) and 0.303 (Welivita only)",
   "welivita_folds": "use welivita_own folds for MITI-space dev/selection; CASAA stays test only"
  },
- "welivita_to_miti": "registry.WELIVITA_TO_MITI (exact 57% / approximate 34% / none 8% of listener labels)"
+ "welivita_to_miti": "schemes.mappings.WELIVITA_TO_MITI (exact 57% / approximate 34% / none 8% of listener labels)"
 }

@@ -17,29 +17,15 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 
-# -----------------------------------------------------------------------------
-# MISC 2.5 label vocabularies (source of truth = components/prompts/response_formats.py)
-# -----------------------------------------------------------------------------
-COUNSELLOR_T1 = ["CRL", "SRL", "IMC", "IMI", "Q", "O"]
-CLIENT_T1 = ["C", "S", "N"]
-
-COUNSELLOR_T2 = [
-    "CR", "AF", "SU", "RF", "EC",
-    "SR",
-    "ADP", "RCP", "GI",
-    "ADW", "CO", "DI", "RCW", "WA",
-    "OQ", "CQ",
-    "FA", "FI", "ST",
-]
-CLIENT_T2 = [
-    "O+", "D+", "AB+", "R+", "N+", "C+", "AC+", "TS+",
-    "O-", "D-", "AB-", "R-", "N-", "C-", "AC-", "TS-",
-    "N",
-]
-
-# Long-tail clinical groupings (the thesis focus)
-CHANGE_TALK_T2 = ["O+", "D+", "AB+", "R+", "N+", "C+", "AC+", "TS+"]
-SUSTAIN_TALK_T2 = ["O-", "D-", "AB-", "R-", "N-", "C-", "AC-", "TS-"]
+# MISC 2.5 label vocabularies: defined once in `schemes.misc`.
+from schemes.misc import (  # noqa: E402
+    CHANGE_TALK_T2,
+    CLIENT_T1,
+    CLIENT_T2,
+    COUNSELLOR_T1,
+    COUNSELLOR_T2,
+    SUSTAIN_TALK_T2,
+)
 
 
 def vocab(class_structure: str) -> List[str]:

@@ -115,7 +115,7 @@ Code lists come from the **handbooks**, not from the data, so a real class that 
 - **Welivita:** Welivita & Pu 2022, Table 1.
 - **AnnoMI:** Wu et al. 2023, §4.
 
-Encoded in `eda.registry.HANDBOOK`, and compared with our vocabulary and the data by `eda.registry.handbook_check()` (notebook §3). Checked 2026-10-05.
+Encoded in `schemes.HANDBOOK` (the `src/schemes/` package holds every code list and cross-scheme mapping; `eda.registry` re-exports it), and compared with our vocabulary and the data by `eda.registry.handbook_check()` (notebook §3). Checked 2026-10-05.
 
 ### MISC 2.5 (target scheme)
 
@@ -183,7 +183,7 @@ Encoded in `eda.registry.HANDBOOK`, and compared with our vocabulary and the dat
 
 ### Welivita (Table 1 of the paper): 15 labels, all present in the data, **a MITI variant**
 
-Welivita & Pu adapted their labels from MITI 2.0 and 4.2.1. Open/closed questions, Direct, Warn and Support come from earlier MITI versions; Self-Disclose and Other are their additions. So it is not a separate scheme. It maps to **MITI 4.2.1** (`registry.WELIVITA_TO_MITI`, each row citing the manual) and to MISC:
+Welivita & Pu adapted their labels from MITI 2.0 and 4.2.1. Open/closed questions, Direct, Warn and Support come from earlier MITI versions; Self-Disclose and Other are their additions. So it is not a separate scheme. It maps to **MITI 4.2.1** (`schemes.mappings.WELIVITA_TO_MITI`, each row citing the manual) and to MISC:
 
 | Welivita code | MITI 4.2.1 | MITI mapping, with manual basis | MISC |
 |---|---|---|---|
@@ -252,7 +252,7 @@ One subsection per dataset. Every table in it describes that dataset only. Cross
 | Permission-seeking coded EC (p.16) | 1 instance, coded FI ✗ |
 | Gold questions with no "?" in the text | **78%** (ASR drops punctuation) |
 | Repeated short utterances with conflicting labels | 9 of 27 (all FI vs FA) |
-| T1 contradicts the T2 group | 6 rows (high_117#142 Q/ST, high_121#120 CRL/ST, high_127#7 O/OQ, low_031#156 O/OQ, low_031#179–180 O/CQ): **needs decision** |
+| T1 contradicts the T2 group | 6 rows (high_117#142 Q/ST, high_121#120 CRL/ST, high_127#7 O/OQ, low_031#156 O/OQ, low_031#179–180 O/CQ): T1 := group(T2) in the cleaned ablation copy (§5.5) |
 
 **Segmentation:**
 - 2.66 utterances per counsellor turn;
@@ -408,7 +408,14 @@ Utterances were aligned word by word and compared per reference turn, because An
 | Train-only codes (§5.3) | ~7 spurious ADW/RCW/WA/CO predictions per run |
 | HLQC FI catch-all (§4.1) | small: test pleasantries still predicted FI 95% of the time. HLQC-based scores (CV, teacher gate) are biased instead |
 
-### 5.5 Possible actions (none applied; they change training data, so they need your decision)
+### 5.5 Possible actions
+
+**Decision (2026-10-05): fixes go into a derived copy, used as an ablation only.** The original file stays the default training set. `python -m eda.clean_apply` writes `data/clean/misc.hlqc.gold.cleaned.csv` (dataset id `misc.hlqc.gold.cleaned`, loaded through `registry.DERIVED`, never counted in `load_all`) plus a changelog of every changed row:
+- R1: 77 standalone acknowledgements FI → FA (manual p.22);
+- R2: the 6 T1/T2 contradictions, T1 := group(T2). Two of these may have the right T1 and the wrong T2 (high_117#142 "so how does that sound to you?" T1 Q/T2 ST): review the changelog before reading much into R2.
+
+Everything else below still needs human judgement and is documented as known label noise.
+
 
 | Issue | Option |
 |---|---|
@@ -416,10 +423,10 @@ Utterances were aligned word by word and compared per reference turn, because An
 | change talk | re-annotate HLQC client turns, or reweight non-neutral client labels |
 | SU / EC | targeted SU / EC / permission-seeking examples (human or synthetic) |
 | train-only codes | downweight, or train ADW/RCW/WA/CO at T1 only |
-| FI catch-all | relabel standalone acknowledgements FI → FA in a derived train copy |
+| FI catch-all | **applied in the cleaned ablation copy (R1)** |
 | ASR | re-segment HLQC, or use corrected transcripts (MI-TAGS, if obtained) |
 | AnnoMI open ≠ OQ | score AnnoMI questions at T1 (Q) only |
-| HLQC T1/T2 rows; high/low conflicts | decide (see §4.1, §4.6) |
+| HLQC T1/T2 rows; high/low conflicts | T1/T2 rows: **cleaned ablation copy (R2)**; high/low conflicts: open (§4.6) |
 
 ## 6. Split plan and justification (`python -m eda.splits` → `data/splits/*.json`)
 
@@ -453,7 +460,7 @@ The manifests are byte-identical across reruns and `PYTHONHASHSEED` values. Buil
 | Split | Data | Why |
 |---|---|---|
 | train | `misc.hlqc.gold` (10 sessions) | the only other MISC gold. HLQC is never used as a test set because its labels are noisy |
-| checkpoint selection | HLQC val fold 0 of 7 (369 rows), fixed before training | MIV is never read for selection |
+| checkpoint selection | SFT: none (end-of-training adapter, 3 epochs). GRPO only: HLQC val fold 0 of 7 (369 rows); its SFT warm start had trained on that fold (fixed in the re-run) | MIV is never read for selection |
 | test | `misc.miv63a.gold` (10 sessions, all 821 utterances); `miti.casaa.gold` on 6 exact T2 codes + T1 (18 sessions) | MIV: most reliable labels, target population. CASAA: reference-quality external test |
 | exclude | CASAA Emmy and Rounder; AnnoMI 15/21/44/53 for any HLQC-trained model; 48 AnnoMI transcripts if the model saw `pool.hlqc` | duplicate sessions |
 
@@ -465,7 +472,7 @@ This answers: "can a model trained only on public labels code a new service's se
 |---|---|---|
 | folds | **headline: leave-one-session-out** (10 folds, no randomness). **Exploratory: 5-fold, re-drawn with each training seed** (seed-tied) | every MIV utterance is tested exactly once, so scores still cover all 821 and stay comparable with AutoMISC. A single fold draw would be a lucky draw: the client gain ranged from +0.001 to +0.045 across 20 draws |
 | train (fold k) | all `misc.hlqc.gold` + the MIV sessions outside fold k (9 under LOSO, 8 under 5-fold) | RQ1 as worded: adapting on labels the service already holds. Best client and best external (CASAA) proxy scores |
-| checkpoint selection | HLQC val fold, as in 6.1 | no MIV session is used for selection |
+| checkpoint selection | as in 6.1: SFT none (end-of-training adapter); GRPO on the HLQC val fold | no MIV session is used for selection |
 | external test / exclude | as in 6.1 | — |
 
 Cost: LOSO is 10 runs per arm per seed; seed-tied 5-fold is 5. P0 results stay valid as the cold-start setting.
@@ -497,9 +504,11 @@ Recommended training: **pooled in MITI space.** Welivita's agreed labels (Self-D
 
 | Route | CASAA MITI macro-F1 (excl. Seek) |
 |---|---:|
-| MISC gold only | 0.246 |
+| MISC gold only | 0.247 |
 | Welivita only | 0.303 |
-| **pooled** | **0.335** |
+| **pooled** | **0.339** |
+
+Figures updated 2026-10-05 when the MISC→MITI mapping moved to `schemes.mappings`: Reframe (RF, 10 rows) has no MITI code and is now dropped instead of being forced to NC (was 0.246 / 0.335).
 
 Selection uses the `welivita_own` folds. Seek can't be learned from either source. MI-TAGS, if obtained, would join after deduplication.
 

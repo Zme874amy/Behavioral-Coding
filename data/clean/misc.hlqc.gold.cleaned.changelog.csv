@@ -1,0 +1,84 @@
+rule,row,conv_id,corp_utt_idx,speaker,utt_text,field,before,after
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",24,high_001,24,counsellor,all right,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",38,high_099,38,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",85,high_099,85,counsellor,okay great,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",107,high_099,107,counsellor,yeah okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",145,high_099,145,counsellor,um,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",150,high_099,150,counsellor,yeah,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",151,high_099,151,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",153,high_099,153,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",168,high_099,168,counsellor,got it,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",231,high_099,231,counsellor,yeah okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",245,high_099,245,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",246,high_099,246,counsellor,all right,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",255,high_099,255,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",269,high_099,269,counsellor,yeah okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",280,high_099,280,counsellor,oh,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",300,high_099,300,counsellor,uh-huh,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",303,high_099,303,counsellor,okay great,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",313,high_117,313,counsellor,sure,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",358,high_117,358,counsellor,hmm,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",465,high_117,465,counsellor,mm-hmm,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",499,high_121,499,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",506,high_121,506,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",519,high_121,519,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",525,high_121,525,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",579,high_121,579,counsellor,Mm-hm.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",597,high_121,597,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",608,high_121,608,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",625,high_121,625,counsellor,"Yeah, yeah.",t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",638,high_121,638,counsellor,Mm-hm.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",649,high_121,649,counsellor,Mm-hm.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",657,high_121,657,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",675,high_121,675,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",739,high_121,739,counsellor,Mm-hm.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",744,high_121,744,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",756,high_121,756,counsellor,Yeah.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",764,high_121,764,counsellor,Mm-hm.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",783,high_121,783,counsellor,"Yeah, yeah.",t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",813,high_127,813,counsellor,mm-hmm,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",842,high_127,842,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",861,high_127,861,counsellor,I see,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",870,high_127,870,counsellor,mm-hmm,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",874,high_127,874,counsellor,mm-hmm,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",894,high_127,894,counsellor,mm-hmm,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",901,high_127,901,counsellor,sure,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",923,low_001,923,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",935,low_001,935,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",961,low_001,961,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",966,low_001,966,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",984,low_001,984,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",990,low_001,990,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",996,low_001,996,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1023,low_001,1023,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1093,low_001,1093,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1118,low_001,1118,counsellor,oh,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1132,low_001,1132,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1133,low_001,1133,counsellor,all right,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1143,low_026,1143,counsellor,yes,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1144,low_026,1144,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1194,low_026,1194,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1262,low_026,1262,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1271,low_026,1271,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1363,low_026,1363,counsellor,alright,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1364,low_026,1364,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1538,low_031,1538,counsellor,yeah,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1540,low_031,1540,counsellor,yeah,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1543,low_031,1543,counsellor,yeah,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1552,low_031,1552,counsellor,Wow,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1650,low_033,1650,counsellor,okay great,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1666,low_033,1666,counsellor,okay great,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1673,low_033,1673,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1696,low_033,1696,counsellor,alright,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1705,low_033,1705,counsellor,mhm...,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1721,low_033,1721,counsellor,got it.,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1768,low_033,1768,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1844,low_033,1844,counsellor,all right,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1849,low_033,1849,counsellor,okay,t2_label_GT,FI,FA
+"R1 FI->FA (standalone acknowledgement, MISC 2.5 p.22)",1856,low_033,1856,counsellor,great,t2_label_GT,FI,FA
+R2 T1:=group(T2) (T1/T2 contradiction),453,high_117,453,counsellor,so how does that sound to you?,t1_label_GT,Q,O
+R2 T1:=group(T2) (T1/T2 contradiction),604,high_121,604,counsellor,"I just wanna say we, we can go over some things that are potential to talk about to really focus on that might help you.",t1_label_GT,CRL,O
+R2 T1:=group(T2) (T1/T2 contradiction),809,high_127,809,counsellor,so let's talk more about what brought you in today,t1_label_GT,O,Q
+R2 T1:=group(T2) (T1/T2 contradiction),1523,low_031,1523,counsellor,tell me a little bit about those,t1_label_GT,O,Q
+R2 T1:=group(T2) (T1/T2 contradiction),1546,low_031,1546,counsellor,where would you put yourself on how important this is to you,t1_label_GT,O,Q
+R2 T1:=group(T2) (T1/T2 contradiction),1547,low_031,1547,counsellor,want to say on a scale of one to ten just just on importance,t1_label_GT,O,Q
