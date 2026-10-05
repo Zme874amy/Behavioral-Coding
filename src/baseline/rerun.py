@@ -48,10 +48,16 @@ def cell_dir(root: Path, manifest: str, design: str, student: str, arm: str, sty
     return root / manifest / design / student / leaf
 
 
+DEFAULT_TEST = "misc.miv63a.gold"
+DATASET_SLUG = {"misc.miv63a.gold": "", "miti.casaa.gold": "_dscasaa", "misc.hlqc.gold": "_dshlqc"}
+
+
 def result_path(manifest, design, student, arm, style, ctx, prompt_version, seed, fold,
-                training_source=None) -> Path:
+                training_source=None, test_dataset: str = DEFAULT_TEST) -> Path:
+    """MIV files are fold<k>.csv; any other test set gets a _ds<slug> suffix so it never
+    overwrites them."""
     return (cell_dir(RESULTS, manifest, design, student, arm, style, ctx, prompt_version, training_source)
-            / f"seed{seed}" / f"fold{fold}.csv")
+            / f"seed{seed}" / f"fold{fold}{DATASET_SLUG[test_dataset]}.csv")
 
 
 def adapter_path(manifest, design, student, arm, ctx, prompt_version, seed, fold, training_source=None) -> Path:

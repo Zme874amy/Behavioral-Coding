@@ -40,6 +40,8 @@ MANUAL_CSV = {
     "misc.hlqc.gold": REPO_ROOT / "data" / "manual" / "HLQC_balanced_manual.csv",
     "misc.miv63a.gold": REPO_ROOT / "data" / "manual" / "MIV6.3A_manual.csv",
     "misc.hlqc.gold.cleaned": REPO_ROOT / "data" / "clean" / "misc.hlqc.gold.cleaned.csv",
+    # Built locally by `python -m baseline.prep_casaa` (third-party transcripts, gitignored).
+    "miti.casaa.gold": REPO_ROOT / "data" / "external" / "casaa" / "CASAA_eval.csv",
 }
 DESIGNS = {
     "misc_main": ("cold_start",),
@@ -147,3 +149,18 @@ def load_fold(name: str, design: str, fold: int = 0, seed: Optional[int] = None,
             "test_sessions": {k: len(v) for k, v in test_parts.items()},
             "n_train": len(train), "n_test": len(test)}
     return train, test, meta
+
+
+def excluded_sessions(test_dataset: str, saw_hlqc_pool: bool = False, name: str = "misc_main") -> List[str]:
+    """Sessions of a transfer test set to drop for any model that saw HLQC gold
+    (training, exemplars, retrieval or synthetic anchors), plus the AnnoMI copies
+    of pool.hlqc when the model also saw the pool (self-training / retrieval).
+    From the manifest's `exclude` block (DATASETS.md section 5.1)."""
+    out: List[str] = []
+    for key, ids in manifest(name).get("exclude", {}).items():
+        if _test_key(key) != test_dataset:
+            continue
+        if "when the model saw pool.hlqc" in key and not saw_hlqc_pool:
+            continue
+        out += [str(i) for i in ids]
+    return sorted(set(out))

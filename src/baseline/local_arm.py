@@ -709,7 +709,7 @@ def _manifest_context(args, cfg):
     source = {"misc.hlqc.gold": args.training_source} if args.training_source else None
     train_df, test_df, fold_meta = folds.load_fold(
         args.manifest, args.design, args.fold, args.seed if args.design == "5fold_seed_tied" else None,
-        training_source=source, test_datasets=["misc.miv63a.gold", "misc.hlqc.gold"])
+        training_source=source, test_datasets=[args.test_dataset])
     key = dict(manifest=args.manifest, design=args.design, student=rerun.student_slug(cfg.model.base_model),
                ctx=args.ctx, prompt_version=os.environ["PROMPT_VERSION"], seed=args.seed, fold=args.fold,
                training_source=source)
@@ -767,7 +767,7 @@ def _predict_manifest(args, cfg, started) -> None:
     test_df = test_df.drop(columns=[c for c in test_df.columns if c.endswith("_auto")])
     k = {x: key[x] for x in ("manifest", "design", "student", "ctx", "prompt_version", "seed", "fold",
                              "training_source")}
-    save_path = rerun.result_path(arm=arm, style=style, **k)
+    save_path = rerun.result_path(arm=arm, style=style, test_dataset=args.test_dataset, **k)
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     done = set()
@@ -892,6 +892,9 @@ def main() -> None:
         p.add_argument("--fold", type=int, default=0)
         p.add_argument("--training-source", default=None,
                        help="swap the HLQC training file, e.g. misc.hlqc.gold.cleaned (ablation)")
+        p.add_argument("--test-dataset", default="misc.miv63a.gold",
+                       help="manifest mode: which test set of the fold to predict "
+                            "(misc.miv63a.gold, or miti.casaa.gold for the external MITI test)")
         p.add_argument("--prompt-version", default=None,
                        help="prompt set (default v2 in manifest mode, v1 otherwise)")
         p.add_argument("--seed", type=int, default=None,
