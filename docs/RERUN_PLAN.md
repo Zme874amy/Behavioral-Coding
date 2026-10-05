@@ -8,7 +8,7 @@
 | P2 prompts | done, except the de-duplicated rationale prompt and the judge/verify fixes (Stages 2/4) and the AnnoMI wording check |
 | P3 infrastructure | done for zs/fs/SFT-bare arms; GRPO/rationale/agentic/self-training entry points join with their stages |
 | P4 evaluation | done, except the Welivita eval rebuild |
-| P5 models | students swapped 2026-10-06 (below); loader/thinking patches done; not started on MLeRP: needs a transformers upgrade there (Gemma-4-12B), staging, then pilots |
+| P5 models | students swapped 2026-10-06; **third family chosen by a pilot** (OLMo-3-7B vs Ministral-3-8B vs Phi-4, HLQC val fold zero-shot + LoRA check; [doc](experiments/2026-10-06-student-pilot.md)), running on MLeRP from the clean clone `/mnt/userdata4/jia-wen/rerun` in grpo-env |
 | P6–P7 | not started |
 
 Details: [experiments/2026-10-05-rerun-prep.md](experiments/2026-10-05-rerun-prep.md).
@@ -167,8 +167,8 @@ Swapped 2026-10-06 (the 2024-era list was outdated). All three are ungated, Apac
 | Role | Student | Released | Params / bf16 on disk | Training mode (to confirm in the pilot) | Notes |
 |---|---|---|---|---|---|
 | **primary** (headline, full LOSO) | `Qwen/Qwen3.5-9B` | 2026-03 | 9.65B / ~19 GB | bf16 LoRA | thinks by default: `chat_template_kwargs` passes `enable_thinking=False`; `AutoModelForCausalLM` maps to `Qwen3_5ForCausalLM` |
-| second family | `google/gemma-4-12B-it` | 2026 | 11.96B / ~24 GB | bf16 LoRA if it fits 40 GB, else QLoRA | `gemma4_unified` architecture: needs a transformers newer than our local 5.9 (latest 5.18); thinking only with `<\|think\|>` in the system prompt, which ours never has |
-| third family | `mistralai/Ministral-3-8B-Instruct-2512-BF16` | 2025-12 | 8.9B / ~18 GB | bf16 LoRA | default release is FP8 (not LoRA-trainable), so the BF16 repo; no causal-LM auto class, loads through the new `AutoModelForImageTextToText` fallback |
+| second family | `google/gemma-4-12B-it` | 2026 | 11.96B / ~24 GB | bf16 LoRA if it fits 40 GB, else QLoRA | `gemma4_unified` architecture: supported by MLeRP's grpo-env (transformers 5.14.1), not by the DSKS env (4.55), so all re-run jobs use grpo-env; thinking only with `<\|think\|>` in the system prompt, which ours never has |
+| third family (**provisional: the P5 pilot picks among Ministral-3-8B, OLMo-3-7B and Phi-4**) | `mistralai/Ministral-3-8B-Instruct-2512-BF16` | 2025-12 | 8.9B / ~18 GB | bf16 LoRA | default release is FP8 (not LoRA-trainable), so the BF16 repo; no causal-LM auto class, loads through the new `AutoModelForImageTextToText` fallback |
 | bridge only | `Qwen/Qwen2.5-7B-Instruct` | 2024 | 7.6B / ~15 GB | bf16 LoRA (as before) | cold start, ft1mix_bare, 3 seeds prompt v2 + 1 seed prompt v1: ties every earlier number to the new pipeline |
 
 Why no Llama: Meta's current generation (Llama 4) is MoE only (Scout 109B total), with no small dense model; Llama-3.1-8B (2024) is what was outdated. LoRA target modules must be restricted to the language model (no vision tower); the pilot checks the trainable-parameter count.
