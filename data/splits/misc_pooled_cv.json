@@ -1,0 +1,252 @@
+{
+ "checkpoint_selection": "HLQC validation fold as in misc_main (val_folds 7, val_fold 0); never an MIV session",
+ "dup_threshold": 0.1,
+ "exclude": {
+  "annomi.gold (when the model also saw pool.hlqc: self-training/retrieval arms)": [
+   "2",
+   "3",
+   "8",
+   "9",
+   "15",
+   "17",
+   "19",
+   "21",
+   "23",
+   "24",
+   "27",
+   "32",
+   "33",
+   "36",
+   "40",
+   "44",
+   "50",
+   "52",
+   "53",
+   "59",
+   "65",
+   "66",
+   "68",
+   "69",
+   "72",
+   "74",
+   "80",
+   "82",
+   "87",
+   "90",
+   "91",
+   "92",
+   "97",
+   "102",
+   "103",
+   "106",
+   "107",
+   "112",
+   "113",
+   "114",
+   "115",
+   "118",
+   "119",
+   "123",
+   "126",
+   "127",
+   "130",
+   "131"
+  ],
+  "annomi.gold (when used as transfer test of HLQC-gold-trained models)": [
+   "15",
+   "21",
+   "44",
+   "53"
+  ],
+  "miti.casaa.gold": [
+   "casaa_emmys-first-encounter",
+   "casaa_rounder-miti-4"
+  ]
+ },
+ "external_test": [
+  "casaa_have-you-ever-been-a-smoker",
+  "casaa_hawaii-every-month",
+  "casaa_i-guess-i-dont-have-a-choice",
+  "casaa_living-with-diabetes",
+  "casaa_maybe-hell-take-my-kids",
+  "casaa_my-father-also-hit-me",
+  "casaa_now-i-only-wear-yoga-pants",
+  "casaa_orientation-to-a-parenting-class",
+  "casaa_overuse-of-directing",
+  "casaa_overuse-of-following",
+  "casaa_session1miti",
+  "casaa_session2miti",
+  "casaa_session3miti",
+  "casaa_session4miti",
+  "casaa_session5miti",
+  "casaa_should-i-really-be-honest",
+  "casaa_the-confirmed-smoker",
+  "casaa_the-suspiscious-smoker"
+ ],
+ "folds": {
+  "0": {
+   "test": {
+    "misc.miv63a.gold": [
+     "671fff4fced93c3e5a17f230",
+     "67203fd3fe9e55e9ec82fc1f"
+    ]
+   },
+   "train": {
+    "misc.hlqc.gold": [
+     "high_001",
+     "high_099",
+     "high_117",
+     "high_121",
+     "high_127",
+     "low_001",
+     "low_026",
+     "low_031",
+     "low_033",
+     "low_080"
+    ],
+    "misc.miv63a.gold": [
+     "59cb95053306be000195be2e",
+     "60dde1621f6e206dea63a7dd",
+     "6127b32b912465823dca1e4b",
+     "6481e7756969fcd48ea9c634",
+     "663b79f76293a4480abba57d",
+     "663fd7ca84b7978432d6070b",
+     "67336dc4beb89674ca687d87",
+     "6735337bd46a0b33a2bcf429"
+    ]
+   }
+  },
+  "1": {
+   "test": {
+    "misc.miv63a.gold": [
+     "6481e7756969fcd48ea9c634",
+     "6735337bd46a0b33a2bcf429"
+    ]
+   },
+   "train": {
+    "misc.hlqc.gold": [
+     "high_001",
+     "high_099",
+     "high_117",
+     "high_121",
+     "high_127",
+     "low_001",
+     "low_026",
+     "low_031",
+     "low_033",
+     "low_080"
+    ],
+    "misc.miv63a.gold": [
+     "59cb95053306be000195be2e",
+     "60dde1621f6e206dea63a7dd",
+     "6127b32b912465823dca1e4b",
+     "663b79f76293a4480abba57d",
+     "663fd7ca84b7978432d6070b",
+     "671fff4fced93c3e5a17f230",
+     "67203fd3fe9e55e9ec82fc1f",
+     "67336dc4beb89674ca687d87"
+    ]
+   }
+  },
+  "2": {
+   "test": {
+    "misc.miv63a.gold": [
+     "6127b32b912465823dca1e4b",
+     "663b79f76293a4480abba57d"
+    ]
+   },
+   "train": {
+    "misc.hlqc.gold": [
+     "high_001",
+     "high_099",
+     "high_117",
+     "high_121",
+     "high_127",
+     "low_001",
+     "low_026",
+     "low_031",
+     "low_033",
+     "low_080"
+    ],
+    "misc.miv63a.gold": [
+     "59cb95053306be000195be2e",
+     "60dde1621f6e206dea63a7dd",
+     "6481e7756969fcd48ea9c634",
+     "663fd7ca84b7978432d6070b",
+     "671fff4fced93c3e5a17f230",
+     "67203fd3fe9e55e9ec82fc1f",
+     "67336dc4beb89674ca687d87",
+     "6735337bd46a0b33a2bcf429"
+    ]
+   }
+  },
+  "3": {
+   "test": {
+    "misc.miv63a.gold": [
+     "59cb95053306be000195be2e",
+     "67336dc4beb89674ca687d87"
+    ]
+   },
+   "train": {
+    "misc.hlqc.gold": [
+     "high_001",
+     "high_099",
+     "high_117",
+     "high_121",
+     "high_127",
+     "low_001",
+     "low_026",
+     "low_031",
+     "low_033",
+     "low_080"
+    ],
+    "misc.miv63a.gold": [
+     "60dde1621f6e206dea63a7dd",
+     "6127b32b912465823dca1e4b",
+     "6481e7756969fcd48ea9c634",
+     "663b79f76293a4480abba57d",
+     "663fd7ca84b7978432d6070b",
+     "671fff4fced93c3e5a17f230",
+     "67203fd3fe9e55e9ec82fc1f",
+     "6735337bd46a0b33a2bcf429"
+    ]
+   }
+  },
+  "4": {
+   "test": {
+    "misc.miv63a.gold": [
+     "60dde1621f6e206dea63a7dd",
+     "663fd7ca84b7978432d6070b"
+    ]
+   },
+   "train": {
+    "misc.hlqc.gold": [
+     "high_001",
+     "high_099",
+     "high_117",
+     "high_121",
+     "high_127",
+     "low_001",
+     "low_026",
+     "low_031",
+     "low_033",
+     "low_080"
+    ],
+    "misc.miv63a.gold": [
+     "59cb95053306be000195be2e",
+     "6127b32b912465823dca1e4b",
+     "6481e7756969fcd48ea9c634",
+     "663b79f76293a4480abba57d",
+     "671fff4fced93c3e5a17f230",
+     "67203fd3fe9e55e9ec82fc1f",
+     "67336dc4beb89674ca687d87",
+     "6735337bd46a0b33a2bcf429"
+    ]
+   }
+  }
+ },
+ "notes": "Answers RQ1 as worded (a service adapting on labels it already holds). misc_main remains the cold-start transfer setting (no in-domain labels).",
+ "scheme": "MISC 2.5",
+ "seed": 42,
+ "status": "PROPOSED (pending decision); misc_main stays the reported setting until then"
+}

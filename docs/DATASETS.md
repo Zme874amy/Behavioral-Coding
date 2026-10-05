@@ -288,7 +288,7 @@ ADW, CO and DI come 100% from low-quality sessions, and RCW and WA 96%.
 
 **Segmentation:** 3.79 utterances per counsellor turn (long multi-sentence chatbot turns); 0.5% start mid-sentence. Reflections are long, polished paraphrases: **SR median 18 words**, CR 15.5.
 
-**Session outcomes** (survey file): the 10 test sessions gained more confidence than the other 163 (+1.90 vs +1.31), so the test set leans toward successful sessions.
+**Selection and representativeness:** all 10 sessions come from the thesis's MI target population ("low-confidence-or-discordant"; the 58 high-confidence sessions are outside the study). Against the other 105 target-population sessions they don't differ in length, Δ confidence (+1.90 vs +1.71) or Δ readiness (Mann-Whitney p ≥ 0.15).
 
 ### 4.3 `annomi.gold`: AnnoMI
 
@@ -415,49 +415,70 @@ Utterances were aligned word by word and compared per reference turn, because An
 | AnnoMI open ≠ OQ | score AnnoMI questions at T1 (Q) only |
 | HLQC T1/T2 rows; high/low conflicts | decide (see §4.1, §4.6) |
 
-## 6. Split plan (`python -m eda.splits` → `data/splits/*.json`)
+## 6. Split plan and justification (`python -m eda.splits` → `data/splits/*.json`)
+
+The splits were reviewed rather than inherited: see [experiments/2026-10-05-split-review.md](experiments/2026-10-05-split-review.md) for the criteria, the evidence and the candidates. In short:
+- **MIV6.3A has the most reliable MISC labels**, so it stays the test set. HLQC is never a test set.
+- In a proxy experiment, **in-domain training data matters more than size**: about 650 MIV utterances beat 1,925 HLQC utterances (counsellor macro-F1 0.47 vs 0.26). Pooled HLQC + MIV also generalises best to CASAA.
+- The test is thin (CI width 0.17–0.20), so every protocol keeps all 821 MIV utterances scored.
 
 The manifests are byte-identical across reruns and `PYTHONHASHSEED` values. Built-in checks:
 - no conversation sits in two splits;
+- in pooled CV, each MIV session is tested exactly once and never trained on in its own fold;
 - no Welivita duplicate cluster spans splits;
 - CASAA Emmy is not in a test split;
 - the MIV pool exclusion covers every test session.
 
-### 6.1 `misc_main` (MISC 2.5, unchanged)
+### 6.1 `misc_main`: cold-start transfer (current reported setting)
 
-| Split | Data |
-|---|---|
-| train | `misc.hlqc.gold` (10 sessions) |
-| dev | 5-fold HLQC CV (`baseline.oof_t1._split`, seed 42) |
-| test | `misc.miv63a.gold` (10 sessions); `miti.casaa.gold` on 6 exact T2 codes + T1 (18 sessions) |
-| exclude | CASAA Emmy and Rounder; AnnoMI 15/21/44/53 for any HLQC-trained model; 48 AnnoMI transcripts if the model saw `pool.hlqc` |
+| Split | Data | Why |
+|---|---|---|
+| train | `misc.hlqc.gold` (10 sessions) | the only other MISC gold. HLQC is never used as a test set because its labels are noisy |
+| checkpoint selection | HLQC val fold 0 of 7 (369 rows), fixed before training | MIV is never read for selection |
+| test | `misc.miv63a.gold` (10 sessions, all 821 utterances); `miti.casaa.gold` on 6 exact T2 codes + T1 (18 sessions) | MIV: most reliable labels, target population. CASAA: reference-quality external test |
+| exclude | CASAA Emmy and Rounder; AnnoMI 15/21/44/53 for any HLQC-trained model; 48 AnnoMI transcripts if the model saw `pool.hlqc` | duplicate sessions |
 
-### 6.2 `annomi_own`
+This answers: "can a model trained only on public labels code a new service's sessions?"
 
-Transcript-level split, stratified by quality × annotator: train 91, dev 22, test 20. The test split includes the 7 ten-rater transcripts (majority labels).
+### 6.2 `misc_pooled_cv`: **PROPOSED primary** (pending your decision and a 7B confirmation run)
 
-### 6.3 `welivita_own`
+| Split | Data | Why |
+|---|---|---|
+| folds | 5 folds over the 10 MIV sessions (2 per fold; seed 42, the same folds `automisc_ft` planned) | every MIV utterance is tested exactly once, so scores still cover all 821 and stay comparable with AutoMISC |
+| train (fold k) | all `misc.hlqc.gold` + the 8 MIV sessions outside fold k | RQ1 as worded: adapting on labels the service already holds. Best client and best external (CASAA) proxy scores |
+| checkpoint selection | HLQC val fold, as in 6.1 | no MIV session is used for selection |
+| external test / exclude | as in 6.1 | — |
 
-Dialogue-level split, stratified by source, with duplicate clusters kept in one split: train 1,604, dev 196, test 200. Labels are the 7,152 stage-I-agreed listener sentences.
+Cost: 5 training runs per arm. P0 results stay valid as the cold-start setting.
 
-### 6.4 `casaa_test`
+### 6.3 `annomi_own`
 
-Test only: 18 sessions (Emmy and Rounder excluded).
+Transcript-level split, stratified by quality × annotator: train 91, dev 22, test 20. The test split includes the 7 ten-rater transcripts (majority labels): the cleanest labels go to the test side. This split is only for AnnoMI-scheme work. **For MISC models, AnnoMI is an external transfer test:** counsellor main behaviour, client C/S/N, and questions at T1 only (AnnoMI's "open" is broader than MISC OQ), with the exclusions in 6.1.
 
-### 6.5 `pools`
+### 6.4 `welivita_own`
+
+Dialogue-level split, stratified by source, with duplicate clusters kept in one split: train 1,604, dev 196, test 200. Labels are the 7,152 stage-I-agreed sentences. Its main role is a weak training pool: crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047). It is not a headline test.
+
+### 6.5 `casaa_test`
+
+External test only: 18 sessions (Emmy and Rounder excluded). It is too small to train on, and its labels are the reference standard.
+
+### 6.6 `pools`
 
 | Pool | Action |
 |---|---|
 | `pool.hlqc` | drop the 45 redundant duplicates; `exclude_if_annomi_is_test` (63 ids); `exclude_if_casaa_is_test` (2) |
-| `pool.miv63a` | drop the 10 test sessions |
+| `pool.miv63a` | drop the 10 test sessions. The 58 high-confidence sessions are outside the MI target population: usable as unlabelled data, but not representative of the test |
 | `pool.miv63b` | use as is |
+
+All pools are training-side only.
 
 ## 7. What this changes for results already reported
 
 - **AnnoMI transfer numbers** (e.g. T2 accuracy 0.504 for the 2-adapter model) include 4 HLQC training sessions. Rerun excluding 15/21/44/53.
 - **AnnoMI OQ/CQ transfer scores** compare against an "open" that is broader than MISC OQ (§5.2). Report AnnoMI questions at T1.
 - **HLQC-based scores** (HLQC CV, the teacher-screen gate) depend on HLQC's FI convention (§4.1). This confirms the 2026-10-04 teacher audit.
-- The MIV6.3A test set is leak-free, but the main model's largest errors trace to train/test convention and prior differences (§5.4).
+- The MIV6.3A test set is leak-free, but the main model's largest errors trace to train/test convention and prior differences (§5.4). The proposed pooled CV (§6.2) addresses this directly.
 - The CASAA results to come should use `casaa_test.json` (18 sessions).
 
 ## Reproduce

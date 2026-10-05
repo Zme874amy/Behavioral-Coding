@@ -112,6 +112,25 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
         "notes": "Unchanged from all prior experiments. CASAA sessions duplicating any HLQC session are excluded.",
     }
 
+    # --- PROPOSED: pooled training with MIV cross-validation -----------------
+    # docs/experiments/2026-10-05-split-review.md. Alongside misc_main, not replacing it:
+    # every MIV6.3A session is test exactly once, so scores still cover all 821 utterances.
+    miv_folds = assign_folds(frames["misc.miv63a.gold"], 5, SEED)
+    man["misc_pooled_cv"] = {
+        "status": "PROPOSED (pending decision); misc_main stays the reported setting until then",
+        "scheme": "MISC 2.5",
+        "folds": {str(k): {
+            "train": {"misc.hlqc.gold": sorted(train_ids),
+                      "misc.miv63a.gold": sorted(c for c, f in miv_folds.items() if f != k)},
+            "test": {"misc.miv63a.gold": sorted(c for c, f in miv_folds.items() if f == k)}}
+            for k in range(5)},
+        "checkpoint_selection": "HLQC validation fold as in misc_main (val_folds 7, val_fold 0); never an MIV session",
+        "external_test": man["misc_main"]["test"]["miti.casaa.gold (MISC-mapped)"],
+        "exclude": man["misc_main"]["exclude"],
+        "notes": "Answers RQ1 as worded (a service adapting on labels it already holds). misc_main remains the "
+                 "cold-start transfer setting (no in-domain labels).",
+    }
+
     # --- AnnoMI own-scheme ---------------------------------------------------
     an = frames["annomi.gold"]
     tr = an.groupby("conv_id").agg(q=("mi_quality", "first"),
@@ -244,6 +263,14 @@ def check(man: Dict[str, dict], frames) -> List[str]:
         errs.append("misc train/test overlap")
     if "casaa_emmys-first-encounter" in mm["test"]["miti.casaa.gold (MISC-mapped)"]:
         errs.append("CASAA Emmy (= HLQC train high_121) is in the CASAA test split")
+    if "misc_pooled_cv" in man:
+        pc, tests = man["misc_pooled_cv"]["folds"], []
+        for k, f in pc.items():
+            if set(f["train"]["misc.miv63a.gold"]) & set(f["test"]["misc.miv63a.gold"]):
+                errs.append(f"misc_pooled_cv fold {k}: an MIV session is in train and test")
+            tests += f["test"]["misc.miv63a.gold"]
+        if sorted(tests) != sorted(mm["test"]["misc.miv63a.gold"]) or len(tests) != len(set(tests)):
+            errs.append("misc_pooled_cv: test folds do not cover every MIV session exactly once")
     if not set(man["pools"]["pool.miv63a"]["exclude_always"]) >= set(mm["test"]["misc.miv63a.gold"]):
         errs.append("pool.miv63a does not exclude every test session")
     return errs
