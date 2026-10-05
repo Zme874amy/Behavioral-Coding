@@ -26,7 +26,7 @@ from automisc_ft.data import (
     t2_codes_for_group,
     t2_codes_for_speaker,
 )
-from components.hf_load import load_model_and_tokenizer
+from components.hf_load import chat_template_kwargs, load_model_and_tokenizer
 from sft.eval import LABEL_ALIASES
 
 
@@ -209,7 +209,8 @@ class TieredAnnotator:
         import torch
 
         prompt = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
+            messages, tokenize=False, add_generation_prompt=True,
+            **chat_template_kwargs(self.tokenizer),
         )
         inputs = self.tokenizer(
             prompt,
@@ -259,7 +260,8 @@ class TieredAnnotator:
         from sft.data import build_completion
 
         prompt = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
+            messages, tokenize=False, add_generation_prompt=True,
+            **chat_template_kwargs(self.tokenizer),
         )
         enc = self.tokenizer(
             prompt, return_tensors="pt", truncation=True,

@@ -2,7 +2,10 @@
 # Expand + submit on MLeRP from a clean tagged checkout:
 #   python scripts/submit_stage.py conf/stages/stage1.yaml            # dry run: list cells
 #   python scripts/submit_stage.py conf/stages/stage1.yaml --submit   # sbatch, <= 4 running (lion cap)
-# Gemma/Llama enter only after their P5 pilot passes (compliance >= 99%).
+# Students swapped 2026-10-06 to current (2025-12 .. 2026-04) open-weight models; every
+# student enters only after its P5 pilot passes (compliance >= 99%, wall time recorded).
+# Qwen2.5-7B stays as a cold-start BRIDGE only: it ties the new pipeline to every
+# earlier number (one seed with prompt v1, three with v2).
 seeds: [42, 1, 2]
 ctx: 5
 prompt: v2
@@ -11,23 +14,33 @@ protocols:
   pooled_loso: {manifest: misc_pooled_cv, design: loso}
   pooled_5fold: {manifest: misc_pooled_cv, design: 5fold_seed_tied}
 students:
-  qwen7b: {model: Qwen/Qwen2.5-7B-Instruct}
-  llama8b: {model: meta-llama/Llama-3.1-8B-Instruct, enabled: false}     # after P5 pilot
-  gemma12b: {model: google/gemma-3-12b-it, enabled: false,                # after P5 pilot; QLoRA
-             extra: "model.load_in_4bit=true training.gradient_checkpointing=true"}
+  # primary (headline, full LOSO): Apache-2.0, ungated, 2026-03; thinking switched off
+  # through the chat template (components.hf_load.chat_template_kwargs)
+  qwen35_9b: {model: Qwen/Qwen3.5-9B, enabled: false}               # flip after its P5 pilot
+  # Apache-2.0, ungated, 12B encoder-free (gemma4_unified: needs a transformers newer
+  # than 5.9); bf16 LoRA if the pilot fits 40 GB, else QLoRA via extra
+  gemma4_12b: {model: google/gemma-4-12B-it, enabled: false}       # flip after its P5 pilot
+  # Apache-2.0, ungated, 2025-12, a third model family; the BF16 release (the default
+  # checkpoint is FP8, which LoRA cannot train)
+  ministral3_8b: {model: mistralai/Ministral-3-8B-Instruct-2512-BF16, enabled: false}  # flip after its P5 pilot
+  # legacy bridge to all earlier results
+  qwen25_7b: {model: Qwen/Qwen2.5-7B-Instruct}
 cells:
   # zero-shot is greedy and identical across seeds and protocols: one seed, cold start;
   # the pooled scorer reuses it (same 821 utterances).
-  - {arm: zs, inf: bare, protocols: [cold_start], students: [qwen7b, llama8b, gemma12b], seeds: [42]}
+  - {arm: zs, inf: bare, protocols: [cold_start], students: [qwen35_9b, gemma4_12b, ministral3_8b], seeds: [42]}
   # few-shot: 3 exemplar draws (= seeds), drawn per fold from the training side.
-  - {arm: fs, inf: bare, protocols: [cold_start, pooled_loso], students: [qwen7b]}
-  - {arm: fs, inf: bare, protocols: [cold_start, pooled_5fold], students: [llama8b, gemma12b]}
+  - {arm: fs, inf: bare, protocols: [cold_start, pooled_loso], students: [qwen35_9b]}
+  - {arm: fs, inf: bare, protocols: [cold_start, pooled_5fold], students: [gemma4_12b, ministral3_8b]}
   # main SFT setting
-  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start, pooled_loso], students: [qwen7b]}
-  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start, pooled_5fold], students: [llama8b, gemma12b]}
-  # cleaned-HLQC ablation (Qwen only)
+  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start, pooled_loso], students: [qwen35_9b]}
+  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start, pooled_5fold], students: [gemma4_12b, ministral3_8b]}
+  # cleaned-HLQC ablation (primary student only)
   - {arm: ft1mix_bare, inf: bare, source: misc.hlqc.gold.cleaned, protocols: [cold_start, pooled_loso],
-     students: [qwen7b]}
+     students: [qwen35_9b]}
+  # bridge: the old student under the new pipeline, cold start only
+  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start], students: [qwen25_7b]}
+  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start], students: [qwen25_7b], seeds: [42], prompt: v1}
 # Not expanded here (run by their own pathways, recorded in the stage doc):
 #   teachers zs/fs (Ollama, selftrain.screen_teachers), synthesis v2 proto / v3 hlqcmix retrains
 #   (selftrain retrain on the existing files), classic TF-IDF/RoBERTa (classic.*).

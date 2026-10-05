@@ -8,7 +8,7 @@
 | P2 prompts | done, except the de-duplicated rationale prompt and the judge/verify fixes (Stages 2/4) and the AnnoMI wording check |
 | P3 infrastructure | done for zs/fs/SFT-bare arms; GRPO/rationale/agentic/self-training entry points join with their stages |
 | P4 evaluation | done, except the Welivita eval rebuild |
-| P5 models | not started: needs the gated Llama/Gemma licences accepted on your HF account, then pilots on MLeRP |
+| P5 models | students swapped 2026-10-06 (below); loader/thinking patches done; not started on MLeRP: needs a transformers upgrade there (Gemma-4-12B), staging, then pilots |
 | P6–P7 | not started |
 
 Details: [experiments/2026-10-05-rerun-prep.md](experiments/2026-10-05-rerun-prep.md).
@@ -31,7 +31,7 @@ The user wants a solid, reproducible, traceable re-run.
 - report **both** MISC protocols equally (pooled CV and HLQC→MIV cold-start);
 - **staged, core-first** scope;
 - HLQC fixes as a **derived "cleaned" copy, used as an ablation only**;
-- students: **Qwen2.5-7B + Gemma (3-12B / 4 class) + Llama-3.1-8B**.
+- students: **Qwen2.5-7B + Gemma (3-12B / 4 class) + Llama-3.1-8B**; **swapped 2026-10-06** (user: too outdated) to Qwen3.5-9B (primary) + Gemma-4-12B + Ministral-3-8B, with Qwen2.5-7B kept as a cold-start bridge (P5).
 
 ## Refined pipeline (the user's outline, reordered so each stage only depends on earlier ones)
 
@@ -162,19 +162,24 @@ Cross-cutting at every stage: validation (seeds), rare classes, prompt consisten
 ### P5. Model selection
 - **Students**, LoRA on MLeRP:
 
-| Student | On disk | Training mode |
-|---|---|---|
-| Qwen2.5-7B-Instruct (existing) | ~15 GB | bf16 LoRA |
-| Llama-3.1-8B-Instruct | ~16 GB | bf16 LoRA |
-| Gemma-3-12B-it (or the Gemma-4 equivalent, if a ~12B text model is staged) | ~24 GB | QLoRA 4-bit + gradient checkpointing, to fit a 40 GB A100 |
+Swapped 2026-10-06 (the 2024-era list was outdated). All three are ungated, Apache-2.0, released 2025-12 to 2026-03, and loadable with transformers; each is a multimodal checkpoint that we use text-only.
 
-  - **Disk plan:** usage is 61 GB of a ~110 GB quota. The students add ~55 GB, so stage one at a time with `scripts/stage_model.sh`, keep only the active student, and drop adapters after pooled prediction. The user approves any deletion.
+| Role | Student | Released | Params / bf16 on disk | Training mode (to confirm in the pilot) | Notes |
+|---|---|---|---|---|---|
+| **primary** (headline, full LOSO) | `Qwen/Qwen3.5-9B` | 2026-03 | 9.65B / ~19 GB | bf16 LoRA | thinks by default: `chat_template_kwargs` passes `enable_thinking=False`; `AutoModelForCausalLM` maps to `Qwen3_5ForCausalLM` |
+| second family | `google/gemma-4-12B-it` | 2026 | 11.96B / ~24 GB | bf16 LoRA if it fits 40 GB, else QLoRA | `gemma4_unified` architecture: needs a transformers newer than our local 5.9 (latest 5.18); thinking only with `<\|think\|>` in the system prompt, which ours never has |
+| third family | `mistralai/Ministral-3-8B-Instruct-2512-BF16` | 2025-12 | 8.9B / ~18 GB | bf16 LoRA | default release is FP8 (not LoRA-trainable), so the BF16 repo; no causal-LM auto class, loads through the new `AutoModelForImageTextToText` fallback |
+| bridge only | `Qwen/Qwen2.5-7B-Instruct` | 2024 | 7.6B / ~15 GB | bf16 LoRA (as before) | cold start, ft1mix_bare, 3 seeds prompt v2 + 1 seed prompt v1: ties every earlier number to the new pipeline |
+
+Why no Llama: Meta's current generation (Llama 4) is MoE only (Scout 109B total), with no small dense model; Llama-3.1-8B (2024) is what was outdated. LoRA target modules must be restricted to the language model (no vision tower); the pilot checks the trainable-parameter count.
+
+  - **Disk plan:** usage is 61 GB of a ~110 GB quota. The three new students add ~61 GB (bf16), so stage one at a time with `scripts/stage_model.sh`, keep only the active student, and drop adapters after pooled prediction. The user approves any deletion.
   - **Pilot each new student:** 1 cold-start run, seed 42, to check the chat template, the answer parser, the compliance rate and the wall time. This also calibrates the per-run cost used below.
 - **Teachers** (MLeRP Ollama shared store, no quota cost): Gemma-4-31B, Qwen3.6-27B, gpt-oss-120b; plus Qwen2.5-32B-AWQ (vLLM, already staged). Qwen3-VL is excluded (thinking build).
   - **New teacher gate, not on any test set:** few-shot (3 exemplar draws) on the HLQC val fold scored with the **robust** metrics (FA+FI merged, SR/CR at T1). That removes HLQC's convention penalty.
   - MIV and CASAA are report-only.
   - Teachers serve as in-context baselines (Stage 1), synthesis generators (Stage 4) and pseudo-labellers (Stage 4).
-- **Hyperparameters:** a small grid per student (lr {5e-5, 1e-4, 2e-4} × epochs {2, 3}; LoRA r {16, 32} only for Qwen). Run it once, under the cold-start protocol, on the HLQC val fold, then freeze it for every protocol. It is never touched with MIV.
+- **Hyperparameters:** a small grid per student (lr {5e-5, 1e-4, 2e-4} × epochs {2, 3}; LoRA r {16, 32} only for the primary student). Run it once, under the cold-start protocol, on the HLQC val fold, then freeze it for every protocol. It is never touched with MIV.
 
 ### P6. Stage 1: core runs (both protocols, 3 seeds, all students)
 | Arm | Setting | Protocols | Seeds / draws |
@@ -183,15 +188,16 @@ Cross-cutting at every stage: validation (seeds), rare classes, prompt consisten
 | few-shot | in-context | both (exemplars per fold) | 3 exemplar draws |
 | teachers zs/fs | in-context (Ollama) | both | 1 / 3 draws |
 | SFT `ft1mix_bare` | 1-adapter mixed fine-tune | cold-start + **pooled LOSO** | 42/1/2 |
-| SFT on cleaned HLQC | ablation (Qwen only) | both | 42/1/2 |
+| SFT on cleaned HLQC | ablation (primary student only) | both | 42/1/2 |
+| bridge: Qwen2.5-7B `ft1mix_bare` | old student, new pipeline | cold start | 42/1/2 (v2) + 42 (v1) |
 | best synthesis (v2 proto, v3 hlqcmix) | data augmentation, existing files | both | 42/1/2 |
 | classic (TF-IDF/RoBERTa) | cheap reference | both | 1 |
 
 **Cost estimate** (calibrated by the P5 pilots):
 - per student, SFT = 3 seeds × (1 cold-start + 10 LOSO) = 33 trainings;
-- Stage 1 total ≈ 33 × 3 students + 33 × 3 (synthesis + cleaned, Qwen only) ≈ 200 trainings.
+- Stage 1 (`conf/stages/stage1.yaml`, all students enabled): 178 cells: 106 train an adapter (Qwen3.5 66, Gemma-4 18, Ministral-3 18, bridge 4) and 72 are zs/fs (no training); plus the synthesis arms on the primary student.
 
-Use **seed-tied 5-fold for the Gemma/Llama exploratory pass** (3 × 5 = 15 per student). Run LOSO for whichever student and arms enter the headline table. This roughly halves the cost.
+Use **seed-tied 5-fold for the Gemma-4/Ministral-3 exploratory pass** (3 × 5 = 15 per student). Run LOSO for whichever student and arms enter the headline table. This roughly halves the cost.
 
 **Gate to Stage 2:** the Stage-1 table is complete, and checks pass (coverage 821/821 per pooled file, seeds complete, prompt hashes match the registry).
 

@@ -108,7 +108,27 @@ def _load_causal_lm(
                     )
                 except Exception:
                     raise second_exc from first_exc
-        raise
+        # Multimodal checkpoints with no causal-LM auto class (e.g. Ministral 3,
+        # mistral3) load through the image-text-to-text class; text-only use is
+        # unchanged because we never pass pixel inputs.
+        try:
+            from transformers import AutoModelForImageTextToText
+
+            log.warning("Retrying %s with AutoModelForImageTextToText", model_id)
+            return AutoModelForImageTextToText.from_pretrained(model_id, **load_kwargs)
+        except Exception:
+            raise first_exc
+
+
+def chat_template_kwargs(tokenizer) -> dict:
+    """Extra apply_chat_template arguments that keep every student in plain
+    answer mode. Qwen3.5 thinks by default (`<think>...</think>`); its template
+    honours enable_thinking=False. Gemma 4 only thinks when the system prompt
+    starts with <|think|>, which ours never does. Templates without the switch
+    (Qwen2.5, Llama 3.1, Ministral 3) get nothing, so their prompts are
+    byte-for-byte unchanged."""
+    tmpl = getattr(tokenizer, "chat_template", None) or ""
+    return {"enable_thinking": False} if "enable_thinking" in str(tmpl) else {}
 
 
 def load_model_and_tokenizer(

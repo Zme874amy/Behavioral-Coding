@@ -40,7 +40,7 @@ def expand(cfg: dict):
                     for fold in range(folds.n_folds(proto["manifest"], proto["design"])):
                         yield {"MANIFEST": proto["manifest"], "DESIGN": proto["design"], "FOLD": fold,
                                "SEED": seed, "ARM": cell["arm"], "INF": cell["inf"], "STUDENT": st["model"],
-                               "CTX": cfg["ctx"], "PROMPT": cfg["prompt"], "SOURCE": cell.get("source", ""),
+                               "CTX": cfg["ctx"], "PROMPT": cell.get("prompt", cfg["prompt"]), "SOURCE": cell.get("source", ""),
                                "EXTRA": st.get("extra", "")}
 
 
@@ -66,7 +66,7 @@ def main() -> None:
                "--export=ALL," + ",".join(f"{k}={v}" for k, v in env.items() if v and k != "EXTRA"),
                "scripts/mlerp_run.slurm"]
         label = f"{c['ARM']}{'+' + c['SOURCE'] if c['SOURCE'] else ''} {c['MANIFEST']}/{c['DESIGN']} " \
-                f"f{c['FOLD']} s{c['SEED']} {c['STUDENT'].split('/')[-1]}"
+                f"f{c['FOLD']} s{c['SEED']} {c['STUDENT'].split('/')[-1]} {c['PROMPT']}"
         if not a.submit:
             print("DRY", label)
             continue

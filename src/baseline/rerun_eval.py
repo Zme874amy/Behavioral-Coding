@@ -250,17 +250,18 @@ def main() -> None:
                     nf = folds.n_folds(pr["manifest"], pr["design"])
                     try:
                         df = rerun.pooled(pr["manifest"], pr["design"], rerun.student_slug(st["model"]), cell["arm"],
-                                          cell["inf"], cfg["ctx"], cfg["prompt"], seed, nf, src)
+                                          cell["inf"], cfg["ctx"], cell.get("prompt", cfg["prompt"]), seed, nf, src)
                     except FileNotFoundError as e:
                         rows.append({"cell": rerun.arm_label(cell["arm"], src), "protocol": pname,
                                      "student": sname, "seed": seed, "status": f"missing: {e}"})
                         continue
                     paths = {k: rerun.result_path(pr["manifest"], pr["design"], rerun.student_slug(st["model"]),
-                                                  cell["arm"], cell["inf"], cfg["ctx"], cfg["prompt"], seed, k, src)
+                                                  cell["arm"], cell["inf"], cfg["ctx"], cell.get("prompt", cfg["prompt"]),
+                                                  seed, k, src)
                              for k in range(nf)}
                     res = score_cell(df, _fold_stats(paths))
                     rows.append({"cell": rerun.arm_label(cell["arm"], src), "protocol": pname, "student": sname,
-                                 "seed": seed, "status": "ok",
+                                 "prompt": cell.get("prompt", cfg["prompt"]), "seed": seed, "status": "ok",
                                  **{f"{s}_{m}": res[s][m] for s in SPEAKERS
                                     for m in ("f1_learnable", "f1_tail", "accuracy", "t1_accuracy")}})
     print(pd.DataFrame(rows).to_string())

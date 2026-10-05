@@ -13,6 +13,7 @@ Schema of the manual CSV (e.g. data/manual/MIV6.3A_manual.csv):
 """
 from __future__ import annotations
 
+from components.hf_load import chat_template_kwargs
 import json
 import random
 from dataclasses import dataclass, field
@@ -308,7 +309,8 @@ def examples_to_prompt_completion(
     rows: List[Dict[str, str]] = []
     for ex in examples:
         prompt = tokenizer.apply_chat_template(
-            ex.messages, tokenize=False, add_generation_prompt=True
+            ex.messages, tokenize=False, add_generation_prompt=True,
+            **chat_template_kwargs(tokenizer),
         )
         if ex.explanation:
             completion = build_rationale_completion(ex.explanation, ex.label)
