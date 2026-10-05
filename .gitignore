@@ -52,6 +52,12 @@ outputs/grpo/*
 !outputs/grpo/faithfulness_*.json
 !outputs/grpo/calibration_*.json
 !outputs/grpo/recovery_*.json
+# P5 pilot: the record behind the student choice (small; HLQC rows only)
+!outputs/student_pilot/
+outputs/student_pilot/*
+!outputs/student_pilot/*.json
+!outputs/student_pilot/*.csv
+!outputs/student_pilot/report.md
 
 # CASAA MITI training transcripts: third-party material, parsed locally only
 /data/external/casaa/

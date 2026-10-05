@@ -1,0 +1,30 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "rows": 369,
+  "seconds": 377.9,
+  "split": "HLQC val fold 0/7 (seed 42)",
+  "prompts": {
+    "version": "v2",
+    "files": {
+      "specs/v2/client_t2.yaml": "21afb7c0aed7ad44d13a4ce7fa380c1a5cc75c3f3f8dc70dac8d90a2c4230fdb",
+      "specs/v2/counsellor_t2.yaml": "873b0fdb6299ea0a21a9a7c3988ef4c058e850ddbd3ab3c3f4a77ef1dec82367",
+      "templates/v2/client/flat.j2": "be04b4d5a6bc60987ebe816d0dbe3a44fdca83c990554a81b678e674d33a4719",
+      "templates/v2/client/t1.j2": "98d5cc290800a924619f8a968d487ae327dabc8b6337d5e177b7263cae566667",
+      "templates/v2/client/t12.j2": "3f485ac764ca9196c1c4c56696a98bc0432703c1c75deaefe5de17b8e8350ff5",
+      "templates/v2/client/t1_bare.j2": "126012b244aabb2308482b23783dd8031938af1201ab6465ee456e178420aa68",
+      "templates/v2/client/t2.j2": "b70dd69614d38d2b1f836eddd134d715a1697c811b54400bf26528244c28b84b",
+      "templates/v2/client/t2_bare.j2": "39a88ebb154abfa1abb1933a616ec68bc8ded0fa56b81c5813209be2a8492a2c",
+      "templates/v2/counsellor/flat.j2": "91d920bb100f0d7868cbe50af817a0672fa91f14e5a99cd4b394e41485603a07",
+      "templates/v2/counsellor/t1.j2": "60b22f51562f849739c93a370af75571b8284c1aaa747b2d305448dfea9a109c",
+      "templates/v2/counsellor/t12.j2": "e84178ff3e75031455b40d199c148fddf40ad6b11c7dddcfec2b270bb750de9a",
+      "templates/v2/counsellor/t1_bare.j2": "69397552315b7f2b353fda77322a1009ebdb346f59fe1f947035135e21014c53",
+      "templates/v2/counsellor/t2.j2": "f1a7fd20c5857f78c63c5f593fba571f5c918f1f3116160418a9d8d1e129bd8d",
+      "templates/v2/counsellor/t2_bare.j2": "54a95e43f3e2671a63549d53d672e25056ebd6e04a4ca1f88308c5fb537533ae",
+      "templates/v2/user_prompt.j2": "501476ca44379364252ff0199c0abad7df8d89ca1d1c147517fe357e6c08fc2a"
+    }
+  },
+  "git_sha": "dc53d7d",
+  "git_tag": null,
+  "git_dirty": false,
+  "slurm_job_id": "170650"
+}

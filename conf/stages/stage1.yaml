@@ -20,21 +20,21 @@ students:   # `path:` = staged copy under /mnt/userdata4/jia-wen/models (results
   # Apache-2.0, ungated, 12B encoder-free (gemma4_unified: needs a transformers newer
   # than 5.9); bf16 LoRA if the pilot fits 40 GB, else QLoRA via extra
   gemma4_12b: {model: google/gemma-4-12B-it, enabled: false}       # flip after its P5 pilot
-  # Apache-2.0, ungated, 2025-12, a third model family; the BF16 release (the default
-  # checkpoint is FP8, which LoRA cannot train)
-  ministral3_8b: {model: mistralai/Ministral-3-8B-Instruct-2512-BF16, enabled: false}  # flip after its P5 pilot
+  # third family, chosen by the P5 pilot (docs/experiments/2026-10-06-student-pilot.md):
+  # MIT, 14.7B, bf16 LoRA peaks at 31 GB; staged copy on MLeRP (compute nodes are offline)
+  phi4: {model: microsoft/phi-4, path: /mnt/userdata4/jia-wen/models/phi-4, enabled: false}  # flip when Stage 1 starts
   # legacy bridge to all earlier results
   qwen25_7b: {model: Qwen/Qwen2.5-7B-Instruct}
 cells:
   # zero-shot is greedy and identical across seeds and protocols: one seed, cold start;
   # the pooled scorer reuses it (same 821 utterances).
-  - {arm: zs, inf: bare, protocols: [cold_start], students: [qwen35_9b, gemma4_12b, ministral3_8b], seeds: [42]}
+  - {arm: zs, inf: bare, protocols: [cold_start], students: [qwen35_9b, gemma4_12b, phi4], seeds: [42]}
   # few-shot: 3 exemplar draws (= seeds), drawn per fold from the training side.
   - {arm: fs, inf: bare, protocols: [cold_start, pooled_loso], students: [qwen35_9b]}
-  - {arm: fs, inf: bare, protocols: [cold_start, pooled_5fold], students: [gemma4_12b, ministral3_8b]}
+  - {arm: fs, inf: bare, protocols: [cold_start, pooled_5fold], students: [gemma4_12b, phi4]}
   # main SFT setting
   - {arm: ft1mix_bare, inf: bare, protocols: [cold_start, pooled_loso], students: [qwen35_9b]}
-  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start, pooled_5fold], students: [gemma4_12b, ministral3_8b]}
+  - {arm: ft1mix_bare, inf: bare, protocols: [cold_start, pooled_5fold], students: [gemma4_12b, phi4]}
   # cleaned-HLQC ablation (primary student only)
   - {arm: ft1mix_bare, inf: bare, source: misc.hlqc.gold.cleaned, protocols: [cold_start, pooled_loso],
      students: [qwen35_9b]}
