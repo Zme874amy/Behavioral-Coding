@@ -1,5 +1,18 @@
 # Re-run pipeline plan (refined from the user's outline)
 
+## Status (2026-10-05)
+| Phase | State |
+|---|---|
+| P0 record | done, except **push + merge to main (awaiting your OK)** |
+| P1 data | done |
+| P2 prompts | done, except the de-duplicated rationale prompt and the judge/verify fixes (Stages 2/4) and the AnnoMI wording check |
+| P3 infrastructure | done for zs/fs/SFT-bare arms; GRPO/rationale/agentic/self-training entry points join with their stages |
+| P4 evaluation | done, except the Welivita eval rebuild |
+| P5 models | not started: needs the gated Llama/Gemma licences accepted on your HF account, then pilots on MLeRP |
+| P6–P7 | not started |
+
+Details: [experiments/2026-10-05-rerun-prep.md](experiments/2026-10-05-rerun-prep.md).
+
 ## Context
 Every past result used one inherited protocol (train HLQC gold → test MIV6.3A gold). The 2026-10-04/05 audits then found several problems:
 
