@@ -106,8 +106,8 @@ Counsellor only, CASAA's 18 clean sessions:
 | `misc.miv63a.gold` | **test** (P0); test folds + in-domain training (P3) | P0: all 10 test. P3: 5 session folds (seed 42; the folds `automisc_ft` planned), each session tested once | most reliable MISC labels (E1); target population (E2); every utterance scored (E3) |
 | `misc.hlqc.gold` | **training only** | all 10 in training; checkpoint selection on HLQC val fold 0 of 7 (369 rows), fixed before training | never a test set (E1); a selection fold that never touches MIV (C7) |
 | `miti.casaa.gold` | **external test only** | 18 sessions; Emmy = high_121 and Rounder = high_072 excluded | reference-quality labels from a third domain (E1, E5); too small to train on |
-| `annomi.gold` | **external test** for MISC models (counsellor main behaviour, client C/S/N at T1); own-scheme split only for AnnoMI-scheme work | transfer test: exclude 15/21/44/53 (HLQC train copies), plus 48 transcripts if the model saw `pool.hlqc`; score questions at T1 (AnnoMI "open" ≠ MISC OQ). Own scheme: see §7.1 (series-level, 97/15/21) | expert labels, but a different scheme and coding convention, so a transfer test, not a MISC test; the cleanest labels go to the test side |
-| `welivita.gold` | **weak pool** (self-training / distillation), weak transfer test; own-scheme split only for Welivita-scheme work | own scheme: see §7.2 (1,602/203/195 dialogues) | crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047), so it should not be a headline test |
+| `annomi.gold` | **external test** for MISC models (counsellor main behaviour, client C/S/N at T1); own-scheme split only for AnnoMI-scheme work | transfer test: exclude 15/21/44/53 (HLQC train copies), plus 48 transcripts if the model saw `pool.hlqc`; score questions at T1 (AnnoMI "open" ≠ MISC OQ). Own scheme: see §7.1 (series-grouped 5-fold CV) | expert labels, but a different scheme and coding convention, so a transfer test, not a MISC test; the cleanest labels go to the test side |
+| `welivita.gold` | **weak pool** (self-training / distillation), weak transfer test; own-scheme split only for Welivita-scheme work | own scheme: see §7.2 (cluster-grouped 5-fold CV) | crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047), so it should not be a headline test |
 | `pool.hlqc`, `pool.miv63a`, `pool.miv63b` | unlabelled pools (training side only) | drop the 10 MIV test sessions; drop the 45 redundant HLQC duplicates; drop the pool twins of any corpus used as a test | leakage control (C3) |
 | `synth.*` | training augmentation only | never a test | generator-assigned labels; see SYNTHETIC_DATA.md |
 
@@ -142,7 +142,7 @@ Counsellor only, CASAA's 18 clean sessions:
 
 | Dataset | Channel | Found | Proxy effect | Decision |
 |---|---|---|---|---|
-| AnnoMI | **parts of one video series / good-bad versions of one role-play split across train/dev/test** | 31 multi-transcript series (e.g. "Daryl interviews Ricky 1–3", "The Effective / Ineffective Physician"); **13 of them were split** by the old transcript-level manifest | none measurable on coarse labels (proxy 0.715 by transcript vs 0.718 by series) | **fixed:** `annomi_own` is now series-level (97/15/21 transcripts) |
+| AnnoMI | **parts of one video series / good-bad versions of one role-play split across train/dev/test** | 31 multi-transcript series (e.g. "Daryl interviews Ricky 1–3", "The Effective / Ineffective Physician"); **13 of them were split** by the old transcript-level manifest | none measurable on coarse labels (proxy 0.715 by transcript vs 0.718 by series) | **fixed:** `annomi_own` is now series-level (and since §9, grouped 5-fold CV) |
 | AnnoMI | same annotator in train and test | yes (10 annotators, 11–13 transcripts each) | unseen annotators −0.01 to −0.02; untestable for reflection subtype (the proxy is near chance there) | keep annotator stratification and report per-annotator scores. The 7 ten-rater transcripts (majority labels) are test |
 | Welivita | same opening post (one question, several answers) across splits | 316 thread pairs | small (0.475 by dialogue vs 0.469 by cluster) | already split by cluster |
 | Welivita | source shift (CounselChat professionals vs Reddit peers) | — | in-source 0.47 vs cross-source 0.36–0.38 | stratify by source (done); report cross-source as a robustness check |
@@ -155,18 +155,18 @@ The MISC protocol is §4. Each other scheme gets its own protocol, chosen by the
 ### 7.1 AnnoMI scheme (main behaviour, subtypes, client talk type)
 
 - **Data:** `annomi.gold` only (133 transcripts).
-- **Split:** `annomi_own`, by video series, stratified by series MI quality. Train 97, dev 15, test 21 transcripts.
+- **Split:** `annomi_own`, **5-fold CV grouped by video series**, stratified by series MI quality, so every transcript is tested once. For test fold k, dev is fold k+1. Folds hold 21–37 transcripts, because series stay whole. A single 15% split was a lucky draw (§9).
 - **Why:**
   - C3: series grouping removes the shared-client/story channel.
-  - C1: the test holds the 7 ten-rater transcripts, the only multi-rater labels, so the cleanest labels are tested.
-  - C5: 21 transcripts; report per-annotator scores, because single-annotator labels carry a strong annotator effect.
+  - C1: also report the score on the 7 ten-rater transcripts (majority labels), the cleanest subset.
+  - C5: all 133 transcripts are scored; report per-annotator scores, because single-annotator labels carry a strong annotator effect.
   - C7: dev is used for selection.
 - **Not used for training:** HLQC overlaps (15/21/44/53 and the 48 pool twins) only matter when a model is trained on HLQC and tested on AnnoMI. For AnnoMI-scheme training they are ordinary AnnoMI transcripts.
 
 ### 7.2 Welivita scheme (15 MITI-derived listener codes)
 
 - **Data:** `welivita.gold`; labels = the 7,152 stage-I-agreed listener sentences (crowd κ 0.34 overall, so only agreed labels are trusted).
-- **Split:** `welivita_own`, by same-post cluster, stratified by source. Train 1,602, dev 203, test 195 dialogues.
+- **Split:** `welivita_own`, **5-fold CV grouped by same-post cluster**, stratified by source (~400 dialogues per fold; dev = the next fold).
 - **Plus:** cross-source robustness (train CounselChat → test Reddit, and the reverse).
 - **Why:** C1 agreed labels only; C3 cluster grouping; C2 source stratification, plus cross-source because the shift is large.
 
@@ -186,8 +186,45 @@ These involve no training on the target scheme, so there is no split, only exclu
 - **Welivita:** the weak test, on the shared codes.
 - **CASAA:** the 18 clean sessions.
 
-## 8. Next steps (updated)
+## 8. Next steps (updated; superseded by §11)
 
 1. **Your decision:** P3 (`misc_pooled_cv`) as the primary MISC protocol, P0 kept as cold-start. P3 adds no session, person or text leakage beyond small template overlap. Its rules (frozen config, per-fold statistics, pooled scoring) also close the test-informed-decision channel that P0 already has.
 2. If yes: a 7B confirmation run of `ft1mix_bare` under P3 (5 folds), then the arms we want to claim.
 3. In any case: disclose L5 for the existing P0 results, and rerun the AnnoMI transfer test with the exclusions and T1 questions.
+
+## 9. Lucky draws
+
+A result is a lucky draw when it depends on one arbitrary random choice. There are five such choices here. Measured with `eda.split_eval.fold_draw_variance` and `single_split_variance`; the 7B seed spread is from EXPANSION_RESULTS.md.
+
+| Source of randomness | Size of the effect | Control (`variance_rules` in every manifest) |
+|---|---|---|
+| **Training seed** (7B) | across 3 seeds, macro-F1 SD up to ±0.033. The seed-42 synthesis v2 accuracy gain of +4.2 pp turned out to be a favourable draw (it flips sign across seeds) | ≥ 3 matched seeds for any claimed difference; paired differences; one seed = exploratory |
+| **Fold assignment** (pooled CV) | 20 random 5-fold draws: SD ≈ 0.010–0.013 macro-F1, range up to 0.05. The direction of pooled vs MIV-only never flipped, but the client gain ranged from **+0.001 to +0.045** depending on the draw | **LOSO** for headline numbers: 10 folds, no randomness, 9 MIV sessions in every training set. Otherwise **seed-tied 5-fold**: training seed s uses fold draw s, so the reported spread includes fold variance |
+| **Single train/test split** (AnnoMI) | 20 draws of a 15% series-grouped test split: SD 0.022–0.031, **range 0.09–0.12** macro-F1 | AnnoMI and Welivita now use **grouped 5-fold CV**: every transcript or dialogue is tested once (dev = the next fold) |
+| **Which 10 sessions are the test** (MIV) | fixed by the data owners; macro-F1 95% CI width 0.17–0.20; dropping one session moves client macro-F1 by up to ±0.05 | can't be re-drawn without more labels. Session-bootstrap CIs on every number, and pooled scoring over all 821 utterances |
+| **Which exemplars are in the prompt** | unmeasured: one frozen draw per context length (`fewshot.py`, fixed `random_state`) | ≥ 3 exemplar draws for prompted arms (§10) |
+
+Cost of LOSO: 10 training runs per arm per seed. With 3 seeds that is 30 runs, so use it for headline arms (baseline and the best synthesis arm) and seed-tied 5-fold (15 runs) for exploratory arms.
+
+## 10. Exemplars
+
+Three channels put HLQC gold text in front of a model:
+- **few-shot exemplars:** `data/fewshot/exemplars*.json`, 41 per file, one per code, frozen;
+- **the retrieval index:** `agentic.retriever`, all 1,925 HLQC rows;
+- **synthesis style anchors:** `synth.generate.load_real_exemplars`, up to 200 per code. Phrases from these were found copied verbatim into synthetic windows (SYNTHETIC_DATA.md).
+
+| Issue | Evidence | Rule (`exemplar_rules` in misc_main / misc_pooled_cv) |
+|---|---|---|
+| Exemplars from the test side | none: all channels use HLQC only (`fewshot.py`: "never from the MIV6.3A evaluation set") | exemplars come only from the training side. Under pooled CV, HLQC by default (the exemplar factor stays constant across protocols); the fold's training MIV sessions only as an explicit, labelled arm; never a test session |
+| **Exemplars that are copies of external-test sessions** | **22 of 41** few-shot exemplars come from HLQC sessions that are AnnoMI 15/21/44/53 (high_099 7, low_080 4, low_033 4, low_001 2) or CASAA Emmy (high_121 5); the retrieval index and synthesis anchors include them too | apply the AnnoMI/CASAA exclusions to **any** model that saw HLQC gold, by training, prompt, retrieval or synthetic data. The exclusion keys now say so |
+| Exemplar draw is a lucky draw | one frozen draw | prompted arms use ≥ 3 exemplar draws (different selection seeds) and report mean ± sd; `fewshot.build_exemplars` needs a seed argument for this |
+| Scoring on the exemplars' own corpus | exemplars carry 5 context volleys of their session; `label_pool --exclude-exemplars` drops exemplar rows only | when scoring on HLQC (CV anchor, teacher screens), drop the exemplar **sessions**, or draw exemplars from other folds |
+
+## 11. Next steps (supersedes §8)
+
+1. **Your decision:** P3 (`misc_pooled_cv`) as the primary MISC protocol, with LOSO for headline arms and seed-tied 5-fold for exploratory ones; P0 kept as cold-start.
+2. If yes: confirmation run of `ft1mix_bare` under LOSO (10 folds × 3 seeds) on MLeRP.
+3. In any case:
+   - add a seed to `fewshot.build_exemplars` and re-score prompted arms over 3 exemplar draws;
+   - rerun the AnnoMI transfer test with the exclusions (now for every model that saw HLQC) and T1 questions;
+   - disclose L5 (test-informed design decisions) for the existing P0 results.

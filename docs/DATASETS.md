@@ -422,6 +422,17 @@ The splits were reviewed rather than inherited: see [experiments/2026-10-05-spli
 - In a proxy experiment, **in-domain training data matters more than size**: about 650 MIV utterances beat 1,925 HLQC utterances (counsellor macro-F1 0.47 vs 0.26). Pooled HLQC + MIV also generalises best to CASAA.
 - The test is thin (CI width 0.17–0.20), so every protocol keeps all 821 MIV utterances scored.
 
+**Lucky draws and exemplars** (split review §9–§10): every manifest carries `variance_rules`:
+- ≥ 3 matched training seeds;
+- paired differences;
+- session-bootstrap CIs;
+- no single random split or fold draw as a headline.
+
+`misc_main` and `misc_pooled_cv` also carry `exemplar_rules`:
+- few-shot, retrieval and synthesis exemplars come from the training side only;
+- prompted arms use ≥ 3 exemplar draws;
+- 22 of 41 few-shot exemplars come from HLQC sessions that are AnnoMI/CASAA test transcripts, so the AnnoMI/CASAA exclusions apply to **any** model that saw HLQC gold by training, prompt, retrieval or synthetic data.
+
 The manifests are byte-identical across reruns and `PYTHONHASHSEED` values. Built-in checks:
 - no conversation sits in two splits;
 - in pooled CV, each MIV session is tested exactly once and never trained on in its own fold;
@@ -446,12 +457,12 @@ This answers: "can a model trained only on public labels code a new service's se
 
 | Split | Data | Why |
 |---|---|---|
-| folds | 5 folds over the 10 MIV sessions (2 per fold; seed 42, the same folds `automisc_ft` planned) | every MIV utterance is tested exactly once, so scores still cover all 821 and stay comparable with AutoMISC |
-| train (fold k) | all `misc.hlqc.gold` + the 8 MIV sessions outside fold k | RQ1 as worded: adapting on labels the service already holds. Best client and best external (CASAA) proxy scores |
+| folds | **headline: leave-one-session-out** (10 folds, no randomness). **Exploratory: 5-fold, re-drawn with each training seed** (seed-tied) | every MIV utterance is tested exactly once, so scores still cover all 821 and stay comparable with AutoMISC. A single fold draw would be a lucky draw: the client gain ranged from +0.001 to +0.045 across 20 draws |
+| train (fold k) | all `misc.hlqc.gold` + the MIV sessions outside fold k (9 under LOSO, 8 under 5-fold) | RQ1 as worded: adapting on labels the service already holds. Best client and best external (CASAA) proxy scores |
 | checkpoint selection | HLQC val fold, as in 6.1 | no MIV session is used for selection |
 | external test / exclude | as in 6.1 | — |
 
-Cost: 5 training runs per arm. P0 results stay valid as the cold-start setting.
+Cost: LOSO is 10 runs per arm per seed; seed-tied 5-fold is 5. P0 results stay valid as the cold-start setting.
 
 **Leakage** (audit in the split review, §6): folds are by session and by participant, and no text crosses folds beyond 18 of 532 template-like counsellor lines. The real risk is reusing decisions tuned on MIV, a risk that exists already under P0: the retriever's rare-code list, the self-training caps, `v3_mivmix` topic counts, and the choice of main setting. Rules in the manifest:
 - freeze the current config;
@@ -460,15 +471,15 @@ Cost: 5 training runs per arm. P0 results stay valid as the cold-start setting.
 
 ### 6.3 `annomi_own`: AnnoMI scheme
 
-**Split by video series**, so parts of one session and good/bad versions of one role-play stay together. Stratified by series MI quality: train 97, dev 15, test 21 transcripts. The test split includes the series of the 7 ten-rater transcripts (majority labels, the cleanest).
+**5-fold CV grouped by video series** (parts of one session and good/bad versions of one role-play stay in one fold), stratified by series MI quality. Every transcript is tested once; for test fold k, dev is fold k+1. Folds hold 21–37 transcripts.
 
-The old transcript-level split had spread 13 of 31 multi-transcript series across splits. The proxy showed no measurable inflation from that, but the fix costs nothing. Report per-annotator scores, because labels come from single annotators with a strong annotator effect.
+**Why CV and not one split:** a single 15% split moved proxy macro-F1 by SD 0.02–0.03, with a range of about 0.1. Also report the score on the 7 ten-rater transcripts (majority labels, the cleanest) and per-annotator scores (annotator effect).
 
 **For MISC models, AnnoMI is an external transfer test:** counsellor main behaviour, client C/S/N, and questions at T1 only, with the exclusions in 6.1.
 
 ### 6.4 `welivita_own`: Welivita scheme
 
-Split by same-post cluster, stratified by source: train 1,602, dev 203, test 195 dialogues. Labels are the 7,152 stage-I-agreed sentences. Also report cross-source robustness (CounselChat → Reddit and the reverse): the proxy drops from 0.47 in-source to 0.36–0.38 across sources.
+**5-fold CV grouped by same-post cluster**, stratified by source (~400 dialogues per fold; dev = the next fold). Labels are the 7,152 stage-I-agreed sentences. Report cross-source robustness (CounselChat → Reddit and the reverse): the proxy drops from 0.47 in-source to 0.36–0.38 across sources.
 
 Its main role in MISC work is a weak pool: crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047).
 

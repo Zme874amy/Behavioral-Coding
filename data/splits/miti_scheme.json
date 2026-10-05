@@ -51,7 +51,7 @@
  ],
  "training_options": {
   "A (recommended)": "MISC-trained model + MISC->MITI mapping (no MITI training data needed)",
-  "B": "welivita.gold train split (MITI-derived, written forum) -> CASAA: cross-domain, weak labels",
+  "B": "welivita.gold (MITI-derived, written forum; all folds) -> CASAA: cross-domain, weak labels",
   "C (if obtained)": "MI-TAGS (MITI 4.2, 242 sessions) after dedup against HLQC, AnnoMI and CASAA"
  }
 }

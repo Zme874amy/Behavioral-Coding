@@ -1,8 +1,820 @@
 {
  "checkpoint_selection": "HLQC validation fold as in misc_main (val_folds 7, val_fold 0); never an MIV session",
+ "designs": {
+  "5fold_seed_tied": {
+   "1": {
+    "0": {
+     "test": {
+      "misc.miv63a.gold": [
+       "6481e7756969fcd48ea9c634",
+       "671fff4fced93c3e5a17f230"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "1": {
+     "test": {
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "67336dc4beb89674ca687d87"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "2": {
+     "test": {
+      "misc.miv63a.gold": [
+       "663b79f76293a4480abba57d",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87"
+      ]
+     }
+    },
+    "3": {
+     "test": {
+      "misc.miv63a.gold": [
+       "60dde1621f6e206dea63a7dd",
+       "67203fd3fe9e55e9ec82fc1f"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "4": {
+     "test": {
+      "misc.miv63a.gold": [
+       "6127b32b912465823dca1e4b",
+       "663fd7ca84b7978432d6070b"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    }
+   },
+   "2": {
+    "0": {
+     "test": {
+      "misc.miv63a.gold": [
+       "663fd7ca84b7978432d6070b",
+       "67203fd3fe9e55e9ec82fc1f"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "671fff4fced93c3e5a17f230",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "1": {
+     "test": {
+      "misc.miv63a.gold": [
+       "6127b32b912465823dca1e4b",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87"
+      ]
+     }
+    },
+    "2": {
+     "test": {
+      "misc.miv63a.gold": [
+       "6481e7756969fcd48ea9c634",
+       "67336dc4beb89674ca687d87"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "3": {
+     "test": {
+      "misc.miv63a.gold": [
+       "60dde1621f6e206dea63a7dd",
+       "663b79f76293a4480abba57d"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "4": {
+     "test": {
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "671fff4fced93c3e5a17f230"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    }
+   },
+   "42": {
+    "0": {
+     "test": {
+      "misc.miv63a.gold": [
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "1": {
+     "test": {
+      "misc.miv63a.gold": [
+       "6481e7756969fcd48ea9c634",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87"
+      ]
+     }
+    },
+    "2": {
+     "test": {
+      "misc.miv63a.gold": [
+       "6127b32b912465823dca1e4b",
+       "663b79f76293a4480abba57d"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "60dde1621f6e206dea63a7dd",
+       "6481e7756969fcd48ea9c634",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "3": {
+     "test": {
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "67336dc4beb89674ca687d87"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "60dde1621f6e206dea63a7dd",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "663fd7ca84b7978432d6070b",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    },
+    "4": {
+     "test": {
+      "misc.miv63a.gold": [
+       "60dde1621f6e206dea63a7dd",
+       "663fd7ca84b7978432d6070b"
+      ]
+     },
+     "train": {
+      "misc.hlqc.gold": [
+       "high_001",
+       "high_099",
+       "high_117",
+       "high_121",
+       "high_127",
+       "low_001",
+       "low_026",
+       "low_031",
+       "low_033",
+       "low_080"
+      ],
+      "misc.miv63a.gold": [
+       "59cb95053306be000195be2e",
+       "6127b32b912465823dca1e4b",
+       "6481e7756969fcd48ea9c634",
+       "663b79f76293a4480abba57d",
+       "671fff4fced93c3e5a17f230",
+       "67203fd3fe9e55e9ec82fc1f",
+       "67336dc4beb89674ca687d87",
+       "6735337bd46a0b33a2bcf429"
+      ]
+     }
+    }
+   }
+  },
+  "loso": {
+   "0": {
+    "test": {
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "1": {
+    "test": {
+     "misc.miv63a.gold": [
+      "60dde1621f6e206dea63a7dd"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "2": {
+    "test": {
+     "misc.miv63a.gold": [
+      "6127b32b912465823dca1e4b"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "3": {
+    "test": {
+     "misc.miv63a.gold": [
+      "6481e7756969fcd48ea9c634"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "4": {
+    "test": {
+     "misc.miv63a.gold": [
+      "663b79f76293a4480abba57d"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "5": {
+    "test": {
+     "misc.miv63a.gold": [
+      "663fd7ca84b7978432d6070b"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "6": {
+    "test": {
+     "misc.miv63a.gold": [
+      "671fff4fced93c3e5a17f230"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "7": {
+    "test": {
+     "misc.miv63a.gold": [
+      "67203fd3fe9e55e9ec82fc1f"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67336dc4beb89674ca687d87",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "8": {
+    "test": {
+     "misc.miv63a.gold": [
+      "67336dc4beb89674ca687d87"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "6735337bd46a0b33a2bcf429"
+     ]
+    }
+   },
+   "9": {
+    "test": {
+     "misc.miv63a.gold": [
+      "6735337bd46a0b33a2bcf429"
+     ]
+    },
+    "train": {
+     "misc.hlqc.gold": [
+      "high_001",
+      "high_099",
+      "high_117",
+      "high_121",
+      "high_127",
+      "low_001",
+      "low_026",
+      "low_031",
+      "low_033",
+      "low_080"
+     ],
+     "misc.miv63a.gold": [
+      "59cb95053306be000195be2e",
+      "60dde1621f6e206dea63a7dd",
+      "6127b32b912465823dca1e4b",
+      "6481e7756969fcd48ea9c634",
+      "663b79f76293a4480abba57d",
+      "663fd7ca84b7978432d6070b",
+      "671fff4fced93c3e5a17f230",
+      "67203fd3fe9e55e9ec82fc1f",
+      "67336dc4beb89674ca687d87"
+     ]
+    }
+   }
+  }
+ },
  "dup_threshold": 0.1,
  "exclude": {
-  "annomi.gold (when the model also saw pool.hlqc: self-training/retrieval arms)": [
+  "annomi.gold (additionally, when the model saw pool.hlqc: self-training/retrieval over the pool)": [
    "2",
    "3",
    "8",
@@ -52,7 +864,7 @@
    "130",
    "131"
   ],
-  "annomi.gold (when used as transfer test of HLQC-gold-trained models)": [
+  "annomi.gold (transfer test of any model that saw HLQC gold: training, exemplars, retrieval or synthetic data)": [
    "15",
    "21",
    "44",
@@ -62,6 +874,12 @@
    "casaa_emmys-first-encounter",
    "casaa_rounder-miti-4"
   ]
+ },
+ "exemplar_rules": {
+  "cross_corpus": "22 of 41 few-shot exemplars (and the retrieval index and synthesis anchors) include HLQC sessions that are AnnoMI 15/21/44/53 and CASAA Emmy: apply the AnnoMI/CASAA exclusions to ANY model that saw HLQC gold by training, prompt exemplars, retrieval or synthetic data",
+  "draws": "prompted arms use >= 3 exemplar draws (different selection seeds) and report mean +- sd; the exemplar draw is a variance source like the training seed",
+  "same_corpus_scoring": "when scoring on the corpus the exemplars come from (HLQC CV, teacher screens), drop the exemplar SESSIONS from scoring (exemplars carry 5 context volleys), or draw exemplars from other folds",
+  "source": "exemplars come only from the training side of the split: HLQC gold under misc_main; under pooled CV, HLQC gold by default (keeps the exemplar factor constant across protocols), the fold's training MIV sessions only as an explicit, labelled arm; never a test session"
  },
  "external_test": [
   "casaa_have-you-ever-been-a-smoker",
@@ -83,176 +901,22 @@
   "casaa_the-confirmed-smoker",
   "casaa_the-suspiscious-smoker"
  ],
- "folds": {
-  "0": {
-   "test": {
-    "misc.miv63a.gold": [
-     "671fff4fced93c3e5a17f230",
-     "67203fd3fe9e55e9ec82fc1f"
-    ]
-   },
-   "train": {
-    "misc.hlqc.gold": [
-     "high_001",
-     "high_099",
-     "high_117",
-     "high_121",
-     "high_127",
-     "low_001",
-     "low_026",
-     "low_031",
-     "low_033",
-     "low_080"
-    ],
-    "misc.miv63a.gold": [
-     "59cb95053306be000195be2e",
-     "60dde1621f6e206dea63a7dd",
-     "6127b32b912465823dca1e4b",
-     "6481e7756969fcd48ea9c634",
-     "663b79f76293a4480abba57d",
-     "663fd7ca84b7978432d6070b",
-     "67336dc4beb89674ca687d87",
-     "6735337bd46a0b33a2bcf429"
-    ]
-   }
-  },
-  "1": {
-   "test": {
-    "misc.miv63a.gold": [
-     "6481e7756969fcd48ea9c634",
-     "6735337bd46a0b33a2bcf429"
-    ]
-   },
-   "train": {
-    "misc.hlqc.gold": [
-     "high_001",
-     "high_099",
-     "high_117",
-     "high_121",
-     "high_127",
-     "low_001",
-     "low_026",
-     "low_031",
-     "low_033",
-     "low_080"
-    ],
-    "misc.miv63a.gold": [
-     "59cb95053306be000195be2e",
-     "60dde1621f6e206dea63a7dd",
-     "6127b32b912465823dca1e4b",
-     "663b79f76293a4480abba57d",
-     "663fd7ca84b7978432d6070b",
-     "671fff4fced93c3e5a17f230",
-     "67203fd3fe9e55e9ec82fc1f",
-     "67336dc4beb89674ca687d87"
-    ]
-   }
-  },
-  "2": {
-   "test": {
-    "misc.miv63a.gold": [
-     "6127b32b912465823dca1e4b",
-     "663b79f76293a4480abba57d"
-    ]
-   },
-   "train": {
-    "misc.hlqc.gold": [
-     "high_001",
-     "high_099",
-     "high_117",
-     "high_121",
-     "high_127",
-     "low_001",
-     "low_026",
-     "low_031",
-     "low_033",
-     "low_080"
-    ],
-    "misc.miv63a.gold": [
-     "59cb95053306be000195be2e",
-     "60dde1621f6e206dea63a7dd",
-     "6481e7756969fcd48ea9c634",
-     "663fd7ca84b7978432d6070b",
-     "671fff4fced93c3e5a17f230",
-     "67203fd3fe9e55e9ec82fc1f",
-     "67336dc4beb89674ca687d87",
-     "6735337bd46a0b33a2bcf429"
-    ]
-   }
-  },
-  "3": {
-   "test": {
-    "misc.miv63a.gold": [
-     "59cb95053306be000195be2e",
-     "67336dc4beb89674ca687d87"
-    ]
-   },
-   "train": {
-    "misc.hlqc.gold": [
-     "high_001",
-     "high_099",
-     "high_117",
-     "high_121",
-     "high_127",
-     "low_001",
-     "low_026",
-     "low_031",
-     "low_033",
-     "low_080"
-    ],
-    "misc.miv63a.gold": [
-     "60dde1621f6e206dea63a7dd",
-     "6127b32b912465823dca1e4b",
-     "6481e7756969fcd48ea9c634",
-     "663b79f76293a4480abba57d",
-     "663fd7ca84b7978432d6070b",
-     "671fff4fced93c3e5a17f230",
-     "67203fd3fe9e55e9ec82fc1f",
-     "6735337bd46a0b33a2bcf429"
-    ]
-   }
-  },
-  "4": {
-   "test": {
-    "misc.miv63a.gold": [
-     "60dde1621f6e206dea63a7dd",
-     "663fd7ca84b7978432d6070b"
-    ]
-   },
-   "train": {
-    "misc.hlqc.gold": [
-     "high_001",
-     "high_099",
-     "high_117",
-     "high_121",
-     "high_127",
-     "low_001",
-     "low_026",
-     "low_031",
-     "low_033",
-     "low_080"
-    ],
-    "misc.miv63a.gold": [
-     "59cb95053306be000195be2e",
-     "6127b32b912465823dca1e4b",
-     "6481e7756969fcd48ea9c634",
-     "663b79f76293a4480abba57d",
-     "671fff4fced93c3e5a17f230",
-     "67203fd3fe9e55e9ec82fc1f",
-     "67336dc4beb89674ca687d87",
-     "6735337bd46a0b33a2bcf429"
-    ]
-   }
-  }
- },
  "leakage_rules": {
   "fold_statistics": "label priors, self-training caps/rare-code lists, synthesis topic mixes and retrieval indexes are rebuilt from the fold's training sessions only",
   "frozen_config": "no hyperparameter is chosen on MIV: reuse the misc_main config as is; any new tuning uses HLQC val fold or an inner split of the fold's TRAINING sessions",
   "pools": "self-training/retrieval pools exclude all 10 MIV gold sessions (label_pool already does)",
-  "scoring": "pool the out-of-fold predictions of all 5 folds and score once (821 utterances); compare arms on the same folds and seeds (paired); bootstrap by session"
+  "scoring": "pool the out-of-fold predictions of all folds and score once (821 utterances); bootstrap by session"
  },
  "notes": "Answers RQ1 as worded (a service adapting on labels it already holds). misc_main remains the cold-start transfer setting (no in-domain labels).",
+ "recommended_design": "loso for headline numbers (10 folds, no fold-assignment randomness, 9 MIV sessions in every training set); 5fold_seed_tied for exploratory arms (training seed s uses fold draw s, so the reported spread includes fold-assignment variance)",
  "scheme": "MISC 2.5",
  "seed": 42,
- "status": "PROPOSED (pending decision); misc_main stays the reported setting until then"
+ "status": "PROPOSED (pending decision); misc_main stays the reported setting until then",
+ "variance_rules": {
+  "fold_draw": "for k-fold designs, re-draw the fold assignment with each training seed (seed-tied) or use leave-one-session-out, so no result rests on one fold assignment",
+  "intervals": "95% CI from resampling sessions (clusters), on top of the across-seed spread",
+  "pairing": "compare arms at the same seed and the same folds; report the mean of paired differences",
+  "single_split": "do not report a single random train/test split as a headline: use the grouped k-fold CV",
+  "training_seeds": "at least 3 matched seeds (42, 1, 2) for any claimed difference; one seed = exploratory only"
+ }
 }

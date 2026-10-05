@@ -15,7 +15,7 @@
  },
  "dup_threshold": 0.1,
  "exclude": {
-  "annomi.gold (when the model also saw pool.hlqc: self-training/retrieval arms)": [
+  "annomi.gold (additionally, when the model saw pool.hlqc: self-training/retrieval over the pool)": [
    "2",
    "3",
    "8",
@@ -65,7 +65,7 @@
    "130",
    "131"
   ],
-  "annomi.gold (when used as transfer test of HLQC-gold-trained models)": [
+  "annomi.gold (transfer test of any model that saw HLQC gold: training, exemplars, retrieval or synthetic data)": [
    "15",
    "21",
    "44",
@@ -75,6 +75,12 @@
    "casaa_emmys-first-encounter",
    "casaa_rounder-miti-4"
   ]
+ },
+ "exemplar_rules": {
+  "cross_corpus": "22 of 41 few-shot exemplars (and the retrieval index and synthesis anchors) include HLQC sessions that are AnnoMI 15/21/44/53 and CASAA Emmy: apply the AnnoMI/CASAA exclusions to ANY model that saw HLQC gold by training, prompt exemplars, retrieval or synthetic data",
+  "draws": "prompted arms use >= 3 exemplar draws (different selection seeds) and report mean +- sd; the exemplar draw is a variance source like the training seed",
+  "same_corpus_scoring": "when scoring on the corpus the exemplars come from (HLQC CV, teacher screens), drop the exemplar SESSIONS from scoring (exemplars carry 5 context volleys), or draw exemplars from other folds",
+  "source": "exemplars come only from the training side of the split: HLQC gold under misc_main; under pooled CV, HLQC gold by default (keeps the exemplar factor constant across protocols), the fold's training MIV sessions only as an explicit, labelled arm; never a test session"
  },
  "notes": "Unchanged from all prior experiments. CASAA sessions duplicating any HLQC session are excluded.",
  "scheme": "MISC 2.5",
@@ -126,5 +132,12 @@
    "low_033",
    "low_080"
   ]
+ },
+ "variance_rules": {
+  "fold_draw": "for k-fold designs, re-draw the fold assignment with each training seed (seed-tied) or use leave-one-session-out, so no result rests on one fold assignment",
+  "intervals": "95% CI from resampling sessions (clusters), on top of the across-seed spread",
+  "pairing": "compare arms at the same seed and the same folds; report the mean of paired differences",
+  "single_split": "do not report a single random train/test split as a headline: use the grouped k-fold CV",
+  "training_seeds": "at least 3 matched seeds (42, 1, 2) for any claimed difference; one seed = exploratory only"
  }
 }

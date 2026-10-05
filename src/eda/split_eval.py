@@ -205,3 +205,81 @@ def pooled_cv_leakage() -> dict:
             "counsellor utterances (>=6 words) with a >=0.9-similar one in another fold": f"{near} of {len(c)}",
             "codes present in only one fold": cov[cov == 1].index.tolist(),
             "test utterances per fold": M.groupby("fold").size().to_dict()}
+
+
+# ------------------------------------------------------------ lucky draws
+def fold_draw_variance(n_draws: int = 20) -> pd.DataFrame:
+    """Pooled CV (HLQC + MIV folds) and MIV-only CV under n random 5-fold assignments, plus LOSO."""
+    import random
+    H, M = registry.load("misc.hlqc.gold"), registry.load("misc.miv63a.gold")
+    sess = sorted(M.conv_id.unique())
+
+    def run(fold_of, with_h):
+        f = M.conv_id.map(fold_of)
+        pred = np.empty(len(M), dtype=object)
+        for k in sorted(f.unique()):
+            te, tr = M[f == k], M[f != k]
+            pred[(f == k).values] = _fit_predict(pd.concat([H, tr]) if with_h else tr, te)
+        return _score(M, pred)
+    rows = []
+    for s in range(n_draws):
+        sh = sess[:]
+        random.Random(s).shuffle(sh)
+        fold = {c: i % 5 for i, c in enumerate(sh)}
+        a, b = run(fold, True), run(fold, False)
+        rows.append({"draw": s, "pooled counsellor": a["counsellor macro-F1"], "pooled client": a["client macro-F1"],
+                     "MIV-only counsellor": b["counsellor macro-F1"], "MIV-only client": b["client macro-F1"]})
+    D = pd.DataFrame(rows)
+    D["diff counsellor"] = D["pooled counsellor"] - D["MIV-only counsellor"]
+    D["diff client"] = D["pooled client"] - D["MIV-only client"]
+    out = D.drop(columns="draw").describe().loc[["mean", "std", "min", "max"]].round(3)
+    loso = {c: i for i, c in enumerate(sess)}
+    a, b = run(loso, True), run(loso, False)
+    out.loc["LOSO (no draw)"] = [a["counsellor macro-F1"], a["client macro-F1"], b["counsellor macro-F1"], b["client macro-F1"],
+                                 round(a["counsellor macro-F1"] - b["counsellor macro-F1"], 3),
+                                 round(a["client macro-F1"] - b["client macro-F1"], 3)]
+    return out
+
+
+def single_split_variance(n_draws: int = 20, test_share: float = 0.15) -> pd.DataFrame:
+    """AnnoMI: how much does one random series-grouped train/test split move the score?"""
+    import random
+    from eda.splits import annomi_series
+    an = registry.load("annomi.gold").copy()
+    an["t2"] = an["native"]
+    an["series"] = an.conv_id.map(annomi_series(an))
+    groups, n_tr = sorted(an.series.unique(), key=int), an.conv_id.nunique()
+    res = []
+    for s in range(n_draws):
+        g = groups[:]
+        random.Random(s).shuffle(g)
+        te, n = set(), 0
+        for x in g:
+            if n >= test_share * n_tr:
+                break
+            te.add(x)
+            n += an[an.series == x].conv_id.nunique()
+        T, R = an[an.series.isin(te)], an[~an.series.isin(te)]
+        res.append(_score(T, _fit_predict(R, T)))
+    return pd.DataFrame(res).describe().loc[["mean", "std", "min", "max"]].round(3)
+
+
+# --------------------------------------------------------------- exemplars
+def exemplar_sources() -> pd.DataFrame:
+    """Which HLQC sessions the frozen few-shot exemplars come from, and which of those are test duplicates."""
+    dup = {"high_121": "CASAA Emmy", "low_001": "AnnoMI 53", "low_080": "AnnoMI 15", "high_099": "AnnoMI 21",
+           "low_033": "AnnoMI 44"}
+    h = registry.load("misc.hlqc.gold").assign(k=lambda d: d.text.map(quality.norm))
+    rows = []
+    for f in sorted((registry.D / "fewshot").glob("exemplars*.json")):
+        d = json.load(open(f))
+        for spk, tiers in d.items():
+            for tier, items in tiers.items():
+                flat = items if isinstance(items, list) else [x for v in items.values()
+                                                              for x in (v if isinstance(v, list) else [v])]
+                for e in flat:
+                    m = h[h.k == quality.norm(e["utterance"])]
+                    sess = m.conv_id.iloc[0] if len(m) else "?"
+                    rows.append({"file": f.name, "speaker": spk, "tier": tier, "label": e.get("t2_label") or e.get("t1_label"),
+                                 "session": sess, "duplicated in test corpus": dup.get(sess, "")})
+    return pd.DataFrame(rows)

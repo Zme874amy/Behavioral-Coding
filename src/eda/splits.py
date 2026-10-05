@@ -26,6 +26,32 @@ from eda import overlap, registry
 OUT = registry.REPO / "data" / "splits"
 SEED = 42
 DUP = 0.10          # containment at/above which two sessions count as the same session
+TRAIN_SEEDS = (42, 1, 2)
+N_FOLDS = 5
+
+# "Lucky draw" controls (docs/experiments/2026-10-05-split-review.md section 9).
+VARIANCE_RULES = {
+    "training_seeds": "at least 3 matched seeds (42, 1, 2) for any claimed difference; one seed = exploratory only",
+    "pairing": "compare arms at the same seed and the same folds; report the mean of paired differences",
+    "intervals": "95% CI from resampling sessions (clusters), on top of the across-seed spread",
+    "fold_draw": "for k-fold designs, re-draw the fold assignment with each training seed (seed-tied) or use "
+                 "leave-one-session-out, so no result rests on one fold assignment",
+    "single_split": "do not report a single random train/test split as a headline: use the grouped k-fold CV",
+}
+# Exemplars (few-shot, retrieval index, synthesis style anchors); section 10 of the split review.
+EXEMPLAR_RULES = {
+    "source": "exemplars come only from the training side of the split: HLQC gold under misc_main; under pooled CV, "
+              "HLQC gold by default (keeps the exemplar factor constant across protocols), the fold's training MIV "
+              "sessions only as an explicit, labelled arm; never a test session",
+    "cross_corpus": "22 of 41 few-shot exemplars (and the retrieval index and synthesis anchors) include HLQC sessions "
+                    "that are AnnoMI 15/21/44/53 and CASAA Emmy: apply the AnnoMI/CASAA exclusions to ANY model that saw "
+                    "HLQC gold by training, prompt exemplars, retrieval or synthetic data",
+    "draws": "prompted arms use >= 3 exemplar draws (different selection seeds) and report mean +- sd; the exemplar "
+             "draw is a variance source like the training seed",
+    "same_corpus_scoring": "when scoring on the corpus the exemplars come from (HLQC CV, teacher screens), drop the "
+                           "exemplar SESSIONS from scoring (exemplars carry 5 context volleys), or draw exemplars from "
+                           "other folds",
+}          # containment at/above which two sessions count as the same session
 
 
 def _components(pairs: pd.DataFrame, nodes: Iterable[str]) -> Dict[str, str]:
@@ -134,12 +160,14 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
                  "miti.casaa.gold (MISC-mapped)": sorted(
                      set(frames["miti.casaa.gold"].conv_id) - twins("misc.hlqc.gold", train_ids, "miti.casaa.gold")
                      - twins("pool.hlqc", set(frames["pool.hlqc"].conv_id), "miti.casaa.gold"))},
+        "exemplar_rules": EXEMPLAR_RULES,
+        "variance_rules": VARIANCE_RULES,
         "exclude": {
             "miti.casaa.gold": sorted(twins("misc.hlqc.gold", train_ids, "miti.casaa.gold")
                                       | twins("pool.hlqc", set(frames["pool.hlqc"].conv_id), "miti.casaa.gold")),
-            "annomi.gold (when used as transfer test of HLQC-gold-trained models)":
+            "annomi.gold (transfer test of any model that saw HLQC gold: training, exemplars, retrieval or synthetic data)":
                 sorted(twins("misc.hlqc.gold", train_ids, "annomi.gold"), key=int),
-            "annomi.gold (when the model also saw pool.hlqc: self-training/retrieval arms)":
+            "annomi.gold (additionally, when the model saw pool.hlqc: self-training/retrieval over the pool)":
                 sorted(twins("pool.hlqc", set(frames["pool.hlqc"].conv_id), "annomi.gold"), key=int),
         },
         "notes": "Unchanged from all prior experiments. CASAA sessions duplicating any HLQC session are excluded.",
@@ -148,15 +176,24 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
     # --- PROPOSED: pooled training with MIV cross-validation -----------------
     # docs/experiments/2026-10-05-split-review.md. Alongside misc_main, not replacing it:
     # every MIV6.3A session is test exactly once, so scores still cover all 821 utterances.
-    miv_folds = assign_folds(frames["misc.miv63a.gold"], 5, SEED)
+    miv = frames["misc.miv63a.gold"]
+    miv_sessions = sorted(set(miv.conv_id))
+
+    def fold_block(fold_of):
+        return {str(k): {"train": {"misc.hlqc.gold": sorted(train_ids),
+                                   "misc.miv63a.gold": sorted(c for c, f in fold_of.items() if f != k)},
+                         "test": {"misc.miv63a.gold": sorted(c for c, f in fold_of.items() if f == k)}}
+                for k in sorted(set(fold_of.values()))}
     man["misc_pooled_cv"] = {
         "status": "PROPOSED (pending decision); misc_main stays the reported setting until then",
         "scheme": "MISC 2.5",
-        "folds": {str(k): {
-            "train": {"misc.hlqc.gold": sorted(train_ids),
-                      "misc.miv63a.gold": sorted(c for c, f in miv_folds.items() if f != k)},
-            "test": {"misc.miv63a.gold": sorted(c for c, f in miv_folds.items() if f == k)}}
-            for k in range(5)},
+        "designs": {
+            "loso": fold_block({c: i for i, c in enumerate(miv_sessions)}),
+            "5fold_seed_tied": {str(sd): fold_block(assign_folds(miv, 5, sd)) for sd in TRAIN_SEEDS},
+        },
+        "recommended_design": "loso for headline numbers (10 folds, no fold-assignment randomness, 9 MIV sessions "
+                              "in every training set); 5fold_seed_tied for exploratory arms (training seed s uses "
+                              "fold draw s, so the reported spread includes fold-assignment variance)",
         "checkpoint_selection": "HLQC validation fold as in misc_main (val_folds 7, val_fold 0); never an MIV session",
         "external_test": man["misc_main"]["test"]["miti.casaa.gold (MISC-mapped)"],
         "exclude": man["misc_main"]["exclude"],
@@ -168,9 +205,10 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
             "fold_statistics": "label priors, self-training caps/rare-code lists, synthesis topic mixes and retrieval "
                                "indexes are rebuilt from the fold's training sessions only",
             "pools": "self-training/retrieval pools exclude all 10 MIV gold sessions (label_pool already does)",
-            "scoring": "pool the out-of-fold predictions of all 5 folds and score once (821 utterances); compare arms on "
-                       "the same folds and seeds (paired); bootstrap by session",
+            "scoring": "pool the out-of-fold predictions of all folds and score once (821 utterances); bootstrap by session",
         },
+        "variance_rules": VARIANCE_RULES,
+        "exemplar_rules": EXEMPLAR_RULES,
     }
 
     # --- AnnoMI own-scheme ---------------------------------------------------
@@ -187,27 +225,23 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
     for c, g in series.items():
         members[g].append(c)
     multi = set(tr[tr.multi > 1].index)
-    forced = {g: "test" for g, ms in members.items() if set(ms) & multi}
-    n_forced = sum(len(members[g]) for g in forced)
-    rest = len(tr) - n_forced
-    f_test = max(0.0, (0.15 * len(tr) - n_forced) / rest)
-    f_dev = 0.15 * len(tr) / rest
     strata = defaultdict(list)
     for g, ms in members.items():
         qs = set(tr.loc[ms, "q"])
         strata["mixed" if len(qs) > 1 else qs.pop()].append(g)
-    g_assign = _allocate(strata, {"train": 1 - f_test - f_dev, "dev": f_dev, "test": f_test},
-                         random.Random(f"{SEED}-annomi_own"), forced=forced)
-    assign = {c: g_assign[series[c]] for c in tr.index}
+    g_fold = _allocate(strata, {str(k): 1 / N_FOLDS for k in range(N_FOLDS)}, random.Random(f"{SEED}-annomi_own"))
     man["annomi_own"] = {
         "scheme": "AnnoMI (main behaviour + subtypes; client change/neutral/sustain)",
-        "split": {c: assign[c] for c in sorted(assign, key=int)},
+        "design": f"{N_FOLDS}-fold CV grouped by video series, stratified by series MI quality. For test fold k, dev = fold "
+                  f"(k+1) mod {N_FOLDS}, train = the other folds. Every transcript is tested exactly once (no single-split "
+                  "lucky draw: one 15% split moved proxy macro-F1 by SD 0.022-0.031).",
+        "folds": {c: int(g_fold[series[c]]) for c in sorted(tr.index, key=int)},
         "series": {g: sorted(ms, key=int) for g, ms in sorted(members.items(), key=lambda kv: int(kv[0])) if len(ms) > 1},
-        "test_core_10rater": sorted(multi, key=int),
+        "clean_subset_10rater": sorted(multi, key=int),
         "exclude": man["misc_main"]["exclude"],
-        "notes": "Series-level (whole video series in one split), stratified by series MI quality; the series of the 7 "
-                 "ten-rater transcripts are test. Report per-annotator scores as a robustness check (annotator effect). "
-                 "For MISC transfer tests apply the misc_main exclude lists.",
+        "variance_rules": VARIANCE_RULES,
+        "notes": "Also report the score on the 7 ten-rater transcripts (majority labels, the cleanest) and per-annotator "
+                 "scores (annotator effect). For MISC transfer tests apply the misc_main exclude lists.",
     }
 
     # --- Welivita own-scheme ---------------------------------------------------
@@ -223,19 +257,21 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
     src = w.groupby("conv_id").source.first()
     for root, members in clusters.items():
         strata[src[members[0]]].append(root)
-    cl_assign = _allocate(strata, {"train": 0.8, "dev": 0.1, "test": 0.1}, random.Random(f"{SEED}-welivita_own"))
-    w_split = {c: cl_assign[comp[c]] for c in convs}
+    cl_fold = _allocate(strata, {str(k): 1 / N_FOLDS for k in range(N_FOLDS)}, random.Random(f"{SEED}-welivita_own"))
     man["welivita_own"] = {
         "scheme": "Welivita MITI-derived (15 codes)",
-        "split": w_split,
+        "design": f"{N_FOLDS}-fold CV grouped by same-post/duplicate cluster, stratified by source. For test fold k, dev = "
+                  f"fold (k+1) mod {N_FOLDS}. Every dialogue is tested exactly once.",
+        "folds": {c: int(cl_fold[comp[c]]) for c in convs},
         "label_subset": "listener rows with stage1_agreed (ann1 == ann2): "
                         f"{len(lis)} rows; the remaining rows are context only",
         "duplicate_clusters": {r: m for r, m in clusters.items() if len(m) > 1},
         "cross_source_robustness": {
-            "train counsel_chat -> test RED": "train on CounselChat dialogues of the train split, test on RED dialogues of the test split",
+            "train counsel_chat -> test RED": "within each fold: train on the training CounselChat dialogues, test on the test-fold RED dialogues",
             "train RED -> test counsel_chat": "the reverse",
             "why": "in-source proxy macro-F1 0.47 drops to 0.36-0.38 across sources (docs/experiments/2026-10-05-split-review.md)"},
-        "notes": "Dialogue-level; duplicate dialogues (containment >= 0.10) share a split; stratified by source.",
+        "variance_rules": VARIANCE_RULES,
+        "notes": "Duplicate dialogues and same-post threads (containment >= 0.10) share a fold; stratified by source.",
     }
 
     # --- MITI 4 scheme ----------------------------------------------------------
@@ -248,7 +284,7 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
                        - twins("pool.hlqc", set(frames["pool.hlqc"].conv_id), "miti.casaa.gold")),
         "training_options": {
             "A (recommended)": "MISC-trained model + MISC->MITI mapping (no MITI training data needed)",
-            "B": "welivita.gold train split (MITI-derived, written forum) -> CASAA: cross-domain, weak labels",
+            "B": "welivita.gold (MITI-derived, written forum; all folds) -> CASAA: cross-domain, weak labels",
             "C (if obtained)": "MI-TAGS (MITI 4.2, 242 sessions) after dedup against HLQC, AnnoMI and CASAA",
         },
         "misc_to_miti": MISC_TO_MITI,
@@ -313,32 +349,33 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
 
 def check(man: Dict[str, dict], frames) -> List[str]:
     errs = []
-    a = man["annomi_own"]["split"]
+    a = man["annomi_own"]["folds"]
+    if set(a) != set(frames["annomi.gold"].conv_id):
+        errs.append("annomi folds do not cover every transcript")
     for g, ms in man["annomi_own"]["series"].items():
         if len({a[m] for m in ms}) > 1:
-            errs.append(f"annomi series {g} spans splits")
-    if set(a) != set(frames["annomi.gold"].conv_id):
-        errs.append("annomi split does not cover every transcript")
-    for name in ("annomi_own", "welivita_own"):
-        if len(set(man[name]["split"].values()) - {"train", "dev", "test"}):
-            errs.append(f"{name}: unknown split name")
+            errs.append(f"annomi series {g} spans folds")
     w = man["welivita_own"]
+    if set(w["folds"]) != set(frames["welivita.gold"].conv_id):
+        errs.append("welivita folds do not cover every dialogue")
     for root, members in w["duplicate_clusters"].items():
-        if len({w["split"][m] for m in members}) > 1:
-            errs.append(f"welivita duplicate cluster {root} spans splits")
+        if len({w["folds"][m] for m in members}) > 1:
+            errs.append(f"welivita duplicate cluster {root} spans folds")
     mm = man["misc_main"]
     if set(mm["train"]["misc.hlqc.gold"]) & set(mm["test"]["misc.miv63a.gold"]):
         errs.append("misc train/test overlap")
     if "casaa_emmys-first-encounter" in mm["test"]["miti.casaa.gold (MISC-mapped)"]:
         errs.append("CASAA Emmy (= HLQC train high_121) is in the CASAA test split")
     if "misc_pooled_cv" in man:
-        pc, tests = man["misc_pooled_cv"]["folds"], []
-        for k, f in pc.items():
-            if set(f["train"]["misc.miv63a.gold"]) & set(f["test"]["misc.miv63a.gold"]):
-                errs.append(f"misc_pooled_cv fold {k}: an MIV session is in train and test")
-            tests += f["test"]["misc.miv63a.gold"]
-        if sorted(tests) != sorted(mm["test"]["misc.miv63a.gold"]) or len(tests) != len(set(tests)):
-            errs.append("misc_pooled_cv: test folds do not cover every MIV session exactly once")
+        d = man["misc_pooled_cv"]["designs"]
+        for name, block in [("loso", d["loso"])] + [(f"5fold seed {k}", v) for k, v in d["5fold_seed_tied"].items()]:
+            tests = []
+            for k, f in block.items():
+                if set(f["train"]["misc.miv63a.gold"]) & set(f["test"]["misc.miv63a.gold"]):
+                    errs.append(f"misc_pooled_cv {name} fold {k}: an MIV session is in train and test")
+                tests += f["test"]["misc.miv63a.gold"]
+            if sorted(tests) != sorted(mm["test"]["misc.miv63a.gold"]) or len(tests) != len(set(tests)):
+                errs.append(f"misc_pooled_cv {name}: test folds do not cover every MIV session exactly once")
     if not set(man["pools"]["pool.miv63a"]["exclude_always"]) >= set(mm["test"]["misc.miv63a.gold"]):
         errs.append("pool.miv63a does not exclude every test session")
     return errs
@@ -364,9 +401,9 @@ def main() -> None:
     d2 = {k: hashlib.sha256(json.dumps({"seed": SEED, "dup_threshold": DUP, **v}, indent=1, sort_keys=True,
                                        default=str).encode()).hexdigest()[:12] for k, v in build(frames).items()}
     print("deterministic:", d1 == d2, d1)
-    a = pd.Series(man["annomi_own"]["split"]).value_counts().to_dict()
-    w = pd.Series(man["welivita_own"]["split"]).value_counts().to_dict()
-    print("annomi transcripts:", a, " welivita dialogues:", w)
+    a = pd.Series(man["annomi_own"]["folds"]).value_counts().sort_index().to_dict()
+    w = pd.Series(man["welivita_own"]["folds"]).value_counts().sort_index().to_dict()
+    print("annomi transcripts per fold:", a, " welivita dialogues per fold:", w)
     if errs:
         raise SystemExit(1)
 
