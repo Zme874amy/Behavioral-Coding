@@ -126,4 +126,21 @@ def summarise(pairs: pd.DataFrame, frames: Dict[str, pd.DataFrame], strong: floa
     return g
 
 
-__all__ = ["pairwise", "known_relations", "summarise", "shingles", "KNOWN", "SYNTH_KNOWN"]
+def classify(pairs: pd.DataFrame, frames: Dict[str, pd.DataFrame], threshold: float = 0.10) -> pd.DataFrame:
+    """Label each strong pair as a real duplicate session or, for Welivita, a shared
+    opening post (one CounselChat question answered by different therapists)."""
+    p = pairs[(pairs.containment >= threshold) & (pairs.conv_a != pairs.conv_b)].copy()
+    p["kind"] = "duplicate session"
+    if "welivita.gold" in frames:
+        w = frames["welivita.gold"]
+        post = w[w.speaker == "client"].groupby("conv_id").text.first()
+        reply = w[w.speaker == "counsellor"].groupby("conv_id").text.apply(" ".join)
+        m = (p.dataset_a == "welivita.gold") & (p.dataset_b == "welivita.gold")
+        same_post = [post.get(a) == post.get(b) for a, b in zip(p[m].conv_a, p[m].conv_b)]
+        same_reply = [reply.get(a) == reply.get(b) for a, b in zip(p[m].conv_a, p[m].conv_b)]
+        p.loc[m, "kind"] = ["duplicate session" if r else ("same opening post, different reply" if sp else "partial overlap")
+                            for sp, r in zip(same_post, same_reply)]
+    return p
+
+
+__all__ = ["classify", "pairwise", "known_relations", "summarise", "shingles", "KNOWN", "SYNTH_KNOWN"]

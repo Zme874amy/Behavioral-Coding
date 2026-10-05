@@ -189,6 +189,32 @@ META: Dict[str, Meta] = {m.id: m for m in [
 
 SYNTH_FILES = {m.id: next(iter(m.files)) for m in META.values() if m.id.startswith("synth.")}
 
+# One row per file of the real datasets: which file to use for what.
+FILES = pd.DataFrame([
+    # dataset, file, level, labels, use it for, derived from
+    ("misc.miv63a.gold", "data/manual/MIV6.3A_manual.csv", "utterance", "MISC T1/T2 human gold (*_GT) + GPT-4.1 (*_auto)", "TEST set of every MISC model", "pool.miv63a (10 sessions)"),
+    ("misc.hlqc.gold", "data/manual/HLQC_balanced_manual.csv", "utterance", "MISC T1/T2 human gold", "TRAIN set; few-shot exemplars", "pool.hlqc (10 sessions)"),
+    ("pool.hlqc", "data/HLQC.csv", "turn (volley)", "none (session high/low in id)", "raw turns", "Pérez-Rosas et al. 2019 ASR transcripts"),
+    ("pool.hlqc", "data/parsed/HLQC_parsed.csv", "utterance", "none", "unlabelled pool (retrieval, self-training)", "data/HLQC.csv, split by the AutoMISC parser"),
+    ("pool.miv63a", "data/MIV6.3A.csv", "turn (volley)", "none", "raw turns", "MIBot v6.3A study logs"),
+    ("pool.miv63a", "data/parsed/MIV6.3A_parsed.csv", "utterance", "none", "unlabelled pool (must drop the 10 test sessions)", "data/MIV6.3A.csv, parser"),
+    ("pool.miv63a", "data/2024-11-14-MIV6.3A-...merged.csv", "participant", "readiness / importance / confidence, demographics", "session outcomes (join 'Participant id' = conv_id)", "MIBot v6.3A surveys"),
+    ("pool.miv63b", "data/MIV6.3B.csv", "turn (volley)", "none", "raw turns", "MIBot v6.3B study logs"),
+    ("pool.miv63b", "data/parsed/MIV6.3B_parsed.csv", "utterance", "none", "unlabelled pool (self-training)", "data/MIV6.3B.csv, parser"),
+    ("pool.miv63b", "data/2024-11-19-MIV6.1B_...merged.csv", "participant", "survey outcomes", "session outcomes (file name says 6.1B)", "MIBot surveys"),
+    ("annomi.gold", "data/external/annomi/AnnoMI-full.csv", "turn x annotator", "AnnoMI attributes per annotator", "agreement analysis (7 ten-rater transcripts)", "official release (Wu et al.)"),
+    ("annomi.gold", "data/external/annomi/AnnoMI-simple.csv", "turn", "AnnoMI main behaviour / talk type", "own-scheme train/dev/test", "official release"),
+    ("annomi.gold", "data/AnnoMI.csv", "turn", "MISC-mapped AnnoMI labels (AutoMISC)", "source of AnnoMI_eval (different row order)", "AnnoMI-full, mapped by AutoMISC"),
+    ("annomi.gold", "data/manual/AnnoMI_eval.csv", "turn", "MISC gold on shared codes only", "cross-scheme TEST of MISC models", "data/AnnoMI.csv (baseline.prep_crossscheme)"),
+    ("annomi.gold", "data/parsed/AnnoMI_parsed.csv", "utterance", "none", "utterance-split text", "AnnoMI, parser"),
+    ("welivita.gold", "data/external/welivita/MI_Dataset.csv", "sentence", "ann1, ann2, judge stages, final label", "agreement analysis; own-scheme split", "official release (Welivita & Pu)"),
+    ("welivita.gold", "data/external/welivita_mi_parsed.csv", "sentence", "final label + MISC map (weak_t2)", "self-training pool", "MI_Dataset.csv (selftrain.ingest)"),
+    ("welivita.gold", "data/manual/Welivita_eval.csv", "sentence", "MISC gold on shared codes", "cross-scheme TEST of MISC models", "welivita_mi_parsed.csv (baseline.prep_crossscheme)"),
+    ("miti.casaa.gold", "data/external/casaa/CASAA_eval.csv", "utterance", "MITI codes + MISC map where exact", "MITI / MISC TEST (18 clean sessions)", "CASAA PDFs (baseline.prep_casaa)"),
+    ("miti.casaa.gold", "data/external/casaa/casaa_turns.csv", "turn", "raw code cell + coder notes", "audit of the parse", "CASAA PDFs"),
+    ("miti.casaa.gold", "data/external/casaa/casaa_globals.csv", "session", "MITI global ratings", "session-level analysis (9 sessions)", "CASAA PDFs"),
+], columns=["dataset", "file", "level", "labels", "use it for", "derived from"])
+
 
 # ---------------------------------------------------------------------- loaders
 def _std(df, dataset, conv, spk, vol, utt, text, native=None, t1=None, t2=None, extra=()):

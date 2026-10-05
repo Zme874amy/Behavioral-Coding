@@ -50,7 +50,7 @@ Like our gold sets, they use AutoMISC's AC± extension.
 
 ## Overlap with real data and with each other
 
-Same detector as DATASETS.md §4: 5-gram containment, with all datasets indexed together.
+Same detector as DATASETS.md §5: 5-gram containment, with all datasets indexed together.
 
 | Relation | Detail | Consequence |
 |---|---|---|

@@ -13,18 +13,38 @@ considered then excluded (KMI, IC-AnnoMI, MIDAS) are covered in
 because they change with every synthesis campaign. Nothing on this page depends on them: overlap scores
 and split manifests here are computed from real data only.
 
-## 1. Names: canonical ID → files
+## 1. Names: which file to use
 
-| Canonical ID | File(s) | What the file really is |
-|---|---|---|
-| `misc.miv63a.gold` | `data/manual/MIV6.3A_manual.csv` | **TEST set.** 10 MIBot v6.3A sessions with expert MISC consensus (`*_GT`); `*_auto` = AutoMISC GPT-4.1 |
-| `misc.hlqc.gold` | `data/manual/HLQC_balanced_manual.csv` | **TRAIN set.** 10 HLQC sessions (5 high, 5 low) with MISC labels |
-| `pool.hlqc` | `data/HLQC.csv` / `data/parsed/HLQC_parsed.csv` | All 257 HLQC sessions, volley-level / utterance-level, **unlabelled**. Contains the 10 train sessions |
-| `pool.miv63a` | `data/MIV6.3A.csv` / `data/parsed/MIV6.3A_parsed.csv` / `data/2024-11-14-MIV6.3A-…merged.csv` | All 173 MIBot v6.3A sessions, **unlabelled**, plus outcome surveys (join on `Participant id` = `conv_id`). **Contains the 10 test sessions** |
-| `pool.miv63b` | `data/MIV6.3B.csv` / `data/parsed/MIV6.3B_parsed.csv` / `data/2024-11-19-MIV6.1B_…merged.csv` | A different MIBot run, 165 sessions, unlabelled (the outcome file is named "6.1B") |
-| `annomi.gold` | `data/external/annomi/AnnoMI-{full,simple}.csv` (official) / `data/AnnoMI.csv` / `data/manual/AnnoMI_eval.csv` / `data/parsed/AnnoMI_parsed.csv` | One corpus in five files. `data/AnnoMI.csv` is AutoMISC's MISC-mapped copy in a **different row order** (join on `conv_id` + `utterance_id`). `AnnoMI_eval.csv` is our cross-scheme test file built from it |
-| `welivita.gold` | `data/external/welivita/MI_Dataset.csv` (official) / `data/external/welivita_mi_parsed.csv` / `data/manual/Welivita_eval.csv` | One corpus, three files. Labels are **Welivita & Pu's own** (100% match to the release), not ours |
-| `miti.casaa.gold` | `data/external/casaa/{CASAA_eval,casaa_turns,casaa_globals}.csv` | Parsed by `baseline.prep_casaa` from the CASAA PDFs (gitignored) |
+Each corpus lives in several files. Pick the file whose *use it for* matches the task. *Derived from* gives the lineage, so the same data is never counted twice.
+
+| Dataset ID | File | Level | Labels | Use it for | Derived from |
+|---|---|---|---|---|---|
+| `misc.miv63a.gold` | `data/manual/MIV6.3A_manual.csv` | utterance | MISC T1/T2 human gold (*_GT) + GPT-4.1 (*_auto) | TEST set of every MISC model | pool.miv63a (10 sessions) |
+| `misc.hlqc.gold` | `data/manual/HLQC_balanced_manual.csv` | utterance | MISC T1/T2 human gold | TRAIN set; few-shot exemplars | pool.hlqc (10 sessions) |
+| `pool.hlqc` | `data/HLQC.csv` | turn (volley) | none (session high/low in id) | raw turns | Pérez-Rosas et al. 2019 ASR transcripts |
+| `pool.hlqc` | `data/parsed/HLQC_parsed.csv` | utterance | none | unlabelled pool (retrieval, self-training) | data/HLQC.csv, split by the AutoMISC parser |
+| `pool.miv63a` | `data/MIV6.3A.csv` | turn (volley) | none | raw turns | MIBot v6.3A study logs |
+| `pool.miv63a` | `data/parsed/MIV6.3A_parsed.csv` | utterance | none | unlabelled pool (must drop the 10 test sessions) | data/MIV6.3A.csv, parser |
+| `pool.miv63a` | `data/2024-11-14-MIV6.3A-...merged.csv` | participant | readiness / importance / confidence, demographics | session outcomes (join 'Participant id' = conv_id) | MIBot v6.3A surveys |
+| `pool.miv63b` | `data/MIV6.3B.csv` | turn (volley) | none | raw turns | MIBot v6.3B study logs |
+| `pool.miv63b` | `data/parsed/MIV6.3B_parsed.csv` | utterance | none | unlabelled pool (self-training) | data/MIV6.3B.csv, parser |
+| `pool.miv63b` | `data/2024-11-19-MIV6.1B_...merged.csv` | participant | survey outcomes | session outcomes (file name says 6.1B) | MIBot surveys |
+| `annomi.gold` | `data/external/annomi/AnnoMI-full.csv` | turn x annotator | AnnoMI attributes per annotator | agreement analysis (7 ten-rater transcripts) | official release (Wu et al.) |
+| `annomi.gold` | `data/external/annomi/AnnoMI-simple.csv` | turn | AnnoMI main behaviour / talk type | own-scheme train/dev/test | official release |
+| `annomi.gold` | `data/AnnoMI.csv` | turn | MISC-mapped AnnoMI labels (AutoMISC) | source of AnnoMI_eval (different row order) | AnnoMI-full, mapped by AutoMISC |
+| `annomi.gold` | `data/manual/AnnoMI_eval.csv` | turn | MISC gold on shared codes only | cross-scheme TEST of MISC models | data/AnnoMI.csv (baseline.prep_crossscheme) |
+| `annomi.gold` | `data/parsed/AnnoMI_parsed.csv` | utterance | none | utterance-split text | AnnoMI, parser |
+| `welivita.gold` | `data/external/welivita/MI_Dataset.csv` | sentence | ann1, ann2, judge stages, final label | agreement analysis; own-scheme split | official release (Welivita & Pu) |
+| `welivita.gold` | `data/external/welivita_mi_parsed.csv` | sentence | final label + MISC map (weak_t2) | self-training pool | MI_Dataset.csv (selftrain.ingest) |
+| `welivita.gold` | `data/manual/Welivita_eval.csv` | sentence | MISC gold on shared codes | cross-scheme TEST of MISC models | welivita_mi_parsed.csv (baseline.prep_crossscheme) |
+| `miti.casaa.gold` | `data/external/casaa/CASAA_eval.csv` | utterance | MITI codes + MISC map where exact | MITI / MISC TEST (18 clean sessions) | CASAA PDFs (baseline.prep_casaa) |
+| `miti.casaa.gold` | `data/external/casaa/casaa_turns.csv` | turn | raw code cell + coder notes | audit of the parse | CASAA PDFs |
+| `miti.casaa.gold` | `data/external/casaa/casaa_globals.csv` | session | MITI global ratings | session-level analysis (9 sessions) | CASAA PDFs |
+
+Traps:
+- `data/HLQC.csv` and `data/parsed/HLQC_parsed.csv` are the unlabelled pool. The train set is `data/manual/HLQC_balanced_manual.csv`.
+- `data/AnnoMI.csv` is in a different row order from the official release.
+- Welivita's labels are the original authors' in all three files.
 
 ## 2. Catalogue
 
@@ -163,7 +183,47 @@ Question / Input / Reflection are **separate attributes that can co-occur**, and
 | In HLQC train, absent from MIV test | ADW, CO, RCW, WA, C−, N+, O− |
 | Thin in HLQC train | SU 9, RF 9, DI 12, CO 15, GI 16 |
 
-## 4. Overlap map: who overlaps whom
+## 4. Annotation quality: what can hurt training
+
+Notebook §4; code in `src/eda/quality.py`. This mainly compares the **train** set (`misc.hlqc.gold`) with the **test** set
+(`misc.miv63a.gold`). Evidence comes from five sources:
+- rule checks quoted from the MISC 2.5 manual;
+- the same text labelled differently;
+- **independent coders on the same sessions**: AnnoMI's experts on 4 shared sessions, and the CASAA MITI reference on Emmy = `high_121`;
+- train-vs-test label shift;
+- the main model's (`ft1mix_bare`, 3 seeds) errors on the test set.
+
+### 4.1 Findings
+
+| # | Issue | Evidence | Effect on the MIV6.3A test |
+|---|---|---|---|
+| 1 | **HLQC uses FI as a catch-all** | 64% (77/121) of standalone "okay"/"yeah"/"mm-hmm" are coded FI, but the manual (p.22) says FA. FI is 19% of counsellor utterances, against the manual's 5% ceiling. Only 7% of HLQC FI are pleasantries (39% acknowledgements, 20% fragments), vs 68% pleasantries in the test. "okay" is FI 24 / FA 10, "yeah" FI 14 / FA 15 | small: test pleasantries are still predicted FI 95% of the time. But HLQC-based scores (CV, teacher gate) penalise codebook-correct models |
+| 2 | **HLQC under-codes client change talk** | against AnnoMI experts on the same 185 client turns, κ 0.36 (AnnoMI's own inter-rater κ is 0.47). In 28 turns HLQC says neutral where AnnoMI says change. HLQC client labels are 85% neutral vs 52% in the test | **large**: 32% of gold change/sustain talk is predicted neutral. O+ recall 0.03, R+ 0.54, R− 0.51 |
+| 3 | **Annotator groups draw the simple/complex line differently** | CASAA MITI reference: 9 of 16 HLQC SR turns are CR. MIV coders call long chatbot paraphrases (median 18 words) SR. Inside HLQC, SR and CR are the same length (11 vs 12 words) | **largest single error**: test SR recall 0.42, and 51% of test SRs are predicted CR |
+| 4 | **The test set's MI-consistent codes are nearly absent from training** | SU 9 rows (0.9% vs 6.7% in test), EC 22 (2.1% vs 6.7%), AF 2.2% vs 5.2%. Permission-seeking, which the manual codes EC (p.16), appears once in HLQC, coded FI | SU recall 0.39 (→ CR, AF), EC 0.33 (→ SU, CQ, FI) |
+| 5 | **Train-only codes** | ADW/RCW/WA/CO are 95 rows (9% of training counsellor labels), 96–100% from low-quality sessions, and never occur in the test. Client C−/N+/O−: 13 rows | ~7 spurious predictions per run (RCW/WA for GI) |
+| 6 | **ASR transcripts and segmentation** | WER of HLQC against manual transcripts: 9–19% (AnnoMI), 25% (CASAA). 78% of HLQC gold questions have no "?" (test: 2%). 36% of utterances start with and/but/or/so/because (test: 0.5%), and 19% are ≤ 3 words | indirect: fragments get FI; questions must be detected from words alone |
+| 7 | **Training codes concentrated in one session** | GI 75% from `high_121`; DI 75% from `low_001`; ADP 51% from `low_031` | per-class CV unstable; the model learns one session's style |
+| 8 | **AnnoMI "open" ≠ MISC OQ** | of 114 shared questions, AnnoMI calls 68 "open" that HLQC codes CQ, following the MISC rule ("could you…", specific-fact questions = CQ). 44 of those come from AnnoMI annotator 3 | affects the AnnoMI transfer test: its OQ/CQ gold is not MISC-consistent |
+
+Other checks HLQC passes:
+- **CQ rules:** questions starting "do/could/is…" are coded CQ 40/41 times, and scale questions CQ 6/6.
+- **Counsellor main behaviour vs AnnoMI:** 72% agreement per turn (κ 0.58), in the expected range between expert groups.
+- **Reflection type vs AnnoMI:** simple/complex agrees in 17/21 cases.
+
+### 4.2 Possible actions (none applied; they change training data, so they need your decision)
+
+| Issue | Option |
+|---|---|
+| 1 | Relabel standalone acknowledgements FI → FA in a derived train copy. Treat HLQC-CV numbers as convention-dependent |
+| 2 | Re-annotate HLQC client turns, or reweight non-neutral client labels |
+| 3 | Agree a written SR/CR guideline and adjudicate. Also report reflections at T1 (SRL vs CRL) |
+| 4 | Targeted SU / EC / permission-seeking examples (human or synthetic) |
+| 5 | Downweight, or train ADW/RCW/WA/CO at T1 only |
+| 6 | Re-segment HLQC, or use corrected transcripts (MI-TAGS, if obtained) |
+| 8 | Score AnnoMI questions at T1 (Q) only |
+
+## 5. Overlap map: who overlaps whom
 
 Overlap was detected by 5-gram containment between conversations, ignoring shingles found in more than
 5 conversations. Unrelated sessions score ≤ 0.02. Copies of one video (manual vs ASR
@@ -178,12 +238,12 @@ transcript) score 0.13–0.95. "→" means "is the same session as".
 | **HLQC pool → AnnoMI** | 48 AnnoMI transcripts match ≥ 1 of 63 pool sessions (68 pairs, up to 0.85) | exclude those 48 when the model also saw `pool.hlqc` |
 | **HLQC train → CASAA** | high_121 → Emmy's First Encounter (0.40) | Emmy is excluded from the CASAA test |
 | **HLQC pool → CASAA** | high_072 → The Rounder (0.28; HLQC holds only ~900 words) | Rounder is excluded from the CASAA test |
-| **HLQC pool → HLQC pool** | 53 pairs (51 ≥ 0.5, e.g. low_003 = low_005, low_008 = low_048 at 1.00), 4 with conflicting high/low labels | 45 redundant sessions listed for dropping |
-| **Welivita → Welivita** | 356 dialogue pairs ≥ 0.1 (the same CounselChat thread under two ids, e.g. 99 = 1856) | split by duplicate cluster |
+| **HLQC pool → HLQC pool** (re-uploads of the same video) | 53 pairs (51 ≥ 0.5, e.g. low_003 = low_005, low_008 = low_048 at 1.00), 4 with conflicting high/low labels | 45 redundant sessions listed for dropping |
+| **Welivita → Welivita** | 356 dialogue pairs ≥ 0.1. **316 share the opening post but have different replies** (one CounselChat question answered by several therapists); **30 are true duplicates** (e.g. 99 = 1856); 10 overlap partially | labels are on the replies, so all are kept; each cluster stays in one split |
 | MIV6.3A test ↔ anything else | none at session level; 22 of 652 long test utterances recur verbatim in `pool.miv63b` (templated chatbot lines) | handled by `label_pool._drop_eval_like` |
-| AnnoMI ↔ AnnoMI, CASAA ↔ AnnoMI, MIV ↔ HLQC/AnnoMI | none | — |
+| AnnoMI ↔ AnnoMI, CASAA ↔ CASAA, MIV ↔ MIV, CASAA ↔ AnnoMI, MIV ↔ HLQC/AnnoMI | none (curated distinct videos; one participant per MIV session) | — |
 
-## 5. Cleaning and processing audit (`eda.clean`)
+## 6. Cleaning and processing audit (`eda.clean`)
 
 No data file was modified. Leakage and duplicate handling is done with exclusion lists in
 `data/splits/`, so every past result reproduces from the originals.
@@ -191,7 +251,7 @@ No data file was modified. Leakage and duplicate handling is done with exclusion
 | Issue | Where | Size | Status |
 |---|---|---|---|
 | T1 contradicts T2 group | `misc.hlqc.gold` (**train**) | 6 rows: high_117#142 Q/ST, high_121#120 CRL/ST, high_127#7 O/OQ, low_031#156 O/OQ, low_031#179–180 O/CQ | **needs decision.** Proposed: set T1 = group of T2 in a derived copy (all six look like correct T2s) |
-| Identical short utterances with conflicting T2 | HLQC train 9/27 ("okay", "yeah", "mmhmm": FI vs FA), MIV test 1/7, AnnoMI 4/5, Welivita 19/38 | — | annotation noise. Report, do not relabel |
+| Identical short utterances with conflicting T2 | HLQC train 9/27 ("okay", "yeah", "mmhmm": FI vs FA), MIV test 1/7, AnnoMI 4/5, Welivita 19/38 | — | annotation noise: see §4 (finding 1). Report, do not relabel |
 | Duplicate sessions with conflicting high/low quality label | `pool.hlqc` | 4 pairs (high_025 = low_086, high_084 = low_026, high_036 = low_051, …) | **needs decision** if session quality is ever used as a label |
 | Near-duplicate sessions | `pool.hlqc` | 51 pairs; 45 redundant ids | exclusion list (`pools.json`) |
 | Duplicate dialogues | `welivita.gold` | 9 at ≥ 0.9; 356 pairs at ≥ 0.1 | clusters kept in one split |
@@ -203,7 +263,7 @@ No data file was modified. Leakage and duplicate handling is done with exclusion
 | Row count 1,925 vs paper 1,924 | `misc.hlqc.gold` | 1 | off-by-one; no duplicate rows found |
 | Missing turn 25 | 3 CASAA PDFs | — | source gap, not a parse loss |
 
-## 6. EDA highlights (details in the notebook)
+## 7. EDA highlights (details in the notebook)
 
 - **Register gap:** HLQC train is ASR speech (14% of units contain fillers, 20% have sentence punctuation). The MIV test is typed chatbot text (0.4% fillers, 83% punctuation). AnnoMI and CASAA are manual speech transcripts.
 - **Unit size:**
@@ -221,7 +281,7 @@ No data file was modified. Leakage and duplicate handling is done with exclusion
 - **Welivita:** only 7,152 of 17,261 listener segments have crowd agreement. Agreement is lowest for reflections (CR 261/1,294 agreed) and advice with permission (57/484).
 - **MIV outcomes:** confidence rises pre → post (4.27 → 5.62). The 10 test sessions gained more confidence than the rest (+1.90 vs +1.31), so the test set leans toward successful sessions.
 
-## 7. Split plan (`python -m eda.splits` → `data/splits/*.json`)
+## 8. Split plan (`python -m eda.splits` → `data/splits/*.json`)
 
 | Manifest | Scheme | Train | Dev | Test | Exclusions |
 |---|---|---|---|---|---|
@@ -237,10 +297,12 @@ The manifests are byte-identical across reruns and `PYTHONHASHSEED` values. Buil
 - CASAA Emmy is not in a test split;
 - the MIV pool exclusion covers every test session.
 
-## 8. What this changes for results already reported
+## 9. What this changes for results already reported
 
 - **AnnoMI transfer numbers** (e.g. T2 accuracy 0.504 for the 2-adapter model) include 4 transcripts that are HLQC training sessions. Rerun excluding 15/21/44/53 before quoting them again.
-- The MIV6.3A test set and all main-setting results are unaffected: no test session appears in any training source.
+- **AnnoMI OQ/CQ transfer scores** compare against an "open" that is broader than MISC OQ (§4, finding 8). Report AnnoMI questions at T1.
+- **HLQC-based scores** (HLQC CV, the teacher-screen gate) depend on HLQC's FI convention (§4, finding 1). This confirms the 2026-10-04 teacher audit.
+- The MIV6.3A test set and all main-setting results are free of leakage: no test session appears in any training source. But the main errors trace to train/test convention and prior differences (§4, findings 2–4).
 - The CASAA results to come should use `casaa_test.json` (18 sessions).
 
 ## Reproduce
