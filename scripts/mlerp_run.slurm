@@ -9,7 +9,7 @@
 #
 # Env:
 #   MANIFEST DESIGN FOLD SEED ARM INF     the cell (required)
-#   STUDENT     HF model id (default: config, Qwen/Qwen2.5-7B-Instruct)
+#   STUDENT     staged model path (/mnt/userdata4/jia-wen/models/<name>) or cached HF id
 #   CTX         context volleys (5)
 #   PROMPT      prompt set (v2)
 #   SOURCE      training-file swap, e.g. misc.hlqc.gold.cleaned (ablation)
@@ -29,8 +29,11 @@
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
-source "${SLURM_SUBMIT_DIR}/scripts/env.sh"
-export TOKENIZERS_PARALLELISM=false PYTHONPATH=src
+# grpo-env (transformers 5.14.1): the DSKS env (4.55) cannot load Qwen3.5 / Gemma-4 /
+# Ministral-3 / OLMo-3. Compute nodes are offline, so models come from the staged
+# copies or the HF cache.
+source "${SLURM_SUBMIT_DIR}/scripts/setup_grpo_env.sh" use
+export TOKENIZERS_PARALLELISM=false PYTHONPATH=src HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 mkdir -p outputs/rerun
 
 : "${MANIFEST:?}" "${DESIGN:?}" "${FOLD:?}" "${SEED:?}" "${ARM:?}" "${INF:?}"
