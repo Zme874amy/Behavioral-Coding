@@ -71,8 +71,13 @@ def _allocate(groups: Dict[str, List[str]], fracs: Dict[str, float], rng: random
 
 
 def build(frames=None, pairs=None) -> Dict[str, dict]:
-    frames = frames or registry.load_all()
-    pairs = overlap.pairwise(frames) if pairs is None else pairs
+    """`pairs` (real datasets only) drives every real-data manifest, so those never
+    depend on our regenerable synthetic files; the synthetic manifest is computed
+    separately when synth.* frames are present."""
+    frames = frames or registry.load_all(include_synth=True)
+    real = {k: v for k, v in frames.items() if not k.startswith("synth.")}
+    pairs = overlap.pairwise(real) if pairs is None else pairs
+    pairs = pairs[~pairs.dataset_a.str.startswith("synth.") & ~pairs.dataset_b.str.startswith("synth.")]
     dup = pairs[(pairs.containment >= DUP) & (pairs.conv_a != pairs.conv_b)]
     rng = random.Random(SEED)
     man: Dict[str, dict] = {}
@@ -201,9 +206,13 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
                                  "(templated chatbot lines), removed by selftrain.label_pool._drop_eval_like."},
     }
 
-    # --- Synthetic -------------------------------------------------------------
+    # --- Synthetic (docs/SYNTHETIC_DATA.md) ------------------------------------
+    syn = [k for k in frames if k.startswith("synth.")]
+    if not syn:
+        return man
+    pairs = overlap.pairwise({**real, **{k: frames[k] for k in syn}})
     syn_dup = {}
-    for s in [k for k in frames if k.startswith("synth.")]:
+    for s in syn:
         sp = pairs[(pairs.dataset_a == s) & (pairs.dataset_b == s) & (pairs.containment >= 0.5)]
         comp = _components(sp, sorted(set(frames[s].conv_id)))
         rep = {}
@@ -251,7 +260,7 @@ def write(man: Dict[str, dict]) -> Dict[str, str]:
 
 
 def main() -> None:
-    frames = registry.load_all()
+    frames = registry.load_all(include_synth=True)   # the synthetic manifest needs the generated sets
     man = build(frames)
     errs = check(man, frames)
     for e in errs:

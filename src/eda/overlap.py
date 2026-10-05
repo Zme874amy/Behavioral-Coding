@@ -34,14 +34,19 @@ _TOK = re.compile(r"[a-z']+")
 KNOWN = [
     ("misc.hlqc.gold", "pool.hlqc", "subset", "the 10 gold sessions are pool sessions (same conv_id)"),
     ("misc.miv63a.gold", "pool.miv63a", "subset", "the 10 test sessions are pool sessions (same conv_id)"),
-    ("synth.*", "misc.hlqc.gold", "derived",
-     "every data/synth/aug file = the 1,925 HLQC gold rows + synthetic rows; synthesis exemplars are HLQC gold"),
-    ("synth.v3_mivmix", "misc.miv63a.gold", "derived",
-     "topic mix measured on the MIV6.3A test set (statistics only, no text)"),
     ("annomi.gold", "annomi.gold", "derived",
      "AnnoMI-full -> AnnoMI-simple -> data/AnnoMI.csv (AutoMISC MISC map) -> data/manual/AnnoMI_eval.csv; parsed/AnnoMI_parsed.csv"),
     ("welivita.gold", "welivita.gold", "derived",
      "release MI_Dataset.csv -> external/welivita_mi_parsed.csv -> manual/Welivita_eval.csv; selftrain pseudo-labels are model output"),
+]
+
+
+# Relations of our generated sets to real data (docs/SYNTHETIC_DATA.md).
+SYNTH_KNOWN = [
+    ("synth.*", "misc.hlqc.gold", "derived",
+     "every data/synth/aug file = the 1,925 HLQC gold rows + synthetic rows; synthesis exemplars are HLQC gold"),
+    ("synth.v3_mivmix", "misc.miv63a.gold", "derived",
+     "topic mix measured on the MIV6.3A test set (statistics only, no text)"),
 ]
 
 
@@ -91,10 +96,10 @@ def pairwise(frames: Dict[str, pd.DataFrame], k: int = 5, max_df: int = 5,
                            ascending=[False, True, True, True, True]).reset_index(drop=True)
 
 
-def known_relations(frames: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def known_relations(frames: Dict[str, pd.DataFrame], synth: bool = False) -> pd.DataFrame:
     """The by-construction relations, with the conv_id check where applicable."""
     rows = []
-    for a, b, rel, note in KNOWN:
+    for a, b, rel, note in (SYNTH_KNOWN if synth else KNOWN):
         check = ""
         if rel == "subset" and a in frames and b in frames:
             ga, gb = set(frames[a].conv_id), set(frames[b].conv_id)
@@ -121,4 +126,4 @@ def summarise(pairs: pd.DataFrame, frames: Dict[str, pd.DataFrame], strong: floa
     return g
 
 
-__all__ = ["pairwise", "known_relations", "summarise", "shingles", "KNOWN"]
+__all__ = ["pairwise", "known_relations", "summarise", "shingles", "KNOWN", "SYNTH_KNOWN"]

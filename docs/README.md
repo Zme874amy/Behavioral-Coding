@@ -14,7 +14,7 @@ Details: [HF_SETUP.md](HF_SETUP.md)
 
 ## Data Preparation
 
-**Which dataset is which, what overlaps what, and the train/dev/test splits: [DATASETS.md](DATASETS.md)** (canonical dataset IDs, overlap map, cleaning audit, split manifests in `data/splits/`; EDA in `notebooks/datasets_eda.ipynb`).
+**Which dataset is which, what overlaps what, and the train/dev/test splits: [DATASETS.md](DATASETS.md)** (canonical dataset IDs, overlap map, cleaning audit, split manifests in `data/splits/`; EDA in `notebooks/datasets_eda.ipynb`). Our generated data is documented separately: [SYNTHETIC_DATA.md](SYNTHETIC_DATA.md) / `notebooks/synthetic_eda.ipynb`.
 
 Ensure your `data/` directory has the following structure:
 ```text

@@ -9,6 +9,9 @@ table, is [`notebooks/datasets_eda.ipynb`](../notebooks/datasets_eda.ipynb). The
 Gated or unobtainable corpora (MI-TAGS, BiMISC, Pérez-Rosas 2016, 7 Cups) and corpora
 considered then excluded (KMI, IC-AnnoMI, MIDAS) are covered in
 [experiments/2026-10-04-dataset-survey.md](experiments/2026-10-04-dataset-survey.md), not here.
+**Our own generated (synthetic) sets are documented separately in [SYNTHETIC_DATA.md](SYNTHETIC_DATA.md)**,
+because they change with every synthesis campaign. Nothing on this page depends on them: overlap scores
+and split manifests here are computed from real data only.
 
 ## 1. Names: canonical ID → files
 
@@ -22,10 +25,6 @@ considered then excluded (KMI, IC-AnnoMI, MIDAS) are covered in
 | `annomi.gold` | `data/external/annomi/AnnoMI-{full,simple}.csv` (official) / `data/AnnoMI.csv` / `data/manual/AnnoMI_eval.csv` / `data/parsed/AnnoMI_parsed.csv` | One corpus in five files. `data/AnnoMI.csv` is AutoMISC's MISC-mapped copy in a **different row order** (join on `conv_id` + `utterance_id`). `AnnoMI_eval.csv` is our cross-scheme test file built from it |
 | `welivita.gold` | `data/external/welivita/MI_Dataset.csv` (official) / `data/external/welivita_mi_parsed.csv` / `data/manual/Welivita_eval.csv` | One corpus, three files. Labels are **Welivita & Pu's own** (100% match to the release), not ours |
 | `miti.casaa.gold` | `data/external/casaa/{CASAA_eval,casaa_turns,casaa_globals}.csv` | Parsed by `baseline.prep_casaa` from the CASAA PDFs (gitignored) |
-| `synth.v1` | `data/synth/aug/Qwen2_5-32B-Instruct-AWQ.csv` | **Every `synth/aug` file = the 1,925 HLQC train rows + synthetic rows** (`conv_id` starts `synth:`) |
-| `synth.v2_proto` / `synth.v2_boundary` | `…_proto.csv` / `…_boundary.csv` | v2 ontology windows (prototype / confusable-pair focus) |
-| `synth.v3_hlqcmix` | `…_proto_train.csv` | v3, HLQC topic mix. Despite "train" in the name, this is a dataset version, not a split |
-| `synth.v3_mivmix` | `…_proto_eval.csv` | v3, MIV6.3A topic mix. **This is training data**: "eval" names the topic mix, not a split |
 
 ## 2. Catalogue
 
@@ -39,7 +38,6 @@ considered then excluded (KMI, IC-AnnoMI, MIDAS) are covered in
 | `annomi.gold` | mixed (23 alcohol, 19 smoking, 8 medication, …) | spoken demos, **manual** transcription | 133 (110 high / 23 low) | 9,699 turns (4,882 / 4,817) | AnnoMI: main behaviour + subtypes; client change/neutral/sustain | 10 experts: 126 transcripts single-annotated, 7 by all 10. **Measured** Fleiss κ: main 0.74, question type 0.74, reflection type 0.50, input type 0.51, client 0.47 | own-scheme train/dev/test; MISC transfer test |
 | `welivita.gold` | mental-health peer support | written forum (1,000 CounselChat + 1,000 Reddit threads) | 2,000 | 20,462 (17,261 listener / 3,201 seeker) | MITI-derived, 15 listener codes | 2 MTurk workers + 2 expert judge stages. **Measured** ann1 vs ann2 κ 0.34 (raw 0.41) | own-scheme (agreed subset); weak transfer test |
 | `miti.casaa.gold` | mixed (alcohol, smoking, diabetes, IPV, parenting) | spoken training demos, manual | 20 | 1,346 (687 / 659) | MITI 4 (counsellor only) + session globals (9) | MITI developers' reference coding | **test only** |
-| `synth.*` | by topic mix | generated dialogue windows (Qwen2.5-32B) | 862 / 50 / 48 / 50 / 50 | 2,631 / 716 / 645 / 848 / 788 | MISC 2.5, generator-labelled, verifier-checked | — | train augmentation only |
 
 Licences:
 
@@ -49,7 +47,6 @@ Licences:
 | AnnoMI | public, no explicit licence |
 | Welivita | CC BY-NC-SA 3.0 |
 | CASAA | training material; research use with citation, not redistributed |
-| synthetic | ours |
 
 ## 3. Coding schemes (every handbook code)
 
@@ -78,7 +75,7 @@ Encoded in `eda.registry.HANDBOOK`, and compared with our vocabulary and the dat
 | GI | Giving information | — | IMC | HLQC, MIV |
 | OQ | Open question | MICO | Q | HLQC, MIV |
 | CQ | Closed question | — | Q | HLQC, MIV |
-| RCP | Raise concern with permission | MICO | IMC | **none** (synthetic only) |
+| RCP | Raise concern with permission | MICO | IMC | **none** |
 | RCW | Raise concern without permission | MIIN | IMI | HLQC only |
 | SR | Simple reflection | MICO | SRL | HLQC, MIV |
 | CR | Complex reflection | MICO | CRL | HLQC, MIV |
@@ -97,7 +94,7 @@ Encoded in `eda.registry.HANDBOOK`, and compared with our vocabulary and the dat
 | D± | Desire | `D±` | both, both |
 | A± | Ability | `AB±` | both, both |
 | N± | Need | `N±` | + HLQC only / − both |
-| TS± | Taking steps | `TS±` | + MIV only / **− none** (synthetic only) |
+| TS± | Taking steps | `TS±` | + MIV only / **− none** |
 | O± | Other | `O±` | + both / − HLQC only |
 
 **Where we depart from the handbook:**
@@ -161,7 +158,7 @@ Question / Input / Reflection are **separate attributes that can co-occur**, and
 
 | Gap | Codes |
 |---|---|
-| Handbook classes with **no real example anywhere** | RCP, TS− (synthetic only) |
+| Handbook classes with **no real example anywhere** | RCP, TS− |
 | In MIV test, absent from HLQC train | TS+, AC− |
 | In HLQC train, absent from MIV test | ADW, CO, RCW, WA, C−, N+, O− |
 | Thin in HLQC train | SU 9, RF 9, DI 12, CO 15, GI 16 |
@@ -176,17 +173,13 @@ transcript) score 0.13–0.95. "→" means "is the same session as".
 |---|---|---|
 | **HLQC train ⊂ HLQC pool** (same ids) | all 10 | expected (subset) |
 | **MIV6.3A test ⊂ MIV6.3A pool** (same ids) | all 10 | pool users must drop them. `selftrain.label_pool` already does, plus templated-line near-dupes |
-| **HLQC train → HLQC pool under other ids** | low_026→high_084 (0.95), low_001→low_027 (0.90) & low_040 (0.87), low_031→low_054 (0.82), low_080→low_019 (0.80) & low_098 (0.53) | the pool holds extra copies of training sessions. low_026/high_084 also has **conflicting** low/high quality labels |
-| **HLQC train → AnnoMI** | low_001→53 (0.67), high_099→21 (0.66), low_033→44 (0.62), low_080→15 (0.60) | **AnnoMI transfer-test results so far include 4 training sessions.** Exclude 15, 21, 44, 53 |
+| **HLQC train → HLQC pool under other ids** | low_026→high_084 (0.95), low_001→low_027 (0.93) & low_040 (0.90), low_080→low_019 (0.87) & low_098 (0.59), low_031→low_054 (0.82) | the pool holds extra copies of training sessions. low_026/high_084 also has **conflicting** low/high quality labels |
+| **HLQC train → AnnoMI** | low_001→53 (0.69), low_080→15 (0.67), high_099→21 (0.66), low_033→44 (0.62) | **AnnoMI transfer-test results so far include 4 training sessions.** Exclude 15, 21, 44, 53 |
 | **HLQC pool → AnnoMI** | 48 AnnoMI transcripts match ≥ 1 of 63 pool sessions (68 pairs, up to 0.85) | exclude those 48 when the model also saw `pool.hlqc` |
 | **HLQC train → CASAA** | high_121 → Emmy's First Encounter (0.40) | Emmy is excluded from the CASAA test |
 | **HLQC pool → CASAA** | high_072 → The Rounder (0.28; HLQC holds only ~900 words) | Rounder is excluded from the CASAA test |
 | **HLQC pool → HLQC pool** | 53 pairs (51 ≥ 0.5, e.g. low_003 = low_005, low_008 = low_048 at 1.00), 4 with conflicting high/low labels | 45 redundant sessions listed for dropping |
 | **Welivita → Welivita** | 356 dialogue pairs ≥ 0.1 (the same CounselChat thread under two ids, e.g. 99 = 1856) | split by duplicate cluster |
-| **synthetic → real** | v2/v3 windows copy HLQC-train exemplar phrases verbatim (≤ 0.20). Indirectly that touches AnnoMI 44 and CASAA Emmy, the HLQC-train copies | training-side only; the test exclusions above cover it |
-| **synth.v3_hlqcmix ↔ synth.v3_mivmix** | windows 19 and 33 near-identical (0.91) | the two v3 arms share 2 windows |
-| **synth.v1 → synth.v1** | 15 pairs (mode collapse), 3 redundant | listed for dropping |
-| **synth.v3_mivmix ← MIV6.3A test** | topic *proportions* measured on the test set (no text) | documented ablation; report as such |
 | MIV6.3A test ↔ anything else | none at session level; 22 of 652 long test utterances recur verbatim in `pool.miv63b` (templated chatbot lines) | handled by `label_pool._drop_eval_like` |
 | AnnoMI ↔ AnnoMI, CASAA ↔ AnnoMI, MIV ↔ HLQC/AnnoMI | none | — |
 
@@ -202,12 +195,11 @@ No data file was modified. Leakage and duplicate handling is done with exclusion
 | Duplicate sessions with conflicting high/low quality label | `pool.hlqc` | 4 pairs (high_025 = low_086, high_084 = low_026, high_036 = low_051, …) | **needs decision** if session quality is ever used as a label |
 | Near-duplicate sessions | `pool.hlqc` | 51 pairs; 45 redundant ids | exclusion list (`pools.json`) |
 | Duplicate dialogues | `welivita.gold` | 9 at ≥ 0.9; 356 pairs at ≥ 0.1 | clusters kept in one split |
-| Redundant synthetic windows | `synth.v1` | 3 | exclusion list (`synthetic.json`) |
 | Empty text | `pool.miv63a` | 2 rows | harmless; consumers already skip empty text |
 | Topic labels with stray whitespace | `annomi.gold` | release-level | stripped in `eda.registry` |
 | No casing / punctuation (ASR) | HLQC train 58% / 80%, HLQC pool 58% / 90% | — | expected. It's a domain gap to MIV (15% uncased) and AnnoMI (4% uncased), not a cleaning target |
 | Multi-code turns, SAME rows, 2 client rows with a code | `miti.casaa.gold` | 50 / 8 / 2 | handled: no gold assigned |
-| Uncoded rows | Welivita 450 listener ("-") + all seekers; CASAA clients; synthetic context rows (~50%) | — | expected |
+| Uncoded rows | Welivita 450 listener ("-") + all seekers; CASAA clients | — | expected |
 | Row count 1,925 vs paper 1,924 | `misc.hlqc.gold` | 1 | off-by-one; no duplicate rows found |
 | Missing turn 25 | 3 CASAA PDFs | — | source gap, not a parse loss |
 
@@ -228,7 +220,6 @@ No data file was modified. Leakage and duplicate handling is done with exclusion
 - **AnnoMI annotator effect:** on identical utterances, the complex-reflection share ranges from 0.19 to 0.82 across annotators, and the change-talk share from 0.14 to 0.38. Annotator 3 is the outlier (κ 0.65 vs ≥ 0.79 against the leave-one-out majority). Each annotator single-handedly coded 11–13 transcripts.
 - **Welivita:** only 7,152 of 17,261 listener segments have crowd agreement. Agreement is lowest for reflections (CR 261/1,294 agreed) and advice with permission (57/484).
 - **MIV outcomes:** confidence rises pre → post (4.27 → 5.62). The 10 test sessions gained more confidence than the rest (+1.90 vs +1.31), so the test set leans toward successful sessions.
-- **Synthetic diversity:** v1 has Self-BLEU 0.263 and 31% near-duplicates, against 0.037–0.066 and 6–9% for v2/v3.
 
 ## 7. Split plan (`python -m eda.splits` → `data/splits/*.json`)
 
@@ -239,7 +230,6 @@ No data file was modified. Leakage and duplicate handling is done with exclusion
 | `welivita_own` | Welivita MITI-derived | 1,604 dialogues | 196 | 200 | dialogue-level, duplicate clusters in one split, stratified by source. Labels: the 7,152 stage-I-agreed listener rows |
 | `casaa_test` | MITI 4 | — | — | 18 sessions | Emmy, Rounder |
 | `pools` | — | `pool.hlqc`: drop the 45 redundant duplicates; `pool.miv63a`: drop the 10 test sessions; `pool.miv63b`: as is | — | — | `exclude_if_annomi_is_test` (63 HLQC pool ids), `exclude_if_casaa_is_test` (2) |
-| `synthetic` | — | train only | — | never | 3 redundant v1 windows; 2 windows shared by the v3 mixes |
 
 The manifests are byte-identical across reruns and `PYTHONHASHSEED` values. Built-in checks:
 - no conversation sits in two splits;

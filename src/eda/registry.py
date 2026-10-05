@@ -3,7 +3,10 @@
 Why this exists: the same corpus lives in several files under unrelated names
 (`HLQC.csv`, `parsed/HLQC_parsed.csv`, `manual/HLQC_balanced_manual.csv` are a
 volley-level pool, an utterance-level pool and a 10-session gold subset), and
-`synth/aug/*_proto_eval.csv` is synthetic TRAINING data, not an eval set. Every
+`synth/aug/*_proto_eval.csv` is synthetic TRAINING data, not an eval set. Our
+generated sets are registered here too (ids `synth.*`) but kept out of `load_all()`
+by default and documented in docs/SYNTHETIC_DATA.md, because they change with
+every synthesis campaign. Every
 analysis in `eda.*` and the notebook goes through the IDs below, so a dataset is
 always named the same way and its lineage is explicit.
 
@@ -305,8 +308,14 @@ def load(dataset_id: str) -> pd.DataFrame:
     return LOADERS[dataset_id]()
 
 
-def load_all() -> Dict[str, pd.DataFrame]:
-    return {k: load(k) for k in LOADERS}
+REAL_IDS = [k for k in LOADERS if not k.startswith("synth.")]
+SYNTH_IDS = [k for k in LOADERS if k.startswith("synth.")]
+
+
+def load_all(include_synth: bool = False) -> Dict[str, pd.DataFrame]:
+    """The stable real datasets; pass include_synth=True to add our generated sets
+    (documented separately in docs/SYNTHETIC_DATA.md, notebooks/synthetic_eda.ipynb)."""
+    return {k: load(k) for k in (REAL_IDS + SYNTH_IDS if include_synth else REAL_IDS)}
 
 
 def miv_outcomes(run: str = "A") -> pd.DataFrame:
