@@ -283,3 +283,30 @@ def exemplar_sources() -> pd.DataFrame:
                     rows.append({"file": f.name, "speaker": spk, "tier": tier, "label": e.get("t2_label") or e.get("t1_label"),
                                  "session": sess, "duplicated in test corpus": dup.get(sess, "")})
     return pd.DataFrame(rows)
+
+
+def miti_routes() -> pd.DataFrame:
+    """Routes to a MITI coder, scored on CASAA (clean sessions, single-code counsellor turns, excl. Seek)."""
+    from eda.quality import MISC_TO_MITI
+    C = registry.load("miti.casaa.gold")
+    keep = set(json.load(open(registry.REPO / "data/splits/casaa_test.json"))["test"])
+    T = C[C.conv_id.isin(keep) & (C.speaker == "counsellor") & C.native.notna()
+          & ~C.native.astype(str).str.contains("|", regex=False) & (C.native != "SAME")]
+    w = registry.load("welivita.gold")
+    L = w[(w.speaker == "counsellor") & w.miti.notna()]
+    H, M = registry.load("misc.hlqc.gold"), registry.load("misc.miv63a.gold")
+    misc = pd.concat([H, M])
+    misc = misc[misc.speaker == "counsellor"].assign(miti=lambda d: d.t2.map(lambda c: MISC_TO_MITI.get(c, "NC")))
+    labs = sorted(set(T.native) - {"Seek"})
+    rows = {}
+    for name, tr_text, tr_y in (
+            ("MISC gold (HLQC+MIV), mapped to MITI", misc.text, misc.miti),
+            ("Welivita mapped to MITI, all labels", L.text, L.miti),
+            ("Welivita mapped to MITI, agreed labels", L[L.stage1_agreed].text, L[L.stage1_agreed].miti),
+            ("Welivita (agreed) + MISC gold, mapped to MITI", pd.concat([L[L.stage1_agreed].text, misc.text]),
+             pd.concat([L[L.stage1_agreed].miti, misc.miti]))):
+        p = _model().fit(tr_text, tr_y).predict(T.text)
+        rows[name] = {"CASAA MITI macro-F1 (excl. Seek)": round(f1_score(T.native, p, average="macro", labels=labs,
+                                                                          zero_division=0), 3),
+                      "CASAA acc": round(accuracy_score(T.native, p), 3)}
+    return pd.DataFrame(rows).T

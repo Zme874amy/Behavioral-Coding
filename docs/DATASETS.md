@@ -95,7 +95,7 @@ A catalogue for looking things up, one row per dataset; the analysis of each dat
 | `pool.miv63a` | smoking | chatbot text | 173 | 13,692 utts | none (+ readiness / importance / confidence pre, post, week-later) | — | unlabelled pool (minus test) |
 | `pool.miv63b` | smoking | chatbot text | 165 | 11,771 utts | none | — | unlabelled pool |
 | `annomi.gold` | mixed (23 alcohol, 19 smoking, 8 medication, …) | spoken demos, **manual** transcription | 133 (110 high / 23 low) | 9,699 turns (4,882 / 4,817) | AnnoMI: main behaviour + subtypes; client change/neutral/sustain | 10 experts: 126 transcripts single-annotated, 7 by all 10. **Measured** Fleiss κ: main 0.74, question type 0.74, reflection type 0.50, input type 0.51, client 0.47 | own-scheme train/dev/test; MISC transfer test |
-| `welivita.gold` | mental-health peer support | written forum (1,000 CounselChat + 1,000 Reddit threads) | 2,000 | 20,462 (17,261 listener / 3,201 seeker) | MITI-derived, 15 listener codes | 2 MTurk workers + 2 expert judge stages. **Measured** ann1 vs ann2 κ 0.34 (raw 0.41) | own-scheme (agreed subset); weak transfer test |
+| `welivita.gold` | mental-health peer support | written forum (1,000 CounselChat + 1,000 Reddit threads) | 2,000 | 20,462 (17,261 listener / 3,201 seeker) | MITI variant (15 listener codes; maps to MITI 4.2.1, §3) | 2 MTurk workers + 2 expert judge stages. **Measured** ann1 vs ann2 κ 0.34 (raw 0.41) | own-scheme (agreed subset); weak transfer test |
 | `miti.casaa.gold` | mixed (alcohol, smoking, diabetes, IPV, parenting) | spoken training demos, manual | 20 | 1,346 (687 / 659) | MITI 4 (counsellor only) + session globals (9) | MITI developers' reference coding | **test only** |
 
 Licences:
@@ -181,23 +181,29 @@ Encoded in `eda.registry.HANDBOOK`, and compared with our vocabulary and the dat
 | *NC, SAME* | **not MITI codes**: CASAA transcript conventions (uncoded; continuation). NC → O at T1 |
 | Globals | Cultivating Change Talk, Softening Sustain Talk, Partnership, Empathy (9 CASAA sessions) |
 
-### Welivita (Table 1 of the paper): 15 labels, all present in the data
+### Welivita (Table 1 of the paper): 15 labels, all present in the data, **a MITI variant**
 
-| Welivita code | MISC |
-|---|---|
-| Give Information | GI |
-| Advise without / with Permission | ADW / ADP |
-| Complex / Simple Reflection | CR / SR |
-| Support | SU |
-| Affirm | AF |
-| Closed / Open Question | CQ / OQ |
-| Direct | DI |
-| Confront | CO |
-| Emphasize Autonomy | EC |
-| Warn | WA |
-| Self-Disclose, Other | none (authors' additions, not MITI) |
+Welivita & Pu adapted their labels from MITI 2.0 and 4.2.1. Open/closed questions, Direct, Warn and Support come from earlier MITI versions; Self-Disclose and Other are their additions. So it is not a separate scheme. It maps to **MITI 4.2.1** (`registry.WELIVITA_TO_MITI`, each row citing the manual) and to MISC:
 
-"Give Information" includes giving an opinion, which is broader than MISC GI. Our ingest map (`selftrain.ingest.MITI_TO_MISC_T2`) also lists Reframe and Structure. Neither exists in Welivita's scheme, so they're dead entries; harmless, because no row carries them.
+| Welivita code | MITI 4.2.1 | MITI mapping, with manual basis | MISC |
+|---|---|---|---|
+| Closed / Open Question | Q | exact: MITI 4 does not split open/closed | CQ / OQ |
+| Simple / Complex Reflection | SR / CR | exact | SR / CR |
+| Affirm | AF | exact (MITI 4.2.1 Affirm is stricter) | AF |
+| Emphasize Autonomy | Emphasize | exact | EC |
+| Confront | Confront | exact | CO |
+| Advise with Permission | Persuade with Permission | exact: E.4.c | ADP |
+| Advise without Permission | Persuade | exact: E.4.b (advice without autonomy emphasis) | ADW |
+| Warn | Confront | exact: E.4.g.2 lists "warning" | WA |
+| Support | not coded | exact: p.26 "statements of support … are no longer coded" (Welivita's example nearly copies the manual's) | SU |
+| Other | not coded | exact: §F greetings and off-topic | — |
+| Give Information | GI | approximate: Welivita GI includes opinions, which MITI codes as Persuade | GI |
+| Direct | Persuade | approximate: imperatives are advice (Persuade); with disapproval, Confront | DI |
+| Self-Disclose | — | none: Persuade only when used to persuade (needs context) | — |
+
+- **Coverage of listener labels:** 57% exact, 34% approximate, 8% none.
+- **Gap:** MITI's **Seek** has no Welivita counterpart.
+- **Caveat:** "Give Information" includes giving an opinion, which is broader than both MITI GI and MISC GI. Our MISC ingest map (`selftrain.ingest.MITI_TO_MISC_T2`) also lists Reframe and Structure, which are dead entries: no Welivita row carries them.
 
 ### AnnoMI (§4 of the paper): all attributes present in the data
 
@@ -481,14 +487,21 @@ Cost: LOSO is 10 runs per arm per seed; seed-tied 5-fold is 5. P0 results stay v
 
 **5-fold CV grouped by same-post cluster**, stratified by source (~400 dialogues per fold; dev = the next fold). Labels are the 7,152 stage-I-agreed sentences. Report cross-source robustness (CounselChat → Reddit and the reverse): the proxy drops from 0.47 in-source to 0.36–0.38 across sources.
 
-Its main role in MISC work is a weak pool: crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047).
+In MISC work it is a weak pool: crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047). **In MITI work it is the training set** (6.4b), because its labels map to MITI 4.2.1.
 
 ### 6.4b `miti_scheme`: MITI 4
 
-Human MITI data is CASAA only, which is **test only**: it is the reference standard and too small to train on. Training options:
-- **A (recommended):** a MISC model with its output mapped MISC → MITI. Seek can't be produced.
-- **B:** Welivita's train split → CASAA (cross-domain, weak labels).
-- **C:** MI-TAGS, if obtained, after deduplication.
+**Two MITI datasets:** Welivita (a MITI variant, mapped to MITI 4.2.1 in §3) for training and selection, and CASAA (the reference coding) as **test only**.
+
+Recommended training: **pooled in MITI space.** Welivita's agreed labels (Self-Disclose dropped) plus the MISC gold, both mapped to MITI. Proxy on CASAA, every route trained on MITI-mapped labels:
+
+| Route | CASAA MITI macro-F1 (excl. Seek) |
+|---|---:|
+| MISC gold only | 0.246 |
+| Welivita only | 0.303 |
+| **pooled** | **0.335** |
+
+Selection uses the `welivita_own` folds. Seek can't be learned from either source. MI-TAGS, if obtained, would join after deduplication.
 
 ### 6.5 `casaa_test`
 

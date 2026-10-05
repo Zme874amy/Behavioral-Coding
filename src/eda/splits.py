@@ -259,7 +259,7 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
         strata[src[members[0]]].append(root)
     cl_fold = _allocate(strata, {str(k): 1 / N_FOLDS for k in range(N_FOLDS)}, random.Random(f"{SEED}-welivita_own"))
     man["welivita_own"] = {
-        "scheme": "Welivita MITI-derived (15 codes)",
+        "scheme": "Welivita, a MITI variant (15 codes; maps to MITI 4.2.1 via registry.WELIVITA_TO_MITI)",
         "design": f"{N_FOLDS}-fold CV grouped by same-post/duplicate cluster, stratified by source. For test fold k, dev = "
                   f"fold (k+1) mod {N_FOLDS}. Every dialogue is tested exactly once.",
         "folds": {c: int(cl_fold[comp[c]]) for c in convs},
@@ -283,12 +283,16 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
                        - twins("misc.hlqc.gold", train_ids, "miti.casaa.gold")
                        - twins("pool.hlqc", set(frames["pool.hlqc"].conv_id), "miti.casaa.gold")),
         "training_options": {
-            "A (recommended)": "MISC-trained model + MISC->MITI mapping (no MITI training data needed)",
-            "B": "welivita.gold (MITI-derived, written forum; all folds) -> CASAA: cross-domain, weak labels",
-            "C (if obtained)": "MI-TAGS (MITI 4.2, 242 sessions) after dedup against HLQC, AnnoMI and CASAA",
+            "recommended": "pooled in MITI space: welivita.gold (stage-I-agreed labels, mapped with registry.WELIVITA_TO_MITI; "
+                           "Self-Disclose dropped) + MISC gold mapped with MISC_TO_MITI. Proxy on CASAA (all routes trained on "
+                           "MITI-mapped labels): macro-F1 0.335 vs 0.246 (MISC gold only) and 0.303 (Welivita only)",
+            "welivita_folds": "use welivita_own folds for MITI-space dev/selection; CASAA stays test only",
+            "if obtained": "MI-TAGS (MITI 4.2, 242 sessions) after dedup against HLQC, AnnoMI and CASAA",
         },
+        "welivita_to_miti": "registry.WELIVITA_TO_MITI (exact 57% / approximate 34% / none 8% of listener labels)",
         "misc_to_miti": MISC_TO_MITI,
-        "not_mappable": ["Seek (MISC folds permission-seeking into EC)", "Q open/closed is not split in MITI"],
+        "not_mappable": ["Seek: neither MISC (folds permission-seeking into EC) nor Welivita has it",
+                         "Welivita Self-Disclose (context-dependent)"],
         "notes": "CASAA is too small to train on and is the reference standard, so it is never used for training or tuning.",
     }
 

@@ -163,7 +163,7 @@ The MISC protocol is §4. Each other scheme gets its own protocol, chosen by the
   - C7: dev is used for selection.
 - **Not used for training:** HLQC overlaps (15/21/44/53 and the 48 pool twins) only matter when a model is trained on HLQC and tested on AnnoMI. For AnnoMI-scheme training they are ordinary AnnoMI transcripts.
 
-### 7.2 Welivita scheme (15 MITI-derived listener codes)
+### 7.2 Welivita scheme (15 MITI-variant listener codes; see §12: it maps to MITI 4.2.1)
 
 - **Data:** `welivita.gold`; labels = the 7,152 stage-I-agreed listener sentences (crowd κ 0.34 overall, so only agreed labels are trusted).
 - **Split:** `welivita_own`, **5-fold CV grouped by same-post cluster**, stratified by source (~400 dialogues per fold; dev = the next fold).
@@ -176,6 +176,7 @@ The MISC protocol is §4. Each other scheme gets its own protocol, chosen by the
 - **Training options, in order of recommendation:**
   - **A.** A MISC-trained model whose output is mapped MISC → MITI (`quality.MISC_TO_MITI`). This needs no MITI training data. MITI's Seek can't be produced, because MISC folds permission-seeking into EC.
   - **B.** Welivita's train split (MITI-derived) → CASAA: cross-domain (written → spoken) with weak labels.
+  - **Superseded by §12:** pooled A + B in MITI space is best.
   - **C.** MI-TAGS (MITI 4.2, 242 sessions), if obtained, deduplicated against HLQC, AnnoMI and CASAA first.
 - **Why:** C1 (CASAA is reference quality) and C4 (no trainable human MITI corpus exists).
 
@@ -220,7 +221,7 @@ Three channels put HLQC gold text in front of a model:
 | Exemplar draw is a lucky draw | one frozen draw | prompted arms use ≥ 3 exemplar draws (different selection seeds) and report mean ± sd; `fewshot.build_exemplars` needs a seed argument for this |
 | Scoring on the exemplars' own corpus | exemplars carry 5 context volleys of their session; `label_pool --exclude-exemplars` drops exemplar rows only | when scoring on HLQC (CV anchor, teacher screens), drop the exemplar **sessions**, or draw exemplars from other folds |
 
-## 11. Next steps (supersedes §8)
+## 11. Next steps (supersedes §8; MITI route updated in §12)
 
 1. **Your decision:** P3 (`misc_pooled_cv`) as the primary MISC protocol, with LOSO for headline arms and seed-tied 5-fold for exploratory ones; P0 kept as cold-start.
 2. If yes: confirmation run of `ft1mix_bare` under LOSO (10 folds × 3 seeds) on MLeRP.
@@ -228,3 +229,34 @@ Three channels put HLQC gold text in front of a model:
    - add a seed to `fewshot.build_exemplars` and re-score prompted arms over 3 exemplar draws;
    - rerun the AnnoMI transfer test with the exclusions (now for every model that saw HLQC) and T1 questions;
    - disclose L5 (test-informed design decisions) for the existing P0 results.
+
+## 12. Is Welivita a separate scheme, or MITI? (follow-up)
+
+**Short answer: it is a MITI variant, and it maps to MITI 4.2.1.** I had treated it as a separate scheme; that was wrong.
+
+- **Evidence from the paper:** Welivita & Pu (2022) adapted their labels from MITI 2.0 and 4.2.1. Open/closed questions, Direct, Warn and Support come from earlier MITI versions; Self-Disclose and Other are additions. Their Support example ("I know it's really hard to stop drinking") nearly copies the MITI 4.2.1 manual's example of an uncoded support statement.
+- **Evidence from the MITI 4.2.1 manual:**
+  - Persuade covers advice, suggestions and opinions given without autonomy emphasis (E.4.b);
+  - Persuade with Permission covers advice given with permission (E.4.c);
+  - Confront lists "warning" (E.4.g.2);
+  - support statements "are no longer coded" (p.26).
+- **Mapping** (`registry.WELIVITA_TO_MITI`, table in DATASETS.md §3), by share of listener labels:
+  - **exact 57%:** Q, SR, CR, AF, Emphasize, Confront, PwP, Persuade, Warn → Confront, Support/Other → not coded;
+  - **approximate 34%:** Give Information, which includes opinions, and Direct → Persuade;
+  - **none 8%:** Self-Disclose, which is context-dependent.
+
+  Seek has no counterpart.
+- **Does it help?** Proxy on CASAA (`split_eval.miti_routes`; every route trained on MITI-mapped labels; macro-F1 excluding Seek):
+
+| Route | CASAA MITI macro-F1 | CASAA acc |
+|---|---:|---:|
+| MISC gold (HLQC + MIV) only | 0.246 | 0.399 |
+| Welivita, all labels | 0.282 | 0.347 |
+| Welivita, agreed labels | 0.303 | 0.364 |
+| **Welivita (agreed) + MISC gold** | **0.335** | **0.429** |
+
+- **Consequence:**
+  - For MITI there are now **two datasets in the same scheme:** Welivita for training and selection (its 5-fold CV), and CASAA as the reference test.
+  - `miti_scheme.json` now recommends pooled training in MITI space.
+  - For MISC work, Welivita stays a weak pool.
+  - The caveats stand: crowd κ 0.34 (use the agreed labels), written forum domain (spoken CASAA is the test), and no Seek.

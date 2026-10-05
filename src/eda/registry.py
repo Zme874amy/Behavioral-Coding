@@ -148,7 +148,7 @@ META: Dict[str, Meta] = {m.id: m for m in [
         lineage="Welivita & Pu, COLING 2022; CounselChat + Reddit threads. Labels are THEIRS (verified 100% match), not ours.",
         domain="mental-health peer support (written)", modality="written forum Q&A", transcription="none",
         session_type="online forum threads (2-6 turns)", language="English",
-        scheme="MITI-derived, 15 listener codes; seekers uncoded", unit="sentence-level listener segment",
+        scheme="MITI-derived (MITI 2.0 / 4.2.1), 15 listener codes; maps to MITI 4.2.1 (57% exact, 34% approximate, 8% none); seekers uncoded", unit="sentence-level listener segment",
         annotators="2 MTurk crowd workers + 2 expert judge stages", reliability="measured by us: ann1 vs ann2 kappa 0.34",
         licence="CC BY-NC-SA 3.0", source="https://github.com/anuradha1992/Motivational-Interviewing-Dataset",
         role="own-scheme train/dev/test (agreed subset); weak cross-scheme test; self-training pool",
@@ -297,9 +297,11 @@ def load_welivita() -> pd.DataFrame:
     raw["native"] = raw["final agreed label"].where(raw["final agreed label"].astype(str) != "-")
     raw["t2"] = raw["native"].map(MITI_TO_MISC_T2)
     raw["source"] = raw.dialog_id.astype(str).str.split("|").str[0].str.strip()
+    raw["miti"] = raw["native"].map(lambda x: WELIVITA_TO_MITI.get(x, (None,))[0])
+    raw["miti_mapping"] = raw["native"].map(lambda x: WELIVITA_TO_MITI.get(x, (None, None))[1])
     raw["stage1_agreed"] = raw["stage I agreed label"].notna() & (raw["stage I agreed label"].astype(str) != "-")
     return _std(raw, "welivita.gold", "dialog_id", "author", "turn", None, "text", "native", None, "t2",
-                extra=("ann1", "ann2", "source", "stage1_agreed"))
+                extra=("ann1", "ann2", "source", "stage1_agreed", "miti", "miti_mapping"))
 
 
 def load_casaa() -> pd.DataFrame:
@@ -383,7 +385,8 @@ HANDBOOK = {
                        "Give Information", "Advise with Permission", "Affirm", "Emphasize Autonomy", "Support",
                        "Advise without Permission", "Confront", "Direct", "Warn", "Self-Disclose", "Other"],
         "client": [],
-        "notes": "Seekers are not coded. Self-Disclose and Other are not MITI codes (added by the authors).",
+        "notes": "A MITI variant: labels adapted from MITI 2.0 and 4.2.1 (open/closed questions, Direct, Warn, Support from "
+                 "earlier MITI versions) plus Self-Disclose and Other. Maps to MITI 4.2.1 via WELIVITA_TO_MITI. Seekers are not coded.",
     },
     "AnnoMI": {
         "counsellor": ["question:open", "question:closed", "reflection:simple", "reflection:complex",
@@ -393,6 +396,26 @@ HANDBOOK = {
         "notes": "Question/Input/Reflection are separate attributes that can co-occur in one utterance; "
                  "a single Main Behaviour is chosen per utterance.",
     },
+}
+
+# Welivita's 15 labels (adapted from MITI 2.0 and 4.2.1) -> MITI 4.2.1, with the manual basis.
+# exact 57% / approximate 34% / none 8% of listener labels (docs/experiments/2026-10-05-split-review.md section 12).
+WELIVITA_TO_MITI = {
+    "Closed Question": ("Q", "exact", "MITI 4.2.1 does not split open/closed"),
+    "Open Question": ("Q", "exact", "MITI 4.2.1 does not split open/closed"),
+    "Simple Reflection": ("SR", "exact", ""),
+    "Complex Reflection": ("CR", "exact", ""),
+    "Affirm": ("AF", "exact", "MITI 4.2.1 Affirm is stricter than earlier versions (p.26)"),
+    "Emphasize Autonomy": ("Emphasize", "exact", ""),
+    "Confront": ("Confront", "exact", ""),
+    "Advise with Permission": ("PwP", "exact", "E.4.c: permission asked/given or autonomy-supportive preface"),
+    "Advise without Permission": ("Persuade", "exact", "E.4.b: advice/suggestions without autonomy emphasis"),
+    "Warn": ("Confront", "exact", "E.4.g.2 lists 'warning' under Confront"),
+    "Support": ("NC", "exact", "p.26: statements of support are no longer coded ('I know it's really hard to stop smoking')"),
+    "Other": ("NC", "exact", "F: greetings and off-topic statements are not coded"),
+    "Give Information": ("GI", "approx", "Welivita GI includes opinions; MITI codes unsolicited opinions as Persuade (E.4.b)"),
+    "Direct": ("Persuade", "approx", "imperatives are advice (Persuade); with disapproval they are Confront"),
+    "Self-Disclose": (None, "none", "Persuade only when used to persuade (E.4.b), otherwise not coded: needs context"),
 }
 
 # Our MISC vocabulary vs the MISC 2.5 handbook (AutoMISC naming in brackets).
@@ -515,7 +538,9 @@ def schemes() -> Dict[str, pd.DataFrame]:
     wel = []
     for code in HANDBOOK["Welivita (MITI-derived)"]["counsellor"]:
         t2 = MITI_TO_MISC_T2.get(code)
-        wel.append({"code": code, "misc_t2": t2, "misc_t1": t1_of.get(t2), "mapping": "exact" if t2 else "none",
+        w_miti, mq, basis = WELIVITA_TO_MITI[code]
+        wel.append({"code": code, "MITI 4.2.1": w_miti, "MITI mapping": mq, "MITI basis": basis,
+                    "misc_t2": t2, "misc_t1": t1_of.get(t2), "MISC mapping": "exact" if t2 else "none",
                     "source": "Welivita & Pu 2022 Table 1"})
 
     annomi = [
