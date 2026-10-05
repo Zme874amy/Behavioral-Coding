@@ -1,0 +1,57 @@
+{
+ "dup_threshold": 0.1,
+ "human_data": {
+  "miti.casaa.gold": "20 transcripts (18 clean): the only human MITI-coded spoken data we hold"
+ },
+ "misc_to_miti": {
+  "ADP": "PwP",
+  "ADW": "Persuade",
+  "AF": "AF",
+  "CO": "Confront",
+  "CQ": "Q",
+  "CR": "CR",
+  "DI": "Persuade",
+  "EC": "Emphasize",
+  "FA": "NC",
+  "FI": "NC",
+  "GI": "GI",
+  "OQ": "Q",
+  "RCP": "PwP",
+  "RCW": "Persuade",
+  "SR": "SR",
+  "ST": "NC",
+  "WA": "Persuade"
+ },
+ "not_mappable": [
+  "Seek (MISC folds permission-seeking into EC)",
+  "Q open/closed is not split in MITI"
+ ],
+ "notes": "CASAA is too small to train on and is the reference standard, so it is never used for training or tuning.",
+ "scheme": "MITI 4.2.1 (counsellor)",
+ "seed": 42,
+ "test": [
+  "casaa_have-you-ever-been-a-smoker",
+  "casaa_hawaii-every-month",
+  "casaa_i-guess-i-dont-have-a-choice",
+  "casaa_living-with-diabetes",
+  "casaa_maybe-hell-take-my-kids",
+  "casaa_my-father-also-hit-me",
+  "casaa_now-i-only-wear-yoga-pants",
+  "casaa_orientation-to-a-parenting-class",
+  "casaa_overuse-of-directing",
+  "casaa_overuse-of-following",
+  "casaa_session1miti",
+  "casaa_session2miti",
+  "casaa_session3miti",
+  "casaa_session4miti",
+  "casaa_session5miti",
+  "casaa_should-i-really-be-honest",
+  "casaa_the-confirmed-smoker",
+  "casaa_the-suspiscious-smoker"
+ ],
+ "training_options": {
+  "A (recommended)": "MISC-trained model + MISC->MITI mapping (no MITI training data needed)",
+  "B": "welivita.gold train split (MITI-derived, written forum) -> CASAA: cross-domain, weak labels",
+  "C (if obtained)": "MI-TAGS (MITI 4.2, 242 sessions) after dedup against HLQC, AnnoMI and CASAA"
+ }
+}

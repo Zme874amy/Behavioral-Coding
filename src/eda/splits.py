@@ -70,6 +70,39 @@ def _allocate(groups: Dict[str, List[str]], fracs: Dict[str, float], rng: random
     return out
 
 
+_SERIES_STOP = (r"\b(new video|the|a|an|how not to do|how to do|not so good|not so bad|ineffective|effective|"
+                r"non[- ]motivational approach|motivational interviewing demonstration|with mi|without mi|"
+                r"part (one|two|three|four|\d+)|\d+|role play|demo|demonstration)\b")
+
+
+def annomi_series(an: pd.DataFrame, threshold: float = 0.85) -> Dict[str, str]:
+    """conv_id -> series id. Titles are normalised (numbering, good/bad and part markers
+    removed) and linked when their similarity is >= threshold; the series id is the
+    smallest conv_id in the group. Deliberately conservative: over-merging only moves
+    whole groups together."""
+    import difflib
+    t = an.groupby("conv_id").video_title.first()
+    core = (t.str.lower().str.replace(_SERIES_STOP, " ", regex=True)
+            .str.replace(r"[^a-z ]", " ", regex=True).str.split().str.join(" "))
+    ids = sorted(t.index, key=int)
+    parent = {i: i for i in ids}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for i, a in enumerate(ids):
+        for b in ids[i + 1:]:
+            if core[a] and core[b] and difflib.SequenceMatcher(None, core[a], core[b]).ratio() >= threshold:
+                parent[find(a)] = find(b)
+    groups = defaultdict(list)
+    for i in ids:
+        groups[find(i)].append(i)
+    canon = {r: min(ms, key=int) for r, ms in groups.items()}
+    return {i: canon[find(i)] for i in ids}
+
+
 def build(frames=None, pairs=None) -> Dict[str, dict]:
     """`pairs` (real datasets only) drives every real-data manifest, so those never
     depend on our regenerable synthetic files; the synthetic manifest is computed
@@ -79,7 +112,7 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
     pairs = overlap.pairwise(real) if pairs is None else pairs
     pairs = pairs[~pairs.dataset_a.str.startswith("synth.") & ~pairs.dataset_b.str.startswith("synth.")]
     dup = pairs[(pairs.containment >= DUP) & (pairs.conv_a != pairs.conv_b)]
-    rng = random.Random(SEED)
+    # Each manifest seeds its own RNG (random.Random(f"{SEED}-<name>")), so changing one split never shifts another.
     man: Dict[str, dict] = {}
 
     def twins(ds_a: str, ids: Set[str], ds_b: str) -> Set[str]:
@@ -129,42 +162,52 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
         "exclude": man["misc_main"]["exclude"],
         "notes": "Answers RQ1 as worded (a service adapting on labels it already holds). misc_main remains the "
                  "cold-start transfer setting (no in-domain labels).",
+        "leakage_rules": {
+            "frozen_config": "no hyperparameter is chosen on MIV: reuse the misc_main config as is; any new tuning uses "
+                             "HLQC val fold or an inner split of the fold's TRAINING sessions",
+            "fold_statistics": "label priors, self-training caps/rare-code lists, synthesis topic mixes and retrieval "
+                               "indexes are rebuilt from the fold's training sessions only",
+            "pools": "self-training/retrieval pools exclude all 10 MIV gold sessions (label_pool already does)",
+            "scoring": "pool the out-of-fold predictions of all 5 folds and score once (821 utterances); compare arms on "
+                       "the same folds and seeds (paired); bootstrap by session",
+        },
     }
 
     # --- AnnoMI own-scheme ---------------------------------------------------
+    # Split by video SERIES, not transcript: parts of one session ("Daryl interviews Ricky 1-3")
+    # and good/bad versions of one role-play ("The Effective / Ineffective Physician") share the
+    # client and story. Series come from title similarity (annomi_series); the 7 ten-rater
+    # transcripts (majority labels, the cleanest) pull their whole series into test.
     an = frames["annomi.gold"]
     tr = an.groupby("conv_id").agg(q=("mi_quality", "first"),
                                    ann=("annotator_id", lambda s: s[s >= 0].mode().iloc[0] if (s >= 0).any() else -1),
                                    multi=("n_annotators", "max"))
+    series = annomi_series(an)
+    members = defaultdict(list)
+    for c, g in series.items():
+        members[g].append(c)
     multi = set(tr[tr.multi > 1].index)
-    an_pairs = dup[(dup.dataset_a == "annomi.gold") & (dup.dataset_b == "annomi.gold")]
-    comp = _components(an_pairs, tr.index)
-    if len(set(comp.values())) != len(comp):
-        raise RuntimeError("AnnoMI has duplicate transcripts; cluster them before splitting")
+    forced = {g: "test" for g, ms in members.items() if set(ms) & multi}
+    n_forced = sum(len(members[g]) for g in forced)
+    rest = len(tr) - n_forced
+    f_test = max(0.0, (0.15 * len(tr) - n_forced) / rest)
+    f_dev = 0.15 * len(tr) / rest
     strata = defaultdict(list)
-    for c, r in tr.iterrows():
-        strata[f"{r.q}|ann{int(r.ann)}"].append(c)
-    n_test_extra = max(0, round(0.15 * len(tr)) - len(multi))
-    assign = _allocate(strata, {"train": 0.70 / 0.85, "dev": 0.15 / 0.85}, rng,
-                       forced={c: "test" for c in multi})
-    # top up the test split with a stratified draw from train
-    pool_tr = sorted((c for c, s in assign.items() if s == "train"), key=int)
-    rng.shuffle(pool_tr)
-    by_q = defaultdict(list)
-    for c in pool_tr:
-        by_q[tr.loc[c, "q"]].append(c)
-    quota = {q: round(n_test_extra * len(v) / len(pool_tr)) for q, v in by_q.items()}
-    for q, k in quota.items():
-        for c in by_q[q][:k]:
-            assign[c] = "test"
+    for g, ms in members.items():
+        qs = set(tr.loc[ms, "q"])
+        strata["mixed" if len(qs) > 1 else qs.pop()].append(g)
+    g_assign = _allocate(strata, {"train": 1 - f_test - f_dev, "dev": f_dev, "test": f_test},
+                         random.Random(f"{SEED}-annomi_own"), forced=forced)
+    assign = {c: g_assign[series[c]] for c in tr.index}
     man["annomi_own"] = {
         "scheme": "AnnoMI (main behaviour + subtypes; client change/neutral/sustain)",
         "split": {c: assign[c] for c in sorted(assign, key=int)},
+        "series": {g: sorted(ms, key=int) for g, ms in sorted(members.items(), key=lambda kv: int(kv[0])) if len(ms) > 1},
         "test_core_10rater": sorted(multi, key=int),
         "exclude": man["misc_main"]["exclude"],
-        "notes": "Transcript-level; stratified by mi_quality x annotator; the 7 ten-rater transcripts (majority labels) "
-                 "are always test. For own-scheme training the HLQC overlap does not matter; for MISC transfer tests apply "
-                 "the misc_main exclude lists.",
+        "notes": "Series-level (whole video series in one split), stratified by series MI quality; the series of the 7 "
+                 "ten-rater transcripts are test. Report per-annotator scores as a robustness check (annotator effect). "
+                 "For MISC transfer tests apply the misc_main exclude lists.",
     }
 
     # --- Welivita own-scheme ---------------------------------------------------
@@ -180,7 +223,7 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
     src = w.groupby("conv_id").source.first()
     for root, members in clusters.items():
         strata[src[members[0]]].append(root)
-    cl_assign = _allocate(strata, {"train": 0.8, "dev": 0.1, "test": 0.1}, rng)
+    cl_assign = _allocate(strata, {"train": 0.8, "dev": 0.1, "test": 0.1}, random.Random(f"{SEED}-welivita_own"))
     w_split = {c: cl_assign[comp[c]] for c in convs}
     man["welivita_own"] = {
         "scheme": "Welivita MITI-derived (15 codes)",
@@ -188,7 +231,29 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
         "label_subset": "listener rows with stage1_agreed (ann1 == ann2): "
                         f"{len(lis)} rows; the remaining rows are context only",
         "duplicate_clusters": {r: m for r, m in clusters.items() if len(m) > 1},
+        "cross_source_robustness": {
+            "train counsel_chat -> test RED": "train on CounselChat dialogues of the train split, test on RED dialogues of the test split",
+            "train RED -> test counsel_chat": "the reverse",
+            "why": "in-source proxy macro-F1 0.47 drops to 0.36-0.38 across sources (docs/experiments/2026-10-05-split-review.md)"},
         "notes": "Dialogue-level; duplicate dialogues (containment >= 0.10) share a split; stratified by source.",
+    }
+
+    # --- MITI 4 scheme ----------------------------------------------------------
+    from eda.quality import MISC_TO_MITI
+    man["miti_scheme"] = {
+        "scheme": "MITI 4.2.1 (counsellor)",
+        "human_data": {"miti.casaa.gold": "20 transcripts (18 clean): the only human MITI-coded spoken data we hold"},
+        "test": sorted(set(frames["miti.casaa.gold"].conv_id)
+                       - twins("misc.hlqc.gold", train_ids, "miti.casaa.gold")
+                       - twins("pool.hlqc", set(frames["pool.hlqc"].conv_id), "miti.casaa.gold")),
+        "training_options": {
+            "A (recommended)": "MISC-trained model + MISC->MITI mapping (no MITI training data needed)",
+            "B": "welivita.gold train split (MITI-derived, written forum) -> CASAA: cross-domain, weak labels",
+            "C (if obtained)": "MI-TAGS (MITI 4.2, 242 sessions) after dedup against HLQC, AnnoMI and CASAA",
+        },
+        "misc_to_miti": MISC_TO_MITI,
+        "not_mappable": ["Seek (MISC folds permission-seeking into EC)", "Q open/closed is not split in MITI"],
+        "notes": "CASAA is too small to train on and is the reference standard, so it is never used for training or tuning.",
     }
 
     # --- CASAA ---------------------------------------------------------------
@@ -249,6 +314,9 @@ def build(frames=None, pairs=None) -> Dict[str, dict]:
 def check(man: Dict[str, dict], frames) -> List[str]:
     errs = []
     a = man["annomi_own"]["split"]
+    for g, ms in man["annomi_own"]["series"].items():
+        if len({a[m] for m in ms}) > 1:
+            errs.append(f"annomi series {g} spans splits")
     if set(a) != set(frames["annomi.gold"].conv_id):
         errs.append("annomi split does not cover every transcript")
     for name in ("annomi_own", "welivita_own"):

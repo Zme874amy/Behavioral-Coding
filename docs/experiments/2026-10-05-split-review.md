@@ -106,13 +106,88 @@ Counsellor only, CASAA's 18 clean sessions:
 | `misc.miv63a.gold` | **test** (P0); test folds + in-domain training (P3) | P0: all 10 test. P3: 5 session folds (seed 42; the folds `automisc_ft` planned), each session tested once | most reliable MISC labels (E1); target population (E2); every utterance scored (E3) |
 | `misc.hlqc.gold` | **training only** | all 10 in training; checkpoint selection on HLQC val fold 0 of 7 (369 rows), fixed before training | never a test set (E1); a selection fold that never touches MIV (C7) |
 | `miti.casaa.gold` | **external test only** | 18 sessions; Emmy = high_121 and Rounder = high_072 excluded | reference-quality labels from a third domain (E1, E5); too small to train on |
-| `annomi.gold` | **external test** for MISC models (counsellor main behaviour, client C/S/N at T1); own-scheme split only for AnnoMI-scheme work | transfer test: exclude 15/21/44/53 (HLQC train copies), plus 48 transcripts if the model saw `pool.hlqc`; score questions at T1 (AnnoMI "open" ≠ MISC OQ). Own scheme: 91/22/20 transcripts, stratified by quality × annotator, with the 7 ten-rater transcripts (best labels) in test | expert labels, but a different scheme and coding convention, so a transfer test, not a MISC test; the cleanest labels go to the test side |
-| `welivita.gold` | **weak pool** (self-training / distillation), weak transfer test; own-scheme split only for Welivita-scheme work | own scheme: 1,604/196/200 dialogues, duplicate clusters kept together, labels = 7,152 stage-I-agreed sentences | crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047), so it should not be a headline test |
+| `annomi.gold` | **external test** for MISC models (counsellor main behaviour, client C/S/N at T1); own-scheme split only for AnnoMI-scheme work | transfer test: exclude 15/21/44/53 (HLQC train copies), plus 48 transcripts if the model saw `pool.hlqc`; score questions at T1 (AnnoMI "open" ≠ MISC OQ). Own scheme: see §7.1 (series-level, 97/15/21) | expert labels, but a different scheme and coding convention, so a transfer test, not a MISC test; the cleanest labels go to the test side |
+| `welivita.gold` | **weak pool** (self-training / distillation), weak transfer test; own-scheme split only for Welivita-scheme work | own scheme: see §7.2 (1,602/203/195 dialogues) | crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047), so it should not be a headline test |
 | `pool.hlqc`, `pool.miv63a`, `pool.miv63b` | unlabelled pools (training side only) | drop the 10 MIV test sessions; drop the 45 redundant HLQC duplicates; drop the pool twins of any corpus used as a test | leakage control (C3) |
 | `synth.*` | training augmentation only | never a test | generator-assigned labels; see SYNTHETIC_DATA.md |
 
-## 5. What has to happen next
+## 5. What has to happen next (updated in §8)
 
 1. **Your decision:** adopt P3 as the primary MISC protocol, with P0 kept as the cold-start setting. The manifest exists already: `data/splits/misc_pooled_cv.json`, marked PROPOSED.
 2. If yes: one confirmation run of `ft1mix_bare` under P3 (5 folds) on MLeRP, then re-run the arms we want to claim under P3 (baseline, synthesis v2/v3).
 3. Independent of the decision: rerun the AnnoMI transfer test with the exclusions and T1 questions.
+
+## 6. Leakage audit (follow-up, same day)
+
+*Does pooled CV, or any other split, leak?* Each channel was checked in the code and the data. Evidence: `eda.split_eval.pooled_cv_leakage`, `annomi_grouping`, `welivita_grouping`.
+
+### 6.1 MISC: current protocol (P0) and proposed pooled CV (P3)
+
+| # | Leakage channel | P0 (current) | P3 (pooled CV) | Evidence | Mitigation |
+|---|---|---|---|---|---|
+| L1 | Same session in train and test | no | no: folds are by session | manifest check: each MIV session tested once, never trained on in its own fold | built into `splits.check` |
+| L2 | Same person in train and test | no | no | 10 distinct participants; no participant id repeats among the 173 MIV6.3A sessions | — |
+| L3 | Same session in another corpus | HLQC-train copies in AnnoMI/CASAA | same | DATASETS.md §5.1 | exclusion lists (unchanged) |
+| L4 | Near-identical utterances across the split (chatbot templates) | n/a | small | 18 of 532 longer counsellor utterances have a ≥ 0.9-similar one in another fold (closing/continuation templates); 14 of 652 exact | accepted: the deployed chatbot repeats them too. Out-of-domain tests (CASAA, AnnoMI) measure generalisation beyond this chatbot |
+| L5 | **Test-informed design decisions** | **yes, already** | yes | the retriever's rare-code list (SU, EC, AF, GI) and the self-training "no cap" codes were picked because they are common in MIV6.3A; synthesis `v3_mivmix` uses MIV6.3A topic counts; the main setting (`ft1mix_bare`, ctx 5) was chosen by comparing MIV scores | disclose for P0. For P3, freeze the current config and rebuild every such statistic from the fold's training sessions (`misc_pooled_cv.leakage_rules`) |
+| L6 | Checkpoint / hyperparameter selection on the test | no (HLQC val fold) | no (same HLQC val fold) | `baseline/grpo.py`, THESIS_SOURCE checkpoint rule | no MIV session is used for selection |
+| L7 | Few-shot exemplars from the test | no (HLQC only) | no | `baseline/fewshot.py` | — |
+| L8 | Pools containing test sessions | handled | handled | `selftrain.label_pool` drops all 10 MIV sessions and eval-like utterances | keep excluding all 10 in P3 too |
+| L9 | Codes seen in only one fold | n/a | AC− (1), RF (1) | they can't be learned in-domain when that fold is test | not leakage. Score pooled out-of-fold predictions once, not per fold |
+| L10 | Same coders in train and test | n/a | yes: MIV's coding team labels both sides | by design | this is RQ1's scenario (a service's own coders). Report it as such; CASAA/AnnoMI give coder-independent checks |
+
+**Answer: pooled CV adds no leak of sessions, people or text beyond small template overlap (L4).** Its real risk is reusing decisions that were tuned on MIV (L5), and that risk exists **already** in the current protocol. The rules in `misc_pooled_cv.json` close it for P3: freeze the config, recompute statistics per fold, pool the scoring.
+
+### 6.2 Other datasets
+
+| Dataset | Channel | Found | Proxy effect | Decision |
+|---|---|---|---|---|
+| AnnoMI | **parts of one video series / good-bad versions of one role-play split across train/dev/test** | 31 multi-transcript series (e.g. "Daryl interviews Ricky 1–3", "The Effective / Ineffective Physician"); **13 of them were split** by the old transcript-level manifest | none measurable on coarse labels (proxy 0.715 by transcript vs 0.718 by series) | **fixed:** `annomi_own` is now series-level (97/15/21 transcripts) |
+| AnnoMI | same annotator in train and test | yes (10 annotators, 11–13 transcripts each) | unseen annotators −0.01 to −0.02; untestable for reflection subtype (the proxy is near chance there) | keep annotator stratification and report per-annotator scores. The 7 ten-rater transcripts (majority labels) are test |
+| Welivita | same opening post (one question, several answers) across splits | 316 thread pairs | small (0.475 by dialogue vs 0.469 by cluster) | already split by cluster |
+| Welivita | source shift (CounselChat professionals vs Reddit peers) | — | in-source 0.47 vs cross-source 0.36–0.38 | stratify by source (done); report cross-source as a robustness check |
+| CASAA | same client across transcripts | the five training sessions have five different clients | — | none needed (test only) |
+
+## 7. Protocols for the other coding schemes
+
+The MISC protocol is §4. Each other scheme gets its own protocol, chosen by the same criteria (C1–C7).
+
+### 7.1 AnnoMI scheme (main behaviour, subtypes, client talk type)
+
+- **Data:** `annomi.gold` only (133 transcripts).
+- **Split:** `annomi_own`, by video series, stratified by series MI quality. Train 97, dev 15, test 21 transcripts.
+- **Why:**
+  - C3: series grouping removes the shared-client/story channel.
+  - C1: the test holds the 7 ten-rater transcripts, the only multi-rater labels, so the cleanest labels are tested.
+  - C5: 21 transcripts; report per-annotator scores, because single-annotator labels carry a strong annotator effect.
+  - C7: dev is used for selection.
+- **Not used for training:** HLQC overlaps (15/21/44/53 and the 48 pool twins) only matter when a model is trained on HLQC and tested on AnnoMI. For AnnoMI-scheme training they are ordinary AnnoMI transcripts.
+
+### 7.2 Welivita scheme (15 MITI-derived listener codes)
+
+- **Data:** `welivita.gold`; labels = the 7,152 stage-I-agreed listener sentences (crowd κ 0.34 overall, so only agreed labels are trusted).
+- **Split:** `welivita_own`, by same-post cluster, stratified by source. Train 1,602, dev 203, test 195 dialogues.
+- **Plus:** cross-source robustness (train CounselChat → test Reddit, and the reverse).
+- **Why:** C1 agreed labels only; C3 cluster grouping; C2 source stratification, plus cross-source because the shift is large.
+
+### 7.3 MITI 4 (`miti_scheme.json`)
+
+- **Human MITI data:** CASAA only (20 transcripts, 18 clean). It is too small to train on and it is the reference standard, so it is **test only**.
+- **Training options, in order of recommendation:**
+  - **A.** A MISC-trained model whose output is mapped MISC → MITI (`quality.MISC_TO_MITI`). This needs no MITI training data. MITI's Seek can't be produced, because MISC folds permission-seeking into EC.
+  - **B.** Welivita's train split (MITI-derived) → CASAA: cross-domain (written → spoken) with weak labels.
+  - **C.** MI-TAGS (MITI 4.2, 242 sessions), if obtained, deduplicated against HLQC, AnnoMI and CASAA first.
+- **Why:** C1 (CASAA is reference quality) and C4 (no trainable human MITI corpus exists).
+
+### 7.4 Cross-scheme transfer tests (MISC model on another scheme)
+
+These involve no training on the target scheme, so there is no split, only exclusions:
+- **AnnoMI:** drop 15/21/44/53 (and the 48 pool twins if the model saw `pool.hlqc`); score counsellor main behaviour and questions at T1, and client C/S/N at T1.
+- **Welivita:** the weak test, on the shared codes.
+- **CASAA:** the 18 clean sessions.
+
+## 8. Next steps (updated)
+
+1. **Your decision:** P3 (`misc_pooled_cv`) as the primary MISC protocol, P0 kept as cold-start. P3 adds no session, person or text leakage beyond small template overlap. Its rules (frozen config, per-fold statistics, pooled scoring) also close the test-informed-decision channel that P0 already has.
+2. If yes: a 7B confirmation run of `ft1mix_bare` under P3 (5 folds), then the arms we want to claim.
+3. In any case: disclose L5 for the existing P0 results, and rerun the AnnoMI transfer test with the exclusions and T1 questions.

@@ -426,6 +426,8 @@ The manifests are byte-identical across reruns and `PYTHONHASHSEED` values. Buil
 - no conversation sits in two splits;
 - in pooled CV, each MIV session is tested exactly once and never trained on in its own fold;
 - no Welivita duplicate cluster spans splits;
+- no AnnoMI video series spans splits;
+- each manifest has its own seeded RNG, so changing one split never shifts another;
 - CASAA Emmy is not in a test split;
 - the MIV pool exclusion covers every test session.
 
@@ -451,13 +453,31 @@ This answers: "can a model trained only on public labels code a new service's se
 
 Cost: 5 training runs per arm. P0 results stay valid as the cold-start setting.
 
-### 6.3 `annomi_own`
+**Leakage** (audit in the split review, §6): folds are by session and by participant, and no text crosses folds beyond 18 of 532 template-like counsellor lines. The real risk is reusing decisions tuned on MIV, a risk that exists already under P0: the retriever's rare-code list, the self-training caps, `v3_mivmix` topic counts, and the choice of main setting. Rules in the manifest:
+- freeze the current config;
+- rebuild priors, caps, topic mixes and retrieval indexes from each fold's training sessions;
+- score the pooled out-of-fold predictions once, paired across arms.
 
-Transcript-level split, stratified by quality × annotator: train 91, dev 22, test 20. The test split includes the 7 ten-rater transcripts (majority labels): the cleanest labels go to the test side. This split is only for AnnoMI-scheme work. **For MISC models, AnnoMI is an external transfer test:** counsellor main behaviour, client C/S/N, and questions at T1 only (AnnoMI's "open" is broader than MISC OQ), with the exclusions in 6.1.
+### 6.3 `annomi_own`: AnnoMI scheme
 
-### 6.4 `welivita_own`
+**Split by video series**, so parts of one session and good/bad versions of one role-play stay together. Stratified by series MI quality: train 97, dev 15, test 21 transcripts. The test split includes the series of the 7 ten-rater transcripts (majority labels, the cleanest).
 
-Dialogue-level split, stratified by source, with duplicate clusters kept in one split: train 1,604, dev 196, test 200. Labels are the 7,152 stage-I-agreed sentences. Its main role is a weak training pool: crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047). It is not a headline test.
+The old transcript-level split had spread 13 of 31 multi-transcript series across splits. The proxy showed no measurable inflation from that, but the fix costs nothing. Report per-annotator scores, because labels come from single annotators with a strong annotator effect.
+
+**For MISC models, AnnoMI is an external transfer test:** counsellor main behaviour, client C/S/N, and questions at T1 only, with the exclusions in 6.1.
+
+### 6.4 `welivita_own`: Welivita scheme
+
+Split by same-post cluster, stratified by source: train 1,602, dev 203, test 195 dialogues. Labels are the 7,152 stage-I-agreed sentences. Also report cross-source robustness (CounselChat → Reddit and the reverse): the proxy drops from 0.47 in-source to 0.36–0.38 across sources.
+
+Its main role in MISC work is a weak pool: crowd κ 0.34, written forum domain, and self-training with it hurt (−0.047).
+
+### 6.4b `miti_scheme`: MITI 4
+
+Human MITI data is CASAA only, which is **test only**: it is the reference standard and too small to train on. Training options:
+- **A (recommended):** a MISC model with its output mapped MISC → MITI. Seek can't be produced.
+- **B:** Welivita's train split → CASAA (cross-domain, weak labels).
+- **C:** MI-TAGS, if obtained, after deduplication.
 
 ### 6.5 `casaa_test`
 

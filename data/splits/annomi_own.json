@@ -62,76 +62,222 @@
    "casaa_rounder-miti-4"
   ]
  },
- "notes": "Transcript-level; stratified by mi_quality x annotator; the 7 ten-rater transcripts (majority labels) are always test. For own-scheme training the HLQC overlap does not matter; for MISC transfer tests apply the misc_main exclude lists.",
+ "notes": "Series-level (whole video series in one split), stratified by series MI quality; the series of the 7 ten-rater transcripts are test. Report per-annotator scores as a robustness check (annotator effect). For MISC transfer tests apply the misc_main exclude lists.",
  "scheme": "AnnoMI (main behaviour + subtypes; client change/neutral/sustain)",
  "seed": 42,
+ "series": {
+  "1": [
+   "1",
+   "55",
+   "63",
+   "99",
+   "101"
+  ],
+  "10": [
+   "10",
+   "66"
+  ],
+  "109": [
+   "109",
+   "123"
+  ],
+  "11": [
+   "11",
+   "26"
+  ],
+  "12": [
+   "12",
+   "38",
+   "108"
+  ],
+  "128": [
+   "128",
+   "130"
+  ],
+  "15": [
+   "15",
+   "24"
+  ],
+  "16": [
+   "16",
+   "37",
+   "83"
+  ],
+  "18": [
+   "18",
+   "49"
+  ],
+  "20": [
+   "20",
+   "106"
+  ],
+  "21": [
+   "21",
+   "44",
+   "53",
+   "68"
+  ],
+  "27": [
+   "27",
+   "127"
+  ],
+  "28": [
+   "28",
+   "39",
+   "60"
+  ],
+  "3": [
+   "3",
+   "19",
+   "40",
+   "50",
+   "103",
+   "120",
+   "132"
+  ],
+  "30": [
+   "30",
+   "45",
+   "54",
+   "58",
+   "95"
+  ],
+  "31": [
+   "31",
+   "57"
+  ],
+  "32": [
+   "32",
+   "114"
+  ],
+  "33": [
+   "33",
+   "115"
+  ],
+  "35": [
+   "35",
+   "93",
+   "124"
+  ],
+  "4": [
+   "4",
+   "74"
+  ],
+  "42": [
+   "42",
+   "48"
+  ],
+  "46": [
+   "46",
+   "67",
+   "104"
+  ],
+  "5": [
+   "5",
+   "71",
+   "84"
+  ],
+  "56": [
+   "56",
+   "61",
+   "77"
+  ],
+  "69": [
+   "69",
+   "70"
+  ],
+  "7": [
+   "7",
+   "129"
+  ],
+  "72": [
+   "72",
+   "112"
+  ],
+  "73": [
+   "73",
+   "122"
+  ],
+  "78": [
+   "78",
+   "92"
+  ],
+  "81": [
+   "81",
+   "125"
+  ],
+  "9": [
+   "9",
+   "17"
+  ]
+ },
  "split": {
   "0": "train",
-  "1": "train",
-  "10": "train",
+  "1": "test",
+  "10": "test",
   "100": "train",
-  "101": "dev",
+  "101": "test",
   "102": "train",
   "103": "train",
-  "104": "train",
+  "104": "test",
   "105": "train",
   "106": "train",
-  "107": "test",
+  "107": "train",
   "108": "train",
   "109": "test",
   "11": "train",
-  "110": "train",
+  "110": "dev",
   "111": "train",
-  "112": "train",
+  "112": "dev",
   "113": "train",
   "114": "train",
-  "115": "train",
-  "116": "train",
-  "117": "train",
+  "115": "dev",
+  "116": "dev",
+  "117": "dev",
   "118": "train",
-  "119": "dev",
+  "119": "train",
   "12": "train",
   "120": "train",
   "121": "dev",
   "122": "train",
-  "123": "train",
+  "123": "test",
   "124": "train",
   "125": "train",
   "126": "train",
   "127": "test",
-  "128": "train",
-  "129": "train",
+  "128": "test",
+  "129": "test",
   "13": "dev",
   "130": "test",
-  "131": "test",
+  "131": "train",
   "132": "train",
-  "133": "dev",
+  "133": "train",
   "14": "train",
-  "15": "dev",
-  "16": "dev",
+  "15": "train",
+  "16": "train",
   "17": "train",
   "18": "train",
   "19": "train",
-  "2": "test",
+  "2": "train",
   "20": "train",
   "21": "train",
   "22": "train",
   "23": "train",
-  "24": "dev",
+  "24": "train",
   "25": "train",
   "26": "train",
   "27": "test",
   "28": "train",
   "29": "train",
   "3": "train",
-  "30": "dev",
+  "30": "train",
   "31": "train",
   "32": "train",
-  "33": "train",
+  "33": "dev",
   "34": "train",
   "35": "train",
   "36": "train",
-  "37": "dev",
+  "37": "train",
   "38": "train",
   "39": "train",
   "4": "train",
@@ -141,64 +287,64 @@
   "43": "dev",
   "44": "train",
   "45": "train",
-  "46": "dev",
+  "46": "test",
   "47": "train",
   "48": "train",
   "49": "train",
   "5": "train",
-  "50": "test",
-  "51": "test",
+  "50": "train",
+  "51": "train",
   "52": "dev",
-  "53": "dev",
-  "54": "dev",
+  "53": "train",
+  "54": "train",
   "55": "test",
   "56": "test",
   "57": "train",
-  "58": "dev",
-  "59": "train",
+  "58": "train",
+  "59": "dev",
   "6": "train",
   "60": "train",
   "61": "test",
-  "62": "test",
-  "63": "train",
+  "62": "train",
+  "63": "test",
   "64": "train",
   "65": "train",
   "66": "test",
-  "67": "dev",
+  "67": "test",
   "68": "train",
-  "69": "test",
+  "69": "train",
   "7": "test",
-  "70": "test",
+  "70": "train",
   "71": "train",
-  "72": "train",
+  "72": "dev",
   "73": "train",
   "74": "train",
-  "76": "dev",
-  "77": "train",
+  "76": "train",
+  "77": "test",
   "78": "train",
   "79": "train",
   "8": "train",
-  "80": "train",
-  "81": "test",
+  "80": "dev",
+  "81": "train",
   "82": "train",
-  "83": "dev",
-  "84": "dev",
+  "83": "train",
+  "84": "train",
   "85": "train",
   "86": "train",
   "87": "train",
   "88": "train",
   "89": "train",
-  "9": "dev",
+  "9": "train",
   "90": "train",
-  "91": "train",
+  "91": "dev",
   "92": "train",
   "93": "train",
   "94": "train",
   "95": "train",
-  "96": "test",
+  "96": "train",
   "97": "dev",
-  "98": "test",
-  "99": "train"
+  "98": "train",
+  "99": "test"
  },
  "test_core_10rater": [
   "7",

@@ -245,6 +245,12 @@
    }
   }
  },
+ "leakage_rules": {
+  "fold_statistics": "label priors, self-training caps/rare-code lists, synthesis topic mixes and retrieval indexes are rebuilt from the fold's training sessions only",
+  "frozen_config": "no hyperparameter is chosen on MIV: reuse the misc_main config as is; any new tuning uses HLQC val fold or an inner split of the fold's TRAINING sessions",
+  "pools": "self-training/retrieval pools exclude all 10 MIV gold sessions (label_pool already does)",
+  "scoring": "pool the out-of-fold predictions of all 5 folds and score once (821 utterances); compare arms on the same folds and seeds (paired); bootstrap by session"
+ },
  "notes": "Answers RQ1 as worded (a service adapting on labels it already holds). misc_main remains the cold-start transfer setting (no in-domain labels).",
  "scheme": "MISC 2.5",
  "seed": 42,

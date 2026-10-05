@@ -142,3 +142,66 @@ if __name__ == "__main__":
     pd.set_option("display.width", 200)
     print(protocols(), "\n"); print(external_casaa(), "\n"); print(template_leak(), "\n")
     print(test_power(), "\n"); r = test_representativeness(); print(r); print(r.attrs)
+
+
+# ------------------------------------------------- other schemes: leakage checks
+def annomi_grouping() -> pd.DataFrame:
+    """Does splitting AnnoMI by transcript (vs by video series, vs unseen annotator) inflate scores?"""
+    from sklearn.model_selection import GroupKFold
+    from eda.splits import annomi_series
+    an = registry.load("annomi.gold").copy()
+    an["t2"] = an["native"]
+    an["series"] = an.conv_id.map(annomi_series(an))
+    dom = an.groupby("conv_id").annotator_id.agg(lambda s: s[s >= 0].mode().iloc[0] if (s >= 0).any() else -1)
+    an["ann"] = an.conv_id.map(dom).astype(str)
+    rows = {}
+    for name, groups, drop_series in (("by transcript (old split)", an.conv_id, False),
+                                      ("by video series (new split)", an.series, False),
+                                      ("by unseen annotator + series", an.ann, True)):
+        pred = np.empty(len(an), dtype=object)
+        for tr_i, te_i in GroupKFold(5).split(an, groups=groups):
+            tr, te = an.iloc[tr_i], an.iloc[te_i]
+            if drop_series:
+                tr = tr[~tr.series.isin(set(te.series))]
+            pred[te_i] = _fit_predict(tr, te)
+        rows[name] = _score(an, pred)
+    return pd.DataFrame(rows).T
+
+
+def welivita_grouping() -> pd.DataFrame:
+    """Same-opening-post leakage and source shift (CounselChat vs Reddit) on the agreed labels."""
+    from sklearn.model_selection import GroupKFold
+    w = registry.load("welivita.gold")
+    L = w[(w.speaker == "counsellor") & w.stage1_agreed].reset_index(drop=True)
+    man = json.load(open(registry.REPO / "data/splits/welivita_own.json"))
+    cl = {m: r for r, ms in man["duplicate_clusters"].items() for m in ms}
+    L["cluster"] = L.conv_id.map(lambda c: cl.get(c, c))
+    rows = {}
+    for name, groups in (("by dialogue (same post may cross)", L.conv_id), ("by same-post cluster (split used)", L.cluster)):
+        pred = np.empty(len(L), dtype=object)
+        for tr_i, te_i in GroupKFold(5).split(L, groups=groups):
+            pred[te_i] = _model().fit(L.text.iloc[tr_i], L.native.iloc[tr_i]).predict(L.text.iloc[te_i])
+        rows[name] = {"macro-F1": round(f1_score(L.native, pred, average="macro"), 3), "acc": round(accuracy_score(L.native, pred), 3)}
+    for a, b in (("counsel_chat", "RED"), ("RED", "counsel_chat")):
+        tr, te = L[L.source == a], L[L.source == b]
+        p = _model().fit(tr.text, tr.native).predict(te.text)
+        rows[f"train {a} -> test {b}"] = {"macro-F1": round(f1_score(te.native, p, average="macro", labels=sorted(te.native.unique()),
+                                                                       zero_division=0), 3), "acc": round(accuracy_score(te.native, p), 3)}
+    return pd.DataFrame(rows).T
+
+
+def pooled_cv_leakage() -> dict:
+    """Leakage channels specific to MIV pooled CV."""
+    import difflib
+    M = registry.load("misc.miv63a.gold").assign(k=lambda d: d.text.map(quality.norm))
+    M["fold"] = M.conv_id.map(miv_folds())
+    c = M[(M.speaker == "counsellor") & (M.k.str.split().str.len() >= 6)]
+    near = sum(any(difflib.SequenceMatcher(None, t, x).ratio() >= 0.9 for x in c[c.fold != f].k)
+               for t, f in zip(c.k, c.fold))
+    cov = M.groupby("t2").fold.nunique()
+    o = registry.miv_outcomes("A")
+    return {"distinct participants in the 10 sessions": int(M.conv_id.nunique()),
+            "duplicate participant ids among 173": int(o.conv_id.duplicated().sum()),
+            "counsellor utterances (>=6 words) with a >=0.9-similar one in another fold": f"{near} of {len(c)}",
+            "codes present in only one fold": cov[cov == 1].index.tolist(),
+            "test utterances per fold": M.groupby("fold").size().to_dict()}
