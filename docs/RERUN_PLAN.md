@@ -173,9 +173,9 @@ Swapped 2026-10-06 (the 2024-era list was outdated). All three are ungated (Apac
 
 Why no Llama: Meta's current generation (Llama 4) is MoE only (Scout 109B total), with no small dense model; Llama-3.1-8B (2024) is what was outdated. LoRA target modules must be restricted to the language model (no vision tower); the pilot checks the trainable-parameter count.
 
-  - **Disk plan:** usage is 61 GB of a ~110 GB quota. The three new students add ~71 GB (bf16: 19 + 24 + 28), so stage one at a time with `scripts/stage_model.sh`, keep only the active student, and drop adapters after pooled prediction. The user approves any deletion.
+  - **Disk plan (user decision 2026-10-06): one model at a time.** MLeRP keeps only the model currently running (plus the Qwen2.5-7B cache for the bridge); every other student or teacher is deleted after use and re-staged on demand with `scripts/stage_model.sh` (~10 min). Fixed content is ~45 GB of the ~112 GB quota. Adapters are dropped after pooled prediction.
   - **Pilot each new student:** 1 cold-start run, seed 42, to check the chat template, the answer parser, the compliance rate and the wall time. This also calibrates the per-run cost used below.
-- **Teachers** (MLeRP Ollama shared store, no quota cost): Gemma-4-31B, Qwen3.6-27B, gpt-oss-120b; plus Qwen2.5-32B-AWQ (vLLM, already staged). Qwen3-VL is excluded (thinking build).
+- **Teachers:** Qwen3.6-27B and gpt-oss-120b come from the MLeRP Ollama shared store (no quota cost, greedy only). **Gemma-4-31B is not in that store** (it holds only gemma3:27b), so it runs from a staged copy via vLLM (22 GB), re-staged on demand under the one-model-at-a-time policy (2026-10-06). Qwen2.5-32B-AWQ (vLLM) is no longer staged. Qwen3-VL is excluded (thinking build).
   - **New teacher gate, not on any test set:** few-shot (3 exemplar draws) on the HLQC val fold scored with the **robust** metrics (FA+FI merged, SR/CR at T1). That removes HLQC's convention penalty.
   - MIV and CASAA are report-only.
   - Teachers serve as in-context baselines (Stage 1), synthesis generators (Stage 4) and pseudo-labellers (Stage 4).

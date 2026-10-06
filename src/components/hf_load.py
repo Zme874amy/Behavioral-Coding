@@ -61,6 +61,10 @@ def _resolve_training_dtype(
     return torch.float32
 
 
+class MissingWeightsError(RuntimeError):
+    """A checkpoint loaded with weights left randomly initialised."""
+
+
 def _load_causal_lm(
     model_id: str,
     *,
@@ -84,7 +88,24 @@ def _load_causal_lm(
         load_kwargs["attn_implementation"] = attn_implementation
 
     try:
-        return AutoModelForCausalLM.from_pretrained(model_id, **load_kwargs)
+        model, info = AutoModelForCausalLM.from_pretrained(model_id, output_loading_info=True, **load_kwargs)
+        # A text-only class loaded from a multimodal checkpoint (Qwen3.5) can miss
+        # the renamed language-model weights and leave them randomly initialised
+        # with only a warning. Treat missing weights as a load failure.
+        missing = [k for k in info.get("missing_keys", []) if not k.endswith("lm_head.weight")]
+        if not missing:
+            return model
+        log.warning("%s: %d weights missing under AutoModelForCausalLM (e.g. %s); "
+                    "reloading with AutoModelForImageTextToText", model_id, len(missing), missing[:3])
+        del model
+        from transformers import AutoModelForImageTextToText
+        model, info = AutoModelForImageTextToText.from_pretrained(model_id, output_loading_info=True, **load_kwargs)
+        missing = [k for k in info.get("missing_keys", []) if not k.endswith("lm_head.weight")]
+        if missing:
+            raise MissingWeightsError(f"{model_id}: {len(missing)} weights missing under both classes, e.g. {missing[:3]}")
+        return model
+    except MissingWeightsError:
+        raise
     except Exception as first_exc:
         mid = model_id.lower()
         if "gemma-3n" in mid or "gemma3n" in mid:
