@@ -7,7 +7,7 @@
 #   MODEL=/mnt/userdata4/jia-wen/models/Olmo-3-7B-Instruct sbatch scripts/mlerp_student_pilot.slurm
 #   MODEL=Qwen/Qwen2.5-7B-Instruct STEP=zs sbatch scripts/mlerp_student_pilot.slurm   # cached reference
 #
-# Env: MODEL (staged path or cached HF id), STEP=zs|lora|both (both), ROWS (300), EXTRA overrides.
+# Env: MODEL (staged path or cached HF id), STEP=zs|lora|both|ftval (both; ftval = predict with the pilot adapter), ROWS (300), EXTRA overrides.
 
 #SBATCH --job-name=student_pilot
 #SBATCH --partition=BigCats
@@ -32,4 +32,7 @@ if [[ "$STEP" == zs || "$STEP" == both ]]; then
 fi
 if [[ "$STEP" == lora || "$STEP" == both ]]; then
   python -m baseline.student_pilot lora --model "$MODEL" --rows "$ROWS" "${OV[@]}"
+fi
+if [[ "$STEP" == ftval ]]; then
+  python -m baseline.student_pilot ftval --model "$MODEL" "${OV[@]}"
 fi

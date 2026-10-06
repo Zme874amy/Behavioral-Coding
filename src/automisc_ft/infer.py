@@ -60,6 +60,11 @@ def parse_label(generated: str, allowed: List[str]) -> str:
     if not generated:
         return "UNKNOWN"
     text = generated.strip()
+    # Gemma 4 opens an empty thinking channel even with thinking off; with special
+    # tokens skipped it decodes as a bare "thought" line before the answer.
+    text = re.sub(r"^(?:thought\s*\n)+", "", text, flags=re.IGNORECASE).strip()
+    # Markdown around the field name ("**label**:", "- __label__ =") is still the field.
+    text = re.sub(r'[*_`]+(label)[*_`]+(?=\s*[:=])', r"\1", text, flags=re.IGNORECASE)
 
     # 0) the whole answer, or a "label:" line, is a code's full name ("Affirm",
     #    "label: Simple Reflection"). Zero-shot models do this often; it resolves

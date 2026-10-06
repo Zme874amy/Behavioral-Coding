@@ -41,6 +41,9 @@ CANDIDATES = {  # the comparison set; Qwen2.5-7B is the zero-cost reference (alr
     "allenai/Olmo-3-7B-Instruct": "AI2 OLMo 3 (2025-11, Apache-2.0, fully open data)",
     "microsoft/phi-4": "Microsoft Phi-4 14B (2024-12, MIT)",
     "Qwen/Qwen2.5-7B-Instruct": "reference: the previous student",
+    # the two students chosen on paper (2026-10-06), piloted for loading/thinking/LoRA fit
+    "Qwen/Qwen3.5-9B": "primary student",
+    "google/gemma-4-12B-it": "second family",
 }
 
 
@@ -59,16 +62,25 @@ def _cfg(model: str, extra):
                         "training.save_strategy=no", *extra])
 
 
+def _adapter(slug: str) -> Path:
+    return REPO / "data" / "fine_tuning" / "student_pilot" / slug / "local_finetuned_model"
+
+
 def cmd_zs(a) -> None:
+    """Zero-shot (`zs`), or with the pilot LoRA adapter (`ftval`: compliance after
+    fine-tuning on 300 rows, the plan's >= 99% check)."""
     from automisc_ft.infer import TieredAnnotator
     os.environ["PROMPT_VERSION"] = "v2"
     cfg = _cfg(a.model, a.overrides)
     _, val = split()
     slug = rerun.student_slug(a.model)
-    out = OUT / f"{slug}_zs_hlqcval.csv"
+    adapter = _adapter(slug) if a.cmd == "ftval" else None
+    if adapter is not None and not adapter.exists():
+        raise SystemExit(f"no pilot adapter at {adapter}; run `lora` first")
+    out = OUT / f"{slug}_{'ft300' if adapter else 'zs'}_hlqcval.csv"
     OUT.mkdir(parents=True, exist_ok=True)
     rows, t0 = [], time.time()
-    ann = TieredAnnotator(base_model=a.model, force_cpu=bool(cfg.inference.force_cpu),
+    ann = TieredAnnotator(base_model=a.model, shared_adapter_dir=str(adapter) if adapter else None, force_cpu=bool(cfg.inference.force_cpu),
                           trust_remote_code=bool(cfg.model.get("trust_remote_code", False)),
                           max_new_tokens=int(cfg.inference.max_new_tokens),
                           max_input_len=int(cfg.inference.max_input_len["zs"]), structure_suffix="_bare")
@@ -95,7 +107,7 @@ def cmd_lora(a) -> None:
     cfg = _cfg(a.model, ["training.num_train_epochs=1", *a.overrides])
     train, _ = split()
     slug = rerun.student_slug(a.model)
-    out_dir = REPO / "data" / "fine_tuning" / "student_pilot" / slug
+    out_dir = _adapter(slug).parent
     out_dir.mkdir(parents=True, exist_ok=True)
     positions = list(range(min(a.rows, len(train))))
     t0, status, err = time.time(), "ok", None
@@ -171,6 +183,11 @@ def summarise(slug: str) -> dict:
                     "train s": L.get("seconds")})
         if L["status"] != "ok":
             row["error"] = L.get("error")
+    ft = OUT / f"{slug}_ft300_hlqcval.csv"
+    if ft.exists():
+        d = reparse(pd.read_csv(ft))
+        row["parseable % after LoRA"] = round(100 * (1 - (d[["t1_label_auto", "t2_label_auto"]] == "UNKNOWN")
+                                                    .any(axis=1).mean()), 1)
     return row
 
 
@@ -185,7 +202,7 @@ def cmd_report(a) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("zs", "lora"):
+    for name in ("zs", "ftval", "lora"):
         p = sub.add_parser(name)
         p.add_argument("--model", required=True)
         p.add_argument("--limit", type=int, default=None)
@@ -193,7 +210,7 @@ def main() -> None:
         p.add_argument("overrides", nargs="*")
     sub.add_parser("report")
     a = ap.parse_args()
-    {"zs": cmd_zs, "lora": cmd_lora, "report": cmd_report}[a.cmd](a)
+    {"zs": cmd_zs, "ftval": cmd_zs, "lora": cmd_lora, "report": cmd_report}[a.cmd](a)
 
 
 if __name__ == "__main__":
