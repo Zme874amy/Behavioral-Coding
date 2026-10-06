@@ -8,7 +8,7 @@
 | P2 prompts | done, except the de-duplicated rationale prompt and the judge/verify fixes (Stages 2/4) and the AnnoMI wording check |
 | P3 infrastructure | done for zs/fs/SFT-bare arms; GRPO/rationale/agentic/self-training entry points join with their stages |
 | P4 evaluation | done, except the Welivita eval rebuild |
-| P5 models | students swapped 2026-10-06; **third family = Phi-4**, chosen by the pilot ([doc](experiments/2026-10-06-student-pilot.md)); jobs run from the clean clone `/mnt/userdata4/jia-wen/rerun` in grpo-env; Qwen3.5-9B and Gemma-4-12B still to stage and pilot |
+| P5 models | **done for students**: Qwen3.5-9B / Gemma-4-12B / Phi-4 (third family by pilot) all load, keep thinking off, fit bf16 LoRA; after-LoRA compliance 100% / 99.2% / pending ([doc](experiments/2026-10-06-student-pilot.md)). Still open: teacher gate on the HLQC val fold, hyperparameter grid |
 | P6–P7 | not started |
 
 Details: [experiments/2026-10-05-rerun-prep.md](experiments/2026-10-05-rerun-prep.md).

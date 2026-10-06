@@ -104,3 +104,29 @@ stage one student at a time.
 
 Raw outputs: `outputs/student_pilot/` (zero-shot CSVs with raw generations,
 `*_lora.json` with loss curves, job logs, `report.md`).
+
+## The two students chosen on paper (same pilot, jobs 170663/170666, 170673/170674)
+
+The pilot was not used to choose these two. It checks that they load (no missing
+weights under the new load guard), that thinking stays off, that LoRA fits, and
+that compliance is at least 99% after fine-tuning: the plan's P5 gate. "After
+LoRA" means predicting the same validation fold with the 300-row, 1-epoch pilot
+adapter.
+
+| Student | parseable % zero-shot (strict / gate) | parseable % after LoRA | robust zero-shot F1 | T1 acc | s/utt | peak GB | LoRA off LM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen/Qwen3.5-9B | 96.7 / 96.7 | **100.0** ✓ | 0.418 | 0.604 | 1.92 | 24.0 | 0 |
+| google/gemma-4-12B-it | 95.1 / 95.9 | **99.2** ✓ | 0.404 | 0.650 | 2.23 | 31.7 | 0 |
+| microsoft/phi-4 (for comparison) | 99.5 / 99.5 | not yet run (re-staged later) | 0.364 | 0.596 | 3.00 | 31.0 | 0 |
+
+- **Qwen3.5 thinking is off.** There are no think tags, and answers are at most 11 tokens.
+  Its zero-shot misses are genuine wrong-tier answers: a T2 code in the T1 call (8), or a T1 group in the T2 call (4).
+- **Gemma-4 opens an empty thought channel even with thinking off.** It decodes as a "thought"
+  line in 55 rows, and two rows degenerate into repeated "thought". Its other misses are wrong-tier answers.
+- **Zero-shot and few-shot arms of both students will carry about 3–4% unparseable rows,
+  scored as wrong.** This is reported as compliance, not hidden.
+- **Deviation 2 (after these runs).** The parser skips a leading "thought" line and accepts
+  `**label**:`. Re-parsing every candidate leaves the third-family decision unchanged
+  (Phi-4 0.364, OLMo-3 0.183, Ministral-3 still fails compliance).
+- **Disk.** Under the one-model-at-a-time policy, Qwen3.5-9B stays staged for Stage 1, and
+  Gemma-4-12B and Phi-4 were deleted. Phi-4's after-LoRA check runs when it is re-staged.

@@ -2,8 +2,8 @@
 # Expand + submit on MLeRP from a clean tagged checkout:
 #   python scripts/submit_stage.py conf/stages/stage1.yaml            # dry run: list cells
 #   python scripts/submit_stage.py conf/stages/stage1.yaml --submit   # sbatch, <= 4 running (lion cap)
-# Students swapped 2026-10-06 to current (2025-12 .. 2026-04) open-weight models; every
-# student enters only after its P5 pilot passes (compliance >= 99%, wall time recorded).
+# Students swapped 2026-10-06; all three piloted (docs/experiments/2026-10-06-student-pilot.md).
+# MLeRP holds one model at a time: enable a student only while its copy is staged.
 # Qwen2.5-7B stays as a cold-start BRIDGE only: it ties the new pipeline to every
 # earlier number (one seed with prompt v1, three with v2).
 seeds: [42, 1, 2]
@@ -16,13 +16,13 @@ protocols:
 students:   # `path:` = staged copy under /mnt/userdata4/jia-wen/models (results are keyed by its basename)
   # primary (headline, full LOSO): Apache-2.0, ungated, 2026-03; thinking switched off
   # through the chat template (components.hf_load.chat_template_kwargs)
-  qwen35_9b: {model: Qwen/Qwen3.5-9B, enabled: false}               # flip after its P5 pilot
+  qwen35_9b: {model: Qwen/Qwen3.5-9B, path: /mnt/userdata4/jia-wen/models/Qwen3.5-9B}   # pilot passed 2026-10-06; staged
   # Apache-2.0, ungated, 12B encoder-free (gemma4_unified: needs a transformers newer
   # than 5.9); bf16 LoRA if the pilot fits 40 GB, else QLoRA via extra
-  gemma4_12b: {model: google/gemma-4-12B-it, enabled: false}       # flip after its P5 pilot
+  gemma4_12b: {model: google/gemma-4-12B-it, path: /mnt/userdata4/jia-wen/models/gemma-4-12B-it, enabled: false}  # pilot passed; flip once re-staged
   # third family, chosen by the P5 pilot (docs/experiments/2026-10-06-student-pilot.md):
   # MIT, 14.7B, bf16 LoRA peaks at 31 GB; staged copy on MLeRP (compute nodes are offline)
-  phi4: {model: microsoft/phi-4, path: /mnt/userdata4/jia-wen/models/phi-4, enabled: false}  # flip when Stage 1 starts
+  phi4: {model: microsoft/phi-4, path: /mnt/userdata4/jia-wen/models/phi-4, enabled: false}  # flip once re-staged (one model at a time); run its ftval check then
   # legacy bridge to all earlier results
   qwen25_7b: {model: Qwen/Qwen2.5-7B-Instruct}
 cells:
